@@ -111,6 +111,8 @@ describe("resolveRoutePermissions", () => {
       "log",
       "sys",
       "workstation",
+      // S10b-5: agent console is an admin child route, granted to Child Admin.
+      "agent",
     ])
   })
 

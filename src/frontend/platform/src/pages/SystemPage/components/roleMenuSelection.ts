@@ -13,6 +13,7 @@ export const ADMIN_CHILD_MENUS = [
   "evaluation",
   "dataset",
   "mark_task",
+  "agent",
 ] as const
 
 export const TASK_MODE_MENU_ID = "linsight_task_mode"

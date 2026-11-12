@@ -227,3 +227,46 @@ describe("MainLayout identity-specific navigation", () => {
     expect(screen.queryByText("menu.tenant")).toBeNull();
   });
 });
+
+describe("agent menu nav gating (S10b-5)", () => {
+  beforeEach(() => {
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: localStorageMock,
+    });
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: localStorageMock,
+    });
+  });
+
+  it("hides both agent entries for a plain user without the agent grant", () => {
+    renderLayout();
+    expect(screen.queryByText("menu.agentConsole")).toBeNull();
+    expect(screen.queryByText("menu.agentApprovals")).toBeNull();
+  });
+
+  it("keeps the entries hidden when only the admin parent is granted", () => {
+    renderLayout({ web_menu: ["admin"] });
+    expect(screen.queryByText("menu.agentConsole")).toBeNull();
+    expect(screen.queryByText("menu.agentApprovals")).toBeNull();
+  });
+
+  it("shows both entries once the agent web menu is granted", () => {
+    renderLayout({ web_menu: ["admin", "agent"] });
+    expect(screen.getByText("menu.agentConsole")).toBeInTheDocument();
+    expect(screen.getByText("menu.agentApprovals")).toBeInTheDocument();
+  });
+
+  it("super admin sees the agent entries", () => {
+    renderLayout({ role: "admin" });
+    expect(screen.getByText("menu.agentConsole")).toBeInTheDocument();
+    expect(screen.getByText("menu.agentApprovals")).toBeInTheDocument();
+  });
+
+  it("child admin sees the agent entries", () => {
+    renderLayout({ is_child_admin: true });
+    expect(screen.getByText("menu.agentConsole")).toBeInTheDocument();
+    expect(screen.getByText("menu.agentApprovals")).toBeInTheDocument();
+  });
+});

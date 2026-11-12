@@ -88,6 +88,7 @@ export function useRolesController() {
       { id: "evaluation", label: t("menu.evaluation") },
       { id: "dataset", label: t("menu.dataset") },
       { id: "mark_task", label: t("menu.annotation") },
+      { id: "agent", label: t("menu.agentConsole") },
     ],
     [t],
   );

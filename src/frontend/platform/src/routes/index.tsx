@@ -117,8 +117,12 @@ const privateRouter = [
       { path: "tenant", element: <TenantPage />, permission: 'sys' },
       { path: "department", element: <Navigate to="/sys" replace /> },
       { path: "menu-pending", element: <MenuPermissionPlaceholder /> },
-      { path: "agent", element: <AgentConsolePage /> },
-      { path: "agent/approvals", element: <AgentApprovalsPage /> },
+      { path: "agent", element: <AgentConsolePage />, permission: "agent" },
+      {
+        path: "agent/approvals",
+        element: <AgentApprovalsPage />,
+        permission: "agent",
+      },
     ],
   },
   { path: "dashboard/:id", element: <EditorPage />, errorElement: <RouteErrorBoundary />, permission: 'board', },
@@ -189,6 +193,7 @@ const CHILD_ADMIN_ROUTE_PERMISSIONS = [
   "log",
   "sys",
   "workstation",
+  "agent",
 ] as const
 
 export function resolveRoutePermissions(user: {
@@ -213,6 +218,7 @@ const ADMIN_LANDING_ROUTES = [
   { key: "evaluation", path: "/evaluation" },
   { key: "mark_task", path: "/label" },
   { key: "sys", path: "/sys" },
+  { key: "agent", path: "/agent" },
 ] as const
 
 export function resolveAdminLandingPath(permissions: string[], menuApprovalMode: boolean): string {

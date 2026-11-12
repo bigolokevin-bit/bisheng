@@ -52,10 +52,13 @@ describe("AC-37 — the role config screen's inventory is unchanged", () => {
       "evaluation",
       "dataset",
       "mark_task",
+      // S10b-5 authorized the agent console child menu; the inventory below
+      // counts it.
+      "agent",
     ])
   })
 
-  it("counts 17 selectable entries, none of them about hosted applications", () => {
+  it("counts 18 selectable entries, none of them about hosted applications", () => {
     const all = [
       WORKBENCH_PARENT_ID,
       ADMIN_PARENT_ID,
@@ -63,8 +66,8 @@ describe("AC-37 — the role config screen's inventory is unchanged", () => {
       TASK_MODE_MENU_ID,
       ...ADMIN_CHILD_MENUS,
     ]
-    expect(all).toHaveLength(17)
-    expect(new Set(all).size).toBe(17)
+    expect(all).toHaveLength(18)
+    expect(new Set(all).size).toBe(18)
     expect(all.filter((id) => /app_runtime|hosted|deploy|publish|square/i.test(id))).toEqual([])
   })
 
@@ -152,6 +155,7 @@ describe("AC-38 — three bearing surfaces, all of them existing pages", () => {
       Array.from(routes.matchAll(/permission:\s*["']([a-z_]+)["']/g)).map((m) => m[1]),
     )
     expect([...declared].sort()).toEqual([
+      "agent", // S10b-5: agent console + approvals web menu
       "board",
       "build",
       "create_app",

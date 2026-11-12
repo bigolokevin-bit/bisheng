@@ -57,6 +57,7 @@ _ROLE_UI_ADMIN_CHILDREN = frozenset(
         "evaluation",
         "dataset",
         "mark_task",
+        "agent",
     }
 )
 
@@ -89,6 +90,7 @@ _WEB_MENU_ADMIN_ALL = frozenset(
         "mark_task",
         "board",
         "create_dashboard",
+        "agent",
     }
 )
 

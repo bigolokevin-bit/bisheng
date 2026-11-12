@@ -60,6 +60,7 @@ class WebMenuResource(Enum):
     DATASET = "dataset"  # Dataset management
     MARK_TASK = "mark_task"  # Annotation tasks
     BOARD = "board"  # Dashboard / kanban
+    AGENT = "agent"  # Digital-employee console (S10b-5)
     # System management
     SUBSCRIPTION = "subscription"  # Subscription management
     # Workbench sidebar (user portal) — granular toggles under ``workstation``
