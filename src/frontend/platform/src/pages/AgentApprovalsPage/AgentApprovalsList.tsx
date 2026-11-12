@@ -235,7 +235,9 @@ export function AgentApprovalsList({
                   return (
                     <TableRow key={row.approvalId} data-testid={`agent-approval-row-${row.approvalId}`}>
                       <TableCell className="max-w-[220px] min-w-0">
-                        <div className="truncate" title={row.approvalId}>
+                        {/* Wrap instead of ellipsis: reviewers must be able to
+                            read the full approvalId from the list screenshot. */}
+                        <div className="break-all" title={row.approvalId}>
                           {row.approvalId}
                         </div>
                       </TableCell>
