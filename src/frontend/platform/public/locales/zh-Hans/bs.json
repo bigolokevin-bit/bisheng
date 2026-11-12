@@ -4306,6 +4306,12 @@
       "cursorNote": "游标分页占位（真实分页接入 E11 后生效）"
     },
     "overview": {
+      "policy": {
+        "approvalRequiredOnWrite": "写入需审批"
+      },
+      "scope": {
+        "tenant": "租户级"
+      },
       "workstations": "工位",
       "workstationMore": "等 {{count}} 个",
       "pendingApprovals": "待办审批",

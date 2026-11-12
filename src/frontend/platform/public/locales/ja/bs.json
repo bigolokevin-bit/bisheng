@@ -4306,6 +4306,12 @@
       "cursorNote": "カーソルページネーションの仮置き（E11 接続後に有効）"
     },
     "overview": {
+      "policy": {
+        "approvalRequiredOnWrite": "書き込みに承認が必要"
+      },
+      "scope": {
+        "tenant": "テナント"
+      },
       "workstations": "拠点",
       "workstationMore": "ほか {{count}} 件",
       "pendingApprovals": "承認待ち",

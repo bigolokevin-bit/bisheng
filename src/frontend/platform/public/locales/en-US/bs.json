@@ -4361,6 +4361,12 @@
       "cursorNote": "Cursor pagination placeholder (effective after E11 integration)"
     },
     "overview": {
+      "policy": {
+        "approvalRequiredOnWrite": "Approval required for writes"
+      },
+      "scope": {
+        "tenant": "Tenant"
+      },
       "workstations": "Workstations",
       "workstationMore": "and {{count}} more",
       "pendingApprovals": "Pending approvals",

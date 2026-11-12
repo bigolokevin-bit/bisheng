@@ -114,7 +114,8 @@ describe('AgentOverviewTab', () => {
     await screen.findByText('v3');
     expect(screen.getAllByText('Koi Claw (stub demo)').length).toBeGreaterThanOrEqual(1);
     expect(await screen.findByText(/active · wechat/)).toBeTruthy();
-    expect(screen.getByText('agentConsole.overview.pendingCount 2')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.overview.pendingApprovals')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('space:store-visit')).toBeInTheDocument();
     expect(screen.getByText('agentConsole.cost.pending')).toBeInTheDocument();
     // cost red line: no currency numbers anywhere
@@ -126,7 +127,8 @@ describe('AgentOverviewTab', () => {
     await screen.findByText('agentConsole.workstation.unavailable');
     expect(screen.getByText('agentConsole.overview.versionUnknown')).toBeInTheDocument();
     expect(screen.getByText('agentConsole.overview.noGrants')).toBeInTheDocument();
-    expect(screen.getByText('agentConsole.overview.pendingCount 0')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.overview.pendingApprovals')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 
   it('shows the workstation empty copy when the list exists but is empty', async () => {

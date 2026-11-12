@@ -21,6 +21,32 @@ export interface AgentListPageProps {
 }
 
 /**
+ * Small-viewport flag for the card/table layout switch.
+ * Falls back to false when `matchMedia` is unavailable (jsdom/SSR).
+ */
+function useIsNarrow(): boolean {
+  const query = '(max-width: 639px)';
+  const [narrow, setNarrow] = useState<boolean>(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia(query).matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+    const mql = window.matchMedia(query);
+    const handleChange = () => setNarrow(mql.matches);
+    if (typeof mql.addEventListener !== 'function') {
+      return undefined;
+    }
+    mql.addEventListener('change', handleChange);
+    return () => mql.removeEventListener('change', handleChange);
+  }, []);
+  return narrow;
+}
+
+/**
  * Read-only employee list shell (E11 EmployeeSummary).
  * Cursor pagination placeholder: E11 returns no `total`, so we offer
  * "load more" on `nextCursor` instead of numbered paging.
@@ -34,6 +60,7 @@ export function AgentListPage({ api, pageSize = 20, onSelect }: AgentListPagePro
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<{ code?: string } | null>(null);
   const reqSeq = useRef(0);
+  const narrow = useIsNarrow();
 
   const load = useCallback(
     async (kw: string, cursor?: string) => {
@@ -99,6 +126,32 @@ export function AgentListPage({ api, pageSize = 20, onSelect }: AgentListPagePro
           />
         ) : rows.length > 0 ? (
           <>
+            {narrow ? (
+              <ul data-testid="agent-list-cards" className="m-0 flex list-none flex-col gap-2 p-0">
+                {rows.map((e) => (
+                  <li key={e.employeeId} className="min-w-0 rounded border border-border-base p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 break-words font-medium">{e.name}</div>
+                      <StatusChip state={e.lifecycleState} />
+                    </div>
+                    <div className="mt-1 break-words text-sm text-text-2">{e.title}</div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-sm text-text-2">
+                      <div className="min-w-0 break-all">{e.ownerUserId}</div>
+                      <div className="shrink-0">{e.updatedAt.replace('T', ' ').replace('Z', '')}</div>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <Button
+                        size="small"
+                        variant="link"
+                        onClick={() => onSelect?.(e.employeeId)}
+                      >
+                        {t('agentConsole.list.detail')}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -141,6 +194,7 @@ export function AgentListPage({ api, pageSize = 20, onSelect }: AgentListPagePro
                 ))}
               </TableBody>
             </Table>
+            )}
             {loading && (
               <div className="flex justify-center py-2">
                 <LoadingIcon className="size-8" />

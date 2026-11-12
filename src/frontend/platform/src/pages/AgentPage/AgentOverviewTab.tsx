@@ -93,6 +93,26 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
 
   const pa = bundle.pendingApprovals;
 
+  // Readable labels for known enum values; unknown values render verbatim.
+  const POLICY_LABEL_KEYS: Record<string, string> = {
+    approval_required_on_write: 'agentConsole.overview.policy.approvalRequiredOnWrite',
+  };
+  const SCOPE_LABEL_KEYS: Record<string, string> = {
+    tenant: 'agentConsole.overview.scope.tenant',
+  };
+  const policyValue = bundle.config.data?.version?.responsePolicy;
+  const scopeValue = bundle.config.data?.version?.memoryScope;
+  const policyText = policyValue
+    ? POLICY_LABEL_KEYS[policyValue]
+      ? t(POLICY_LABEL_KEYS[policyValue])
+      : policyValue
+    : '—';
+  const scopeText = scopeValue
+    ? SCOPE_LABEL_KEYS[scopeValue]
+      ? t(SCOPE_LABEL_KEYS[scopeValue])
+      : scopeValue
+    : '—';
+
   return (
     <div className="w-full max-w-full">
       <AgentSummaryHeader employee={employee} versionNo={versionNo} />
@@ -104,21 +124,17 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
         <dt className="text-text-2">{t('agentConsole.overview.pendingApprovals')}</dt>
         <dd>
           {pa.ok && pa.data ? (
-            <Tag color="approving">{`${t('agentConsole.overview.pendingCount')} ${pa.data.count}`}</Tag>
+            <Tag color="approving">{String(pa.data.count)}</Tag>
           ) : (
             t('agentConsole.overview.pendingUnavailable')
           )}
         </dd>
 
         <dt className="text-text-2">{t('agentConsole.overview.responsePolicy')}</dt>
-        <dd className="min-w-0 break-all">
-          {bundle.config.data?.version?.responsePolicy ?? '—'}
-        </dd>
+        <dd className="min-w-0 break-all">{policyText}</dd>
 
         <dt className="text-text-2">{t('agentConsole.overview.memoryScope')}</dt>
-        <dd className="min-w-0 break-all">
-          {bundle.config.data?.version?.memoryScope ?? '—'}
-        </dd>
+        <dd className="min-w-0 break-all">{scopeText}</dd>
       </dl>
 
       <div className="mt-4">

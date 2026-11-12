@@ -20,6 +20,7 @@ export function AgentSummaryHeader({ employee, versionNo }: AgentSummaryHeaderPr
           { title: employee.name },
         ]}
         expandLabel={(hidden: number) => String(hidden)}
+        parentMaxWidth={200}
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className="text-h4 break-all">{employee.name}</span>
