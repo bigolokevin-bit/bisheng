@@ -33,6 +33,11 @@ function formatTime(iso: string | null | undefined): string {
   return iso.replace('T', ' ').replace('Z', '');
 }
 
+/** Renders a domain reference object ({ type, id }) as one readable line. */
+function refText(ref: { type: string; id: string } | null | undefined): string {
+  return ref ? `${ref.type} · ${ref.id}` : '—';
+}
+
 /**
  * Read-only AP3 detail. Cross-tenant / unknown ids collapse into a single
  * "not found or not visible" state (the domain 404 is identical for both).
@@ -158,10 +163,10 @@ export function ApprovalDetail({ api, approval }: ApprovalDetailProps) {
         </dd>
 
         <dt className="text-text-2">{t('agentConsole.approvals.requestedBy')}</dt>
-        <dd className="min-w-0 break-all">{row.requestedBy}</dd>
+        <dd className="min-w-0 break-all">{refText(row.requestedBy)}</dd>
 
         <dt className="text-text-2">{t('agentConsole.approvals.onBehalfOf')}</dt>
-        <dd className="min-w-0 break-all">{row.onBehalfOf ?? '—'}</dd>
+        <dd className="min-w-0 break-all">{refText(row.onBehalfOf)}</dd>
 
         <dt className="text-text-2">{t('agentConsole.approvals.reasonText')}</dt>
         <dd className="min-w-0 break-all">{row.reasonText ?? '—'}</dd>

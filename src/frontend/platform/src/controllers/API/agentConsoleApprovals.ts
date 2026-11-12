@@ -24,6 +24,12 @@ export type ApprovalQueryFilter = 'pending' | 'expired';
 
 export type ApprovalRisk = 'low' | 'medium' | 'high';
 
+/** Reference object as serialized by the domain (e.g. requestedBy). */
+export interface ApprovalRef {
+  type: string;
+  id: string;
+}
+
 export interface ApprovalBinding {
   subjectType: string;
   subjectId: string;
@@ -56,8 +62,8 @@ export interface Approval {
   resource?: unknown;
   status: ApprovalStatus;
   riskLevel: ApprovalRisk;
-  requestedBy: string;
-  onBehalfOf?: string | null;
+  requestedBy: ApprovalRef | null;
+  onBehalfOf?: ApprovalRef | null;
   reasonText?: string | null;
   approvers: ApprovalApprover[];
   requiredApprovals: number;
@@ -167,8 +173,8 @@ export const DEMO_APPROVAL_FIXTURES: ApprovalFixture[] = [
       },
       status: 'pending',
       riskLevel: 'high',
-      requestedBy: 'human:requester_demo',
-      onBehalfOf: 'human:user_demo_owner',
+      requestedBy: { type: 'user', id: 'u_demo_requester' },
+      onBehalfOf: { type: 'human', id: 'user_demo_owner' },
       reasonText: 'Publish the new employee version',
       approvers: [{ userId: DEMO_ASSIGNEE, role: 'owner' }],
       policyDecisionId: 'pd_demo_0001',
@@ -195,7 +201,7 @@ export const DEMO_APPROVAL_FIXTURES: ApprovalFixture[] = [
       },
       status: 'pending',
       riskLevel: 'medium',
-      requestedBy: 'human:requester_demo',
+      requestedBy: { type: 'user', id: 'u_demo_requester' },
       onBehalfOf: null,
       reasonText: 'Second draft publish request',
       approvers: [{ userId: DEMO_ASSIGNEE, role: 'owner' }],
@@ -222,7 +228,7 @@ export const DEMO_APPROVAL_FIXTURES: ApprovalFixture[] = [
       },
       status: 'expired',
       riskLevel: 'low',
-      requestedBy: 'human:requester_demo',
+      requestedBy: { type: 'user', id: 'u_demo_requester' },
       onBehalfOf: null,
       reasonText: 'Escalated access that was never decided',
       approvers: [{ userId: DEMO_ASSIGNEE, role: 'peer' }],
@@ -250,7 +256,7 @@ export const DEMO_APPROVAL_FIXTURES: ApprovalFixture[] = [
       },
       status: 'pending',
       riskLevel: 'high',
-      requestedBy: 'human:requester_demo',
+      requestedBy: { type: 'user', id: 'u_demo_requester' },
       onBehalfOf: null,
       reasonText: 'Ownership handover for another reviewer',
       approvers: [{ userId: 'human:someone-else', role: 'owner' }],

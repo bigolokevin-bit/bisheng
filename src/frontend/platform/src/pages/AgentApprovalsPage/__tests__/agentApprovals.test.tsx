@@ -62,7 +62,7 @@ function makeApproval(approvalId: string): Approval {
     },
     status: 'pending',
     riskLevel: 'high',
-    requestedBy: 'human:requester_demo',
+    requestedBy: { type: 'user', id: 'u_demo_requester' },
     onBehalfOf: null,
     reasonText: `Reason for ${approvalId}`,
     approvers: [{ userId: DEMO_ASSIGNEE, role: 'owner' }],
@@ -172,7 +172,7 @@ describe('AgentApprovalsPage', () => {
     );
     expect(screen.getByText('Publish the new employee version')).toBeTruthy();
     expect(screen.getByText('th_demo_0001')).toBeTruthy();
-    expect(screen.getByText('human:requester_demo')).toBeTruthy();
+    expect(screen.getByText('user · u_demo_requester')).toBeTruthy();
     expect(
       screen.getByText(`${DEMO_ASSIGNEE} · owner`),
     ).toBeTruthy();
@@ -182,7 +182,7 @@ describe('AgentApprovalsPage', () => {
     expect(
       screen.getByText('agentConsole.approvals.onBehalfOf'),
     ).toBeTruthy();
-    expect(screen.getByText('human:user_demo_owner')).toBeTruthy();
+    expect(screen.getByText('human · user_demo_owner')).toBeTruthy();
 
     // Back returns to the list.
     fireEvent.click(screen.getByText('agentConsole.detail.back'));
