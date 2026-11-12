@@ -2241,6 +2241,7 @@
   "department.accountDisabledToast": "账号已停用",
   "department.all": "全部",
   "menu.department": "组织管理",
+  "menu.agentConsole": "数字员工控制台",
   "department.assignRolesEmptyHint": "暂无可分配角色，请先在角色管理中创建可见角色",
   "department.refreshRoles": "刷新角色",
   "department.memberEditTitleLocal": "编辑人员（本地）",
@@ -4271,6 +4272,74 @@
       "member": "成员",
       "admin": "管理员",
       "children": "包含下级部门"
+    }
+  },
+  "agentConsole": {
+        "auth": {
+      "expired": "登录已失效，请重新登录",
+      "relogin": "重新登录"
+    },
+    "breadcrumb": {
+      "root": "数字员工控制台"
+    },
+    "cost": {
+      "pending": "成本汇总待契约"
+    },
+    "detail": {
+      "back": "返回"
+    },
+    "lifecycle": {
+      "draft": "草稿",
+      "onboarding": "入职中",
+      "active": "在岗",
+      "paused": "已暂停",
+      "offboarding": "离职中",
+      "suspended": "已停用",
+      "archived": "已归档"
+    },
+    "list": {
+      "detail": "详情",
+      "colName": "姓名",
+      "colTitle": "岗位",
+      "colLifecycle": "状态",
+      "colOwner": "负责人",
+      "colUpdatedAt": "更新时间",
+      "colAction": "操作",
+      "searchPlaceholder": "搜索员工姓名或岗位",
+      "empty": "未找到员工",
+      "emptyHint": "调整关键字后重试",
+      "error": "员工列表加载失败",
+      "retry": "重试",
+      "loadMore": "加载更多"
+    },
+    "overview": {
+      "complex": "自定义",
+      "policy": {
+        "approvalRequiredOnWrite": "写入需审批"
+      },
+      "scope": {
+        "tenant": "租户级"
+      },
+      "workstations": "工位",
+      "workstationMore": "等 {{count}} 个",
+      "pendingApprovals": "待办审批",
+      "pendingCount": "待办审批",
+      "pendingUnavailable": "待办审批不可用",
+      "pendingWiring": "待接线",
+      "versionUnknown": "版本未知",
+      "responsePolicy": "响应策略",
+      "memoryScope": "记忆范围",
+      "grantsTitle": "授权摘要",
+      "noGrants": "暂无授权",
+      "error": "员工概览加载失败",
+      "grantColScope": "范围",
+      "grantColResource": "资源",
+      "grantColActions": "动作",
+      "grantColExpires": "过期"
+    },
+    "workstation": {
+      "empty": "暂无工位",
+      "unavailable": "工位状态不可用"
     }
   }
 }

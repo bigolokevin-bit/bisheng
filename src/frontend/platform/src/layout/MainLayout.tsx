@@ -318,6 +318,18 @@ export default function MainLayout() {
                                     </span>
                                 </NavLink>
                             )}
+                            {/* Digital-employee console: entry reachable for any logged-in user (permission wiring pending). */}
+                            <NavLink
+                              to="/agent"
+                              className={({ isActive }) =>
+                                `navlink inline-flex items-center rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]${isActive ? " active" : ""}`
+                              }
+                            >
+                                <Outlined.People className="h-4 w-4 mr-2 shrink-0" />
+                                <span className="mx-[14px] max-w-none whitespace-nowrap text-[14px] leading-none">
+                                  {t("menu.agentConsole")}
+                                </span>
+                              </NavLink>
                             {showAdminNav("evaluation") && (
                                 <NavLink
                                     to={isMenu("evaluation") ? "/evaluation" : "/menu-pending?menu=evaluation"}

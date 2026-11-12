@@ -34,6 +34,7 @@ const LabelPage = lazy(() => import("@/pages/LabelPage"));
 const TaskAppChats = lazy(() => import("@/pages/LabelPage/taskAppChats"));
 const TaskApps = lazy(() => import("@/pages/LabelPage/taskApps"));
 const LogPage = lazy(() => import("@/pages/LogPage").then(module => ({ default: module.LogPage })));
+const AgentConsolePage = lazy(() => import("@/pages/AgentPage").then(module => ({ default: module.AgentPage })));
 const AppChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/appChatDetail"));
 const DailyChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/dailyChatDetail"));
 const Doc = lazy(() => import("@/pages/ModelPage/doc"));
@@ -115,6 +116,7 @@ const privateRouter = [
       { path: "tenant", element: <TenantPage />, permission: 'sys' },
       { path: "department", element: <Navigate to="/sys" replace /> },
       { path: "menu-pending", element: <MenuPermissionPlaceholder /> },
+      { path: "agent", element: <AgentConsolePage /> },
     ],
   },
   { path: "dashboard/:id", element: <EditorPage />, errorElement: <RouteErrorBoundary />, permission: 'board', },

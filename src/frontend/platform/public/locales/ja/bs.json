@@ -2241,6 +2241,7 @@
   "department.accountDisabledToast": "アカウントを停止しました",
   "department.all": "すべて",
   "menu.department": "組織管理",
+  "menu.agentConsole": "エージェントコンソール",
   "department.assignRolesEmptyHint": "割り当て可能なロールがありません。先にロール管理で可視ロールを作成してください。",
   "department.refreshRoles": "ロールを再読み込み",
   "department.memberEditTitleLocal": "メンバー編集（ローカル）",
@@ -4271,6 +4272,74 @@
       "member": "メンバー",
       "admin": "管理者",
       "children": "下位部門を含む"
+    }
+  },
+  "agentConsole": {
+        "auth": {
+      "expired": "ログインの有効期限が切れました。再度ログインしてください",
+      "relogin": "再ログイン"
+    },
+    "breadcrumb": {
+      "root": "エージェントコンソール"
+    },
+    "cost": {
+      "pending": "コスト集計は契約待ち"
+    },
+    "detail": {
+      "back": "戻る"
+    },
+    "lifecycle": {
+      "draft": "下書き",
+      "onboarding": "オンボーディング中",
+      "active": "稼働中",
+      "paused": "一時停止",
+      "offboarding": "オフボーディング中",
+      "suspended": "利用停止",
+      "archived": "アーカイブ済み"
+    },
+    "list": {
+      "detail": "詳細",
+      "colName": "名前",
+      "colTitle": "役職",
+      "colLifecycle": "ステータス",
+      "colOwner": "責任者",
+      "colUpdatedAt": "更新日時",
+      "colAction": "操作",
+      "searchPlaceholder": "名前または役職で検索",
+      "empty": "エージェントが見つかりません",
+      "emptyHint": "キーワードを変更して再試行",
+      "error": "エージェント一覧の読み込みに失敗",
+      "retry": "再試行",
+      "loadMore": "さらに読み込む"
+    },
+    "overview": {
+      "complex": "カスタム",
+      "policy": {
+        "approvalRequiredOnWrite": "書き込みに承認が必要"
+      },
+      "scope": {
+        "tenant": "テナント"
+      },
+      "workstations": "拠点",
+      "workstationMore": "ほか {{count}} 件",
+      "pendingApprovals": "承認待ち",
+      "pendingCount": "承認待ち",
+      "pendingUnavailable": "承認待ちを取得できません",
+      "pendingWiring": "未接続",
+      "versionUnknown": "バージョン不明",
+      "responsePolicy": "レスポンス方針",
+      "memoryScope": "メモリ範囲",
+      "grantsTitle": "権限サマリー",
+      "noGrants": "権限なし",
+      "error": "エージェント概要の読み込みに失敗",
+      "grantColScope": "範囲",
+      "grantColResource": "リソース",
+      "grantColActions": "操作",
+      "grantColExpires": "有効期限"
+    },
+    "workstation": {
+      "empty": "拠点なし",
+      "unavailable": "拠点の状態を取得できません"
     }
   }
 }
