@@ -13,7 +13,47 @@
  * - E10 `GET /v1/employees/{id}/workstations` -> {items[], nextCursor?}.
  * - AP4 `GET /v1/approvals?assignee=&status=pending` -> slice 1 uses the
  *   pending count only.
+ *
+ * Read tabs (tasks / runs / audit) add listTasks / listRuns / listAudit;
+ * their contract types, stub helpers and demo fixtures live in
+ * `./agentConsoleRead` (600-line file rule) and are re-exported below.
  */
+
+import {
+  DEMO_AUDIT_EVENTS,
+  DEMO_RUNS,
+  DEMO_TASKS,
+  hasAnyAuditFilter,
+  stubKeysetPage,
+  type AuditEvent,
+  type AuditList,
+  type ListAuditParams,
+  type ListRunsParams,
+  type ListTasksParams,
+  type Run,
+  type RunList,
+  type Task,
+  type TaskList,
+} from './agentConsoleRead';
+
+export type {
+  AuditActor,
+  AuditEvent,
+  AuditList,
+  AuditOutcome,
+  AuditResource,
+  ListAuditParams,
+  ListRunsParams,
+  ListTasksParams,
+  Run,
+  RunList,
+  RunStatus,
+  Task,
+  TaskList,
+  TaskPriority,
+  TaskSource,
+  TaskStatus,
+} from './agentConsoleRead';
 
 // ---------- Contract types (subset used by slice 1) ----------
 
@@ -136,6 +176,17 @@ export interface AgentConsoleApi {
   getWorkstations(employeeId: string): Promise<ApiResult<WorkstationList>>;
   /** AP4: assignee=human:<current user> + status=pending; slice 1 returns the count only. */
   countPendingApprovals(assignee: string): Promise<ApiResult<{ count: number }>>;
+  /** T5 read-only task list; the tabs always pass assignee (no unfiltered query). */
+  listTasks(params: ListTasksParams): Promise<TaskList>;
+  /** R5 read-only run list; the tabs always pass employeeId. */
+  listRuns(params: ListRunsParams): Promise<RunList>;
+  /**
+   * A3 read-only audit list. The BFF rejects an unfiltered query with 400
+   * `console.missing_filter`, so callers MUST pass at least one filter
+   * (runId/taskId/actorId/resourceId/action/from/to); the HTTP adapter
+   * throws UpstreamError('console.missing_filter') without sending if not.
+   */
+  listAudit(params: ListAuditParams): Promise<AuditList>;
 }
 
 // ---------- Stub / fixture adapter (tests & preview only; no network, no tokens) ----------
@@ -146,6 +197,9 @@ export interface AgentConsoleFixtures {
   configs?: Record<string, EffectiveConfig>;
   workstations?: Record<string, Workstation[]>;
   pendingApprovalCounts?: Record<string, number>;
+  tasks?: Task[];
+  runs?: Run[];
+  audit?: AuditEvent[];
 }
 
 function mkResult<T>(data: T): ApiResult<T> {
@@ -209,6 +263,37 @@ export function createStubAgentConsoleApi(
       const counts = fixtures.pendingApprovalCounts;
       if (!counts || !(assignee in counts)) return mkResult({ count: 0 });
       return mkResult({ count: counts[assignee] });
+    },
+
+    async listTasks({ assignee, status, dueBefore, limit, cursor }) {
+      let rows = (fixtures.tasks ?? []).slice();
+      if (assignee) rows = rows.filter((t) => t.assignee === assignee);
+      if (status) rows = rows.filter((t) => t.status === status);
+      if (dueBefore) {
+        rows = rows.filter((t) => t.dueAt !== null && t.dueAt <= dueBefore);
+      }
+      return stubKeysetPage(rows, limit, cursor, 200);
+    },
+
+    async listRuns({ employeeId, status, since, limit, cursor }) {
+      let rows = (fixtures.runs ?? []).slice();
+      if (employeeId) rows = rows.filter((r) => r.employeeId === employeeId);
+      if (status) rows = rows.filter((r) => r.status === status);
+      // Not-yet-started rows (startedAt null) survive `since`.
+      if (since) rows = rows.filter((r) => r.startedAt === null || r.startedAt >= since);
+      return stubKeysetPage(rows, limit, cursor, 100);
+    },
+
+    async listAudit({ runId, taskId, actorId, resourceId, action, from, to, limit, cursor }) {
+      let rows = (fixtures.audit ?? []).slice();
+      if (runId) rows = rows.filter((a) => a.runId === runId);
+      if (taskId) rows = rows.filter((a) => a.taskId === taskId);
+      if (actorId) rows = rows.filter((a) => a.actor.id === actorId);
+      if (resourceId) rows = rows.filter((a) => a.resource.id === resourceId);
+      if (action) rows = rows.filter((a) => a.action === action);
+      if (from) rows = rows.filter((a) => a.occurredAt >= from);
+      if (to) rows = rows.filter((a) => a.occurredAt <= to);
+      return stubKeysetPage(rows, limit, cursor, 200);
     },
   };
 }
@@ -323,6 +408,9 @@ export const DEMO_FIXTURES: AgentConsoleFixtures = (() => {
     configs,
     workstations,
     pendingApprovalCounts: { 'human:user_demo_owner': 2 },
+    tasks: DEMO_TASKS,
+    runs: DEMO_RUNS,
+    audit: DEMO_AUDIT_EVENTS,
   };
 })();
 
@@ -464,6 +552,52 @@ export function createHttpAgentConsoleApi(
         };
       }
       return res;
+    },
+
+    async listTasks({ assignee, status, dueBefore, limit, cursor }) {
+      const res = await request<TaskList>('/api/tasks', {
+        assignee,
+        status,
+        dueBefore,
+        limit,
+        cursor,
+      });
+      if (!res.ok || !res.data) {
+        throw new UpstreamError(res.code ?? 'agent.http.unknown');
+      }
+      return res.data;
+    },
+
+    async listRuns({ employeeId, status, since, limit, cursor }) {
+      // Live R5 returns `"nextCursor": null` on the last page (vs E11 which
+      // omits the key); normalize so the UI treats both as "no more pages".
+      const res = await request<RunList & { nextCursor?: string | null }>(
+        '/api/runs',
+        { employeeId, status, since, limit, cursor },
+      );
+      if (!res.ok || !res.data) {
+        throw new UpstreamError(res.code ?? 'agent.http.unknown');
+      }
+      const { nextCursor, items } = res.data;
+      return { items: items ?? [], nextCursor: nextCursor ?? undefined };
+    },
+
+    async listAudit({ runId, taskId, actorId, resourceId, action, from, to, limit, cursor }) {
+      const params = { runId, taskId, actorId, resourceId, action, from, to, limit, cursor };
+      // A3 rejects unfiltered queries (400 console.missing_filter); never
+      // send one, and pass the code through unchanged so the UI shows it.
+      if (!hasAnyAuditFilter(params)) {
+        throw new UpstreamError('console.missing_filter');
+      }
+      const res = await request<
+        AuditList & { events?: AuditEvent[]; nextCursor?: string | null }
+      >('/api/audit', params);
+      if (!res.ok || !res.data) {
+        throw new UpstreamError(res.code ?? 'agent.http.unknown');
+      }
+      // Live A3 wraps rows under `events` (not `items`); normalize both shapes.
+      const rows = res.data.items ?? res.data.events ?? [];
+      return { items: rows, nextCursor: res.data.nextCursor ?? undefined };
     },
   };
 }

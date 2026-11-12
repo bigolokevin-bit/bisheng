@@ -4395,6 +4395,81 @@
     "workstation": {
       "empty": "No workstations",
       "unavailable": "Workstation status unavailable"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "tasks": "Tasks",
+      "runs": "Runs",
+      "audit": "Audit"
+    },
+    "tasks": {
+      "colTitle": "Task",
+      "colStatus": "Status",
+      "colPriority": "Priority",
+      "colDueAt": "Due",
+      "filterStatus": "Filter by status",
+      "expand": "Details",
+      "collapse": "Hide details",
+      "progressNote": "Progress note",
+      "statusReason": "Status reason",
+      "sourceChannel": "Source channel",
+      "status": {
+        "open": "Open",
+        "inProgress": "In progress",
+        "done": "Done",
+        "blocked": "Blocked",
+        "cancelled": "Cancelled"
+      },
+      "priority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High"
+      },
+      "empty": "No tasks",
+      "error": "Failed to load tasks"
+    },
+    "runs": {
+      "colRunId": "Run ID",
+      "colStatus": "Status",
+      "colVersion": "Version",
+      "colTime": "Window",
+      "colCostUsd": "Cost (upstream basis)",
+      "costBasis": "upstream basis",
+      "versionNo": "v{{no}}",
+      "reasonCode": "Reason code",
+      "attemptNo": "Attempts",
+      "taskId": "Task ID",
+      "expand": "Details",
+      "collapse": "Hide details",
+      "status": {
+        "pending": "Queued",
+        "running": "Running",
+        "completed": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "interrupted": "Interrupted"
+      },
+      "empty": "No runs",
+      "error": "Failed to load runs"
+    },
+    "audit": {
+      "colOccurredAt": "Time",
+      "colActor": "Actor",
+      "colAction": "Action",
+      "colResource": "Resource",
+      "colOutcome": "Outcome",
+      "outcome": {
+        "success": "Success",
+        "failure": "Failure",
+        "denied": "Denied",
+        "pending": "Pending"
+      },
+      "decision": "Decision",
+      "responsibleHumanId": "Responsible human",
+      "expand": "Details",
+      "collapse": "Hide details",
+      "empty": "No matching audit events",
+      "unavailable": "Audit unavailable (upstream.unavailable)"
     }
   }
 }

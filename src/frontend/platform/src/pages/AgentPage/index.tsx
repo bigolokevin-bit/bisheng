@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@bisheng/ui';
+import { Button, Tabs } from '@bisheng/ui';
 import type { AgentConsoleApi } from '@/controllers/API/agent';
 import { createHttpAgentConsoleApi } from '@/controllers/API/agent';
 import { AgentListPage } from './AgentListPage';
 import { AgentOverviewTab } from './AgentOverviewTab';
+import { AgentTasksTab } from './AgentTasksTab';
+import { AgentRunsTab } from './AgentRunsTab';
+import { AgentAuditTab } from './AgentAuditTab';
 
 /**
  * Default real adapter: same-origin `/agent-api` -> console BFF, using the
@@ -28,9 +31,9 @@ export interface AgentPageProps {
 }
 
 /**
- * Console page shell: employee list <-> overview panel.
- * Single-tab stage does not mount the shared Tabs control yet (its spec
- * requires >= 2 items); Tabs lands together with the second tab.
+ * Console page shell: employee list <-> detail tabs (overview / tasks /
+ * runs / audit). All tabs are read-only; inactive tabs are not mounted, so
+ * they issue no requests until opened (Radix unmounts inactive panels).
  */
 export function AgentPage({ api }: AgentPageProps) {
   const { t } = useTranslation();
@@ -45,7 +48,34 @@ export function AgentPage({ api }: AgentPageProps) {
             {t('agentConsole.detail.back')}
           </Button>
         </div>
-        <AgentOverviewTab api={resolvedApi} employeeId={employeeId} />
+        <Tabs
+          aria-label={t('agentConsole.breadcrumb.root')}
+          defaultActiveKey="overview"
+          items={[
+            {
+              key: 'overview',
+              label: t('agentConsole.tabs.overview'),
+              children: (
+                <AgentOverviewTab api={resolvedApi} employeeId={employeeId} />
+              ),
+            },
+            {
+              key: 'tasks',
+              label: t('agentConsole.tabs.tasks'),
+              children: <AgentTasksTab api={resolvedApi} employeeId={employeeId} />,
+            },
+            {
+              key: 'runs',
+              label: t('agentConsole.tabs.runs'),
+              children: <AgentRunsTab api={resolvedApi} employeeId={employeeId} />,
+            },
+            {
+              key: 'audit',
+              label: t('agentConsole.tabs.audit'),
+              children: <AgentAuditTab api={resolvedApi} employeeId={employeeId} />,
+            },
+          ]}
+        />
       </div>
     );
   }

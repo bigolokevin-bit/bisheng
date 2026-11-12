@@ -4340,6 +4340,81 @@
     "workstation": {
       "empty": "拠点なし",
       "unavailable": "拠点の状態を取得できません"
+    },
+    "tabs": {
+      "overview": "概要",
+      "tasks": "タスク",
+      "runs": "実行",
+      "audit": "監査"
+    },
+    "tasks": {
+      "colTitle": "タスク",
+      "colStatus": "ステータス",
+      "colPriority": "優先度",
+      "colDueAt": "期限",
+      "filterStatus": "ステータスで絞り込み",
+      "expand": "詳細",
+      "collapse": "閉じる",
+      "progressNote": "進捗メモ",
+      "statusReason": "ステータスの理由",
+      "sourceChannel": "ソースチャネル",
+      "status": {
+        "open": "未着手",
+        "inProgress": "進行中",
+        "done": "完了",
+        "blocked": "ブロック中",
+        "cancelled": "キャンセル済み"
+      },
+      "priority": {
+        "low": "低",
+        "normal": "普通",
+        "high": "高"
+      },
+      "empty": "タスクはありません",
+      "error": "タスク一覧の読み込みに失敗"
+    },
+    "runs": {
+      "colRunId": "実行 ID",
+      "colStatus": "ステータス",
+      "colVersion": "バージョン",
+      "colTime": "開始–終了",
+      "colCostUsd": "コスト（上流集計ベース）",
+      "costBasis": "上流集計ベース",
+      "versionNo": "v{{no}}",
+      "reasonCode": "理由コード",
+      "attemptNo": "試行回数",
+      "taskId": "タスク ID",
+      "expand": "詳細",
+      "collapse": "閉じる",
+      "status": {
+        "pending": "待機中",
+        "running": "実行中",
+        "completed": "完了",
+        "failed": "失敗",
+        "cancelled": "キャンセル済み",
+        "interrupted": "中断"
+      },
+      "empty": "実行はありません",
+      "error": "実行一覧の読み込みに失敗"
+    },
+    "audit": {
+      "colOccurredAt": "時刻",
+      "colActor": "実行者",
+      "colAction": "操作",
+      "colResource": "リソース",
+      "colOutcome": "結果",
+      "outcome": {
+        "success": "成功",
+        "failure": "失敗",
+        "denied": "拒否",
+        "pending": "保留"
+      },
+      "decision": "決定",
+      "responsibleHumanId": "責任者",
+      "expand": "詳細",
+      "collapse": "閉じる",
+      "empty": "一致する監査イベントはありません",
+      "unavailable": "監査を利用できません（upstream.unavailable）"
     }
   }
 }

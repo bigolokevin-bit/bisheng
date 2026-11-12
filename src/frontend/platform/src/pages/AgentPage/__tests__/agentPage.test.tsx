@@ -7,20 +7,42 @@
  * asserted as DOM/class structure (break-all on long-string cells); the
  * pixel-level check is reported as NOT MEASURED.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
+  createHttpAgentConsoleApi,
   createStubAgentConsoleApi,
   DEMO_FIXTURES,
+  AuthError,
+  UpstreamError,
   type AgentConsoleApi,
+  type AuditList,
   type EmployeeList,
+  type RunList,
+  type TaskList,
 } from '@/controllers/API/agent';
+import { DEMO_RUN1 } from '@/controllers/API/agentConsoleRead';
 import { AgentListPage } from '../AgentListPage';
 import { AgentOverviewTab } from '../AgentOverviewTab';
 import { AgentPage } from '../index';
 import { lifecycleTagColor, StatusChip } from '../StatusChip';
+import { AgentTasksTab } from '../AgentTasksTab';
+import { AgentRunsTab } from '../AgentRunsTab';
+import { AgentAuditTab } from '../AgentAuditTab';
 
 afterEach(cleanup);
+
+/** Read-only guard: the new tabs must never expose a write affordance. */
+const expectNoWriteButtons = () => {
+  const buttons = Array.from(document.querySelectorAll('button')).map(
+    (b) => b.textContent ?? '',
+  );
+  expect(
+    buttons.some((label) =>
+      /create|delete|edit|publish|stop|start/i.test(label),
+    ),
+  ).toBe(false);
+};
 
 const EMP1 = '01DEMOEMPLOYEE000000000001';
 const EMP2 = '01DEMOEMPLOYEE000000000002';
@@ -158,5 +180,277 @@ describe('AgentPage shell', () => {
         /create|delete|edit|publish|stop|start/i.test(label),
       ),
     ).toBe(false);
+  });
+
+  it('detail view mounts the four tabs and switches to tasks lazily', async () => {
+    const base = stub();
+    // Inactive tabs are not mounted, so tasks must not be fetched yet.
+    const listTasks = vi.fn(base.listTasks);
+    render(<AgentPage api={{ ...base, listTasks }} />);
+    await screen.findByText('Koi Claw (stub demo)');
+    fireEvent.click(screen.getAllByText('agentConsole.list.detail')[0]);
+    expect(screen.getByRole('tab', { name: 'agentConsole.tabs.overview' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'agentConsole.tabs.tasks' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'agentConsole.tabs.runs' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'agentConsole.tabs.audit' })).toBeInTheDocument();
+    expect(listTasks).not.toHaveBeenCalled();
+    // Radix tab triggers activate on mouseDown (repo idiom:
+    // dshPageNavigation.test.tsx); a bare click leaves aria-selected unchanged.
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'agentConsole.tabs.tasks' }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    await screen.findByText('Draft the store-visit script for the demo group');
+    expect(listTasks).toHaveBeenCalledTimes(1);
+    expect(
+      listTasks.mock.calls[0][0].assignee,
+    ).toBe(`employee:${EMP1}`);
+    expectNoWriteButtons();
+  });
+});
+
+describe('AgentTasksTab (read-only T5)', () => {
+  it('renders stub task rows with frozen §5.7 status/priority labels', async () => {
+    render(<AgentTasksTab api={stub()} employeeId={EMP1} />);
+    await screen.findByText('Draft the store-visit script for the demo group');
+    expect(
+      screen.getByText('Collect review notes for the published digest'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Prepare the weekly channel digest'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.tasks.status.open')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.tasks.status.blocked')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.tasks.priority.high')).toBeInTheDocument();
+  });
+
+  it('expands a row to progressNote / statusReason / source.channel', async () => {
+    render(<AgentTasksTab api={stub()} employeeId={EMP1} />);
+    await screen.findByText('Draft the store-visit script for the demo group');
+    fireEvent.click(screen.getAllByText('agentConsole.tasks.expand')[1]);
+    expect(
+      await screen.findByText('Second draft shared with the reviewer'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('agentConsole.tasks.progressNote'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('agentConsole.tasks.sourceChannel'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getAllByText('agentConsole.tasks.collapse')[0]);
+    expect(
+      screen.queryByText('Second draft shared with the reviewer'),
+    ).toBeNull();
+  });
+
+  it('appends the next cursor page via the load-more button', async () => {
+    render(<AgentTasksTab api={stub()} employeeId={EMP1} pageSize={2} />);
+    await screen.findByText('Draft the store-visit script for the demo group');
+    expect(screen.queryByText('Prepare the weekly channel digest')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'agentConsole.list.loadMore' }));
+    await screen.findByText('Prepare the weekly channel digest');
+    expect(screen.queryByText('agentConsole.list.loadMore')).toBeNull();
+  });
+
+  it('shows the empty state when fixtures have no tasks', async () => {
+    const emptyApi = createStubAgentConsoleApi({ ...DEMO_FIXTURES, tasks: [] });
+    render(<AgentTasksTab api={emptyApi} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.tasks.empty');
+  });
+
+  it('shows error + retry when listTasks fails', async () => {
+    const failing: AgentConsoleApi = {
+      ...stub(),
+      listTasks: async (): Promise<TaskList> => {
+        throw new UpstreamError('agent.http.502');
+      },
+    };
+    render(<AgentTasksTab api={failing} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.tasks.error');
+    expect(screen.getByText('agent.http.502')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.list.retry')).toBeInTheDocument();
+  });
+
+  it('shows the re-login view when listTasks throws AuthError', async () => {
+    const authApi: AgentConsoleApi = {
+      ...stub(),
+      listTasks: async (): Promise<TaskList> => {
+        throw new AuthError();
+      },
+    };
+    render(<AgentTasksTab api={authApi} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.auth.expired');
+    expect(screen.getByText('agentConsole.auth.relogin')).toBeInTheDocument();
+  });
+
+  it('is read-only: no create/edit/delete affordances', async () => {
+    render(<AgentTasksTab api={stub()} employeeId={EMP1} />);
+    await screen.findByText('Draft the store-visit script for the demo group');
+    expectNoWriteButtons();
+  });
+});
+
+describe('AgentRunsTab (read-only R5)', () => {
+  it('renders stub runs, short runId, cost always with the basis label', async () => {
+    const { container } = render(<AgentRunsTab api={stub()} employeeId={EMP1} />);
+    // §5.6: every figure carries its 口径 annotation in the same cell
+    // (combined leaf), so the matchers below are deliberately regexes.
+    await screen.findByText(/0\.42\s+agentConsole\.runs\.costBasis/);
+    expect(screen.getByText(/0\.00\s+agentConsole\.runs\.costBasis/)).toBeInTheDocument();
+    expect(screen.getByText(/0\.05\s+agentConsole\.runs\.costBasis/)).toBeInTheDocument();
+    expect(
+      screen.getByText('01DEMORUN000000000000000001'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('01DEMORUN000000000000000002'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('01DEMORUN000000000000000003'),
+    ).toBeInTheDocument();
+    // times render as one cell of three text nodes; match the row text
+    expect(container.textContent).toMatch(
+      /2026-11-11 01:00:00\s*→\s*2026-11-11 01:04:30/,
+    );
+    // reasonCode is次屏: hidden until the row is expanded
+    expect(screen.queryByText('upstream.timeout')).toBeNull();
+    expect(screen.getByText('agentConsole.runs.status.failed')).toBeInTheDocument();
+    // other employee's cancelled run must not leak through the employee filter
+    expect(screen.queryByText('01DEMORUN000000000000000004')).toBeNull();
+  });
+
+  it('appends the next cursor page via the load-more button', async () => {
+    render(<AgentRunsTab api={stub()} employeeId={EMP1} pageSize={2} />);
+    await screen.findByText(/0\.42\s+agentConsole\.runs\.costBasis/);
+    expect(screen.queryByText(/0\.05\s+agentConsole\.runs\.costBasis/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'agentConsole.list.loadMore' }));
+    await screen.findByText(/0\.05\s+agentConsole\.runs\.costBasis/);
+    expect(
+      screen.getByText('01DEMORUN000000000000000003'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('agentConsole.list.loadMore')).toBeNull();
+    // expand the failed run (second row) to reveal its reasonCode
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'agentConsole.runs.expand' })[1],
+    );
+    await screen.findByText('upstream.timeout');
+  });
+
+  it('shows the empty state when fixtures have no runs', async () => {
+    const emptyApi = createStubAgentConsoleApi({ ...DEMO_FIXTURES, runs: [] });
+    render(<AgentRunsTab api={emptyApi} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.runs.empty');
+  });
+
+  it('shows error + retry when listRuns fails', async () => {
+    const failing: AgentConsoleApi = {
+      ...stub(),
+      listRuns: async (): Promise<RunList> => {
+        throw new Error('stub failure');
+      },
+    };
+    render(<AgentRunsTab api={failing} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.runs.error');
+    expect(screen.getByText('agentConsole.list.retry')).toBeInTheDocument();
+  });
+
+  it('is read-only: no create/edit/delete affordances', async () => {
+    render(<AgentRunsTab api={stub()} employeeId={EMP1} />);
+    await screen.findByText(/0\.42\s+agentConsole\.runs\.costBasis/);
+    expectNoWriteButtons();
+  });
+});
+
+describe('AgentAuditTab (read-only A3, filter derived from latest run)', () => {
+  it('derives the runId filter from the most recent run and never queries unfiltered', async () => {
+    const base = stub();
+    const listAudit = vi.fn(base.listAudit);
+    render(<AgentAuditTab api={{ ...base, listAudit }} employeeId={EMP1} />);
+    await screen.findByText('message.propose');
+    expect(listAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: DEMO_RUN1 }),
+    );
+    // The employee identity appears in two rows (propose actor + denied
+    // file-write actor), so the assertion counts matches instead of pinning one.
+    expect(screen.getAllByText('employee · 01DEMOEMPLOYEE000000000001').length).toBe(2);
+    expect(screen.getByText('workspace · ws_demo_1')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('employee · 01DEMOEMPLOYEE000000000001').length,
+    ).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('workspace · ws_demo_1')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.audit.outcome.denied')).toBeInTheDocument();
+    // the failed run's event (run.cancel, DEMO_RUN2) must not leak in
+    expect(screen.queryByText('run.cancel')).toBeNull();
+  });
+
+  it('with no runs, shows empty WITHOUT calling listAudit', async () => {
+    const base = createStubAgentConsoleApi({ ...DEMO_FIXTURES, runs: [] });
+    const listAudit = vi.fn(base.listAudit);
+    render(<AgentAuditTab api={{ ...base, listAudit }} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.audit.empty');
+    expect(listAudit).not.toHaveBeenCalled();
+  });
+
+  it('appends the next cursor page via the load-more button', async () => {
+    const base = stub();
+    render(<AgentAuditTab api={base} employeeId={EMP1} pageSize={2} />);
+    await screen.findByText('message.propose');
+    expect(screen.queryByText('file.write')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'agentConsole.list.loadMore' }));
+    await screen.findByText('file.write');
+  });
+
+  it('shows error + retry when the prelude run query fails', async () => {
+    const failing: AgentConsoleApi = {
+      ...stub(),
+      listRuns: async (): Promise<RunList> => {
+        throw new UpstreamError('console.upstream_down');
+      },
+    };
+    render(<AgentAuditTab api={failing} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.audit.error');
+    expect(screen.getByText('console.upstream_down')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.list.retry')).toBeInTheDocument();
+  });
+
+  it('shows the re-login view when listAudit throws AuthError', async () => {
+    const authApi: AgentConsoleApi = {
+      ...stub(),
+      listAudit: async (): Promise<AuditList> => {
+        throw new AuthError();
+      },
+    };
+    render(<AgentAuditTab api={authApi} employeeId={EMP1} />);
+    await screen.findByText('agentConsole.auth.expired');
+    expect(screen.getByText('agentConsole.auth.relogin')).toBeInTheDocument();
+  });
+
+  it('is read-only: no create/edit/delete affordances', async () => {
+    render(<AgentAuditTab api={stub()} employeeId={EMP1} />);
+    await screen.findByText('message.propose');
+    expectNoWriteButtons();
+  });
+});
+
+describe('agent console HTTP listAudit guard', () => {
+  it('never sends an unfiltered audit query (console.missing_filter)', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    try {
+      const api = createHttpAgentConsoleApi({ getToken: () => null });
+      await expect(api.listAudit({ limit: 50 })).rejects.toThrow(
+        'console.missing_filter',
+      );
+      expect(fetchSpy).not.toHaveBeenCalled();
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [] }),
+      } as unknown as Response);
+      const res = await api.listAudit({ runId: 'r1', limit: 50 });
+      expect(res.items).toEqual([]);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

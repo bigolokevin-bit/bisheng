@@ -4340,6 +4340,81 @@
     "workstation": {
       "empty": "暂无工位",
       "unavailable": "工位状态不可用"
+    },
+    "tabs": {
+      "overview": "概览",
+      "tasks": "任务",
+      "runs": "运行",
+      "audit": "审计"
+    },
+    "tasks": {
+      "colTitle": "任务",
+      "colStatus": "状态",
+      "colPriority": "优先级",
+      "colDueAt": "截止时间",
+      "filterStatus": "按状态筛选",
+      "expand": "详情",
+      "collapse": "收起",
+      "progressNote": "进展说明",
+      "statusReason": "状态原因",
+      "sourceChannel": "来源渠道",
+      "status": {
+        "open": "待处理",
+        "inProgress": "进行中",
+        "done": "已完成",
+        "blocked": "已阻塞",
+        "cancelled": "已取消"
+      },
+      "priority": {
+        "low": "低",
+        "normal": "普通",
+        "high": "高"
+      },
+      "empty": "暂无任务",
+      "error": "任务列表加载失败"
+    },
+    "runs": {
+      "colRunId": "运行 ID",
+      "colStatus": "状态",
+      "colVersion": "版本",
+      "colTime": "起止时间",
+      "colCostUsd": "成本（上游口径）",
+      "costBasis": "上游口径",
+      "versionNo": "v{{no}}",
+      "reasonCode": "原因码",
+      "attemptNo": "尝试次数",
+      "taskId": "任务 ID",
+      "expand": "详情",
+      "collapse": "收起",
+      "status": {
+        "pending": "排队中",
+        "running": "运行中",
+        "completed": "已完成",
+        "failed": "失败",
+        "cancelled": "已取消",
+        "interrupted": "已中断"
+      },
+      "empty": "暂无运行",
+      "error": "运行列表加载失败"
+    },
+    "audit": {
+      "colOccurredAt": "时间",
+      "colActor": "操作者",
+      "colAction": "动作",
+      "colResource": "资源",
+      "colOutcome": "结果",
+      "outcome": {
+        "success": "成功",
+        "failure": "失败",
+        "denied": "已拒绝",
+        "pending": "待定"
+      },
+      "decision": "决策",
+      "responsibleHumanId": "负责人工号",
+      "expand": "详情",
+      "collapse": "收起",
+      "empty": "无匹配审计事件",
+      "unavailable": "审计暂不可用（upstream.unavailable）"
     }
   }
 }
