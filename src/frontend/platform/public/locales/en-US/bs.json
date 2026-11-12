@@ -2292,6 +2292,7 @@
   "department.all": "All",
   "menu.department": "Organization",
   "menu.agentConsole": "Agent Console",
+  "menu.agentApprovals": "Agent Approvals",
   "department.assignRolesEmptyHint": "No assignable roles found. Please create a visible role in Role Management first.",
   "department.refreshRoles": "Refresh roles",
   "department.memberEditTitleLocal": "Edit member (local)",
@@ -4330,6 +4331,63 @@
     }
   },
   "agentConsole": {
+    "approvals": {
+      "filterStatus": "Status filter",
+      "colId": "Approval ID",
+      "colAction": "Action",
+      "colChangeKind": "Change kind",
+      "colSubject": "Subject",
+      "colRisk": "Risk",
+      "colExpires": "Expires",
+      "colStatus": "Status",
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "reviseRequested": "Revise requested",
+        "expired": "Expired",
+        "cancelled": "Cancelled",
+        "consumed": "Consumed",
+        "superseded": "Superseded"
+      },
+      "risk": {
+        "low": "Low risk",
+        "medium": "Medium risk",
+        "high": "High risk"
+      },
+      "verdict": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "revise": "Request revision"
+      },
+      "empty": "No pending approvals",
+      "emptyHint": "Nothing is waiting for your decision right now.",
+      "error": "Failed to load approvals",
+      "notFound": "Not found or no permission to view",
+      "identityUnavailable": "Cannot determine the current user",
+      "identityUnavailableHint": "Sign in again and retry.",
+      "remaining": "{{seconds}}s remaining",
+      "approvalId": "Approval ID",
+      "type": "Type",
+      "action": "Action",
+      "binding": "Subject type",
+      "subjectId": "Subject ID",
+      "changeKind": "Change kind",
+      "targetHash": "Target hash",
+      "effectiveFrom": "Effective from",
+      "requestedBy": "Requested by",
+      "onBehalfOf": "On behalf of",
+      "reasonText": "Reason",
+      "approvers": "Approvers",
+      "requiredApprovals": "Required approvals",
+      "decisions": "Decisions",
+      "decisionsEmpty": "No decisions yet",
+      "expiresAt": "Expires at",
+      "consumedAt": "Consumed at",
+      "policyDecisionId": "Policy decision ID",
+      "runId": "Run ID",
+      "createdAt": "Created at"
+    },
         "auth": {
       "expired": "Login expired, please sign in again",
       "relogin": "Re-login"

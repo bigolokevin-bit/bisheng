@@ -2242,6 +2242,7 @@
   "department.all": "すべて",
   "menu.department": "組織管理",
   "menu.agentConsole": "エージェントコンソール",
+  "menu.agentApprovals": "エージェント承認",
   "department.assignRolesEmptyHint": "割り当て可能なロールがありません。先にロール管理で可視ロールを作成してください。",
   "department.refreshRoles": "ロールを再読み込み",
   "department.memberEditTitleLocal": "メンバー編集（ローカル）",
@@ -4275,6 +4276,63 @@
     }
   },
   "agentConsole": {
+    "approvals": {
+      "filterStatus": "ステータス選択",
+      "colId": "承認 ID",
+      "colAction": "アクション",
+      "colChangeKind": "変更種別",
+      "colSubject": "対象",
+      "colRisk": "リスク",
+      "colExpires": "期限",
+      "colStatus": "ステータス",
+      "status": {
+        "pending": "処理待ち",
+        "approved": "承認済み",
+        "rejected": "却下",
+        "reviseRequested": "修正依頼",
+        "expired": "期限切れ",
+        "cancelled": "キャンセル済み",
+        "consumed": "消費済み",
+        "superseded": "置き換え済み"
+      },
+      "risk": {
+        "low": "低リスク",
+        "medium": "中リスク",
+        "high": "高リスク"
+      },
+      "verdict": {
+        "approve": "承認",
+        "reject": "却下",
+        "revise": "修正要求"
+      },
+      "empty": "未処理の承認はありません",
+      "emptyHint": "現在、対応が必要な承認はありません。",
+      "error": "承認の読み込みに失敗しました",
+      "notFound": "存在しないか表示する権限がありません",
+      "identityUnavailable": "現在のユーザーを特定できません",
+      "identityUnavailableHint": "再ログイン後にもう一度お試しください。",
+      "remaining": "残り {{seconds}} 秒",
+      "approvalId": "承認 ID",
+      "type": "種別",
+      "action": "アクション",
+      "binding": "対象種別",
+      "subjectId": "対象 ID",
+      "changeKind": "変更種別",
+      "targetHash": "対象ハッシュ",
+      "effectiveFrom": "有効開始日時",
+      "requestedBy": "申請者",
+      "onBehalfOf": "代理者",
+      "reasonText": "申請理由",
+      "approvers": "承認者",
+      "requiredApprovals": "必要な承認数",
+      "decisions": "決定記録",
+      "decisionsEmpty": "決定記録はまだありません",
+      "expiresAt": "有効期限",
+      "consumedAt": "消費日時",
+      "policyDecisionId": "ポリシー決定 ID",
+      "runId": "実行 ID",
+      "createdAt": "作成日時"
+    },
         "auth": {
       "expired": "ログインの有効期限が切れました。再度ログインしてください",
       "relogin": "再ログイン"
