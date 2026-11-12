@@ -2291,6 +2291,7 @@
   "department.accountDisabledToast": "Account disabled",
   "department.all": "All",
   "menu.department": "Organization",
+  "menu.agentConsole": "Agent Console",
   "department.assignRolesEmptyHint": "No assignable roles found. Please create a visible role in Role Management first.",
   "department.refreshRoles": "Refresh roles",
   "department.memberEditTitleLocal": "Edit member (local)",
@@ -4329,6 +4330,10 @@
     }
   },
   "agentConsole": {
+        "auth": {
+      "expired": "Login expired, please sign in again",
+      "relogin": "Re-login"
+    },
     "breadcrumb": {
       "root": "Agent Console"
     },
@@ -4372,6 +4377,7 @@
       "pendingApprovals": "Pending approvals",
       "pendingCount": "Pending approvals",
       "pendingUnavailable": "Pending approvals unavailable",
+      "pendingWiring": "Not wired yet",
       "versionUnknown": "Version unknown",
       "responsePolicy": "Response policy",
       "memoryScope": "Memory scope",

@@ -11,6 +11,7 @@ import {
 } from '@/components/bs-ui/table';
 import { LoadingIcon } from '@/components/bs-icons/loading';
 import type { AgentConsoleApi, EmployeeSummary } from '@/controllers/API/agent';
+import { AuthError } from '@/controllers/API/agent';
 import { StatusChip } from './StatusChip';
 
 export interface AgentListPageProps {
@@ -76,9 +77,12 @@ export function AgentListPage({ api, pageSize = 20, onSelect }: AgentListPagePro
         setError(null);
         setRows((prev) => (cursor ? [...prev, ...res.items] : res.items));
         setNextCursor(res.nextCursor);
-      } catch {
+      } catch (err) {
         if (seq !== reqSeq.current) return;
-        setError({ code: 'agent.list.request_failed' });
+        setError({
+          code:
+            err instanceof AuthError ? 'agent.auth.expired' : 'agent.list.request_failed',
+        });
       } finally {
         if (seq === reqSeq.current) {
           setLoading(false);
@@ -115,15 +119,29 @@ export function AgentListPage({ api, pageSize = 20, onSelect }: AgentListPagePro
           </div>
         )}
         {error ? (
-          <StateView
-            title={t('agentConsole.list.error')}
-            description={error.code ?? ''}
-            action={
-              <Button variant="outlined" onClick={() => void load(keyword)}>
-                {t('agentConsole.list.retry')}
-              </Button>
-            }
-          />
+          error.code === 'agent.auth.expired' ? (
+            <StateView
+              title={t('agentConsole.auth.expired')}
+              action={
+                <Button
+                  variant="outlined"
+                  onClick={() => window.location.assign('/login')}
+                >
+                  {t('agentConsole.auth.relogin')}
+                </Button>
+              }
+            />
+          ) : (
+            <StateView
+              title={t('agentConsole.list.error')}
+              description={error.code ?? ''}
+              action={
+                <Button variant="outlined" onClick={() => void load(keyword)}>
+                  {t('agentConsole.list.retry')}
+                </Button>
+              }
+            />
+          )
         ) : rows.length > 0 ? (
           <>
             {narrow ? (

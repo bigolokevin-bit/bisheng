@@ -2241,6 +2241,7 @@
   "department.accountDisabledToast": "アカウントを停止しました",
   "department.all": "すべて",
   "menu.department": "組織管理",
+  "menu.agentConsole": "エージェントコンソール",
   "department.assignRolesEmptyHint": "割り当て可能なロールがありません。先にロール管理で可視ロールを作成してください。",
   "department.refreshRoles": "ロールを再読み込み",
   "department.memberEditTitleLocal": "メンバー編集（ローカル）",
@@ -4274,6 +4275,10 @@
     }
   },
   "agentConsole": {
+        "auth": {
+      "expired": "ログインの有効期限が切れました。再度ログインしてください",
+      "relogin": "再ログイン"
+    },
     "breadcrumb": {
       "root": "エージェントコンソール"
     },
@@ -4317,6 +4322,7 @@
       "pendingApprovals": "承認待ち",
       "pendingCount": "承認待ち",
       "pendingUnavailable": "承認待ちを取得できません",
+      "pendingWiring": "未接続",
       "versionUnknown": "バージョン不明",
       "responsePolicy": "レスポンス方針",
       "memoryScope": "メモリ範囲",

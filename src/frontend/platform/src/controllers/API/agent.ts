@@ -315,3 +315,145 @@ export const DEMO_FIXTURES: AgentConsoleFixtures = (() => {
     pendingApprovalCounts: { 'human:user_demo_owner': 2 },
   };
 })();
+
+// ---------------------------------------------------------------------------
+// Real HTTP adapter (S10b-2 pitch 3). Same-origin `/agent-api` prefix served
+// by Caddy and proxied to the console BFF; the BFF injects tenant + internal
+// token after checking the Bisheng login token via /api/v1/user/info.
+// Never fabricates data: 401 raises AuthError, 5xx/network raises UpstreamError.
+// ---------------------------------------------------------------------------
+
+export class AuthError extends Error {
+  constructor(message = 'login required or expired') {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
+
+export class UpstreamError extends Error {
+  constructor(message = 'console upstream unavailable') {
+    super(message);
+    this.name = 'UpstreamError';
+  }
+}
+
+export interface HttpAgentConsoleApiOptions {
+  /** Same-origin prefix routed by Caddy to the console BFF. */
+  base?: string;
+  /** Token provider; defaults to the Bisheng web token in localStorage. */
+  getToken?: () => string | null;
+}
+
+export function createHttpAgentConsoleApi(
+  options: HttpAgentConsoleApiOptions = {},
+): AgentConsoleApi {
+  const base = options.base ?? '/agent-api';
+  const getToken =
+    options.getToken ??
+    (() =>
+      typeof localStorage !== 'undefined'
+        ? localStorage.getItem('ws_token')
+        : null);
+
+  async function request<T>(
+    path: string,
+    params: Record<string, string | number | undefined>,
+  ): Promise<ApiResult<T>> {
+    const qs = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== '') {
+        qs.set(key, String(value));
+      }
+    }
+    const query = qs.toString();
+    const url = `${base}${path}${query ? `?${query}` : ''}`;
+    const token = getToken();
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(url, { headers });
+    } catch {
+      throw new UpstreamError('console request failed (network)');
+    }
+    if (res.status === 401) {
+      throw new AuthError();
+    }
+    let body: unknown = null;
+    try {
+      body = await res.json();
+    } catch {
+      if (res.ok) {
+        throw new UpstreamError('invalid JSON from console gateway');
+      }
+    }
+    if (!res.ok) {
+      const envelope = body as { code?: string; message?: string } | null;
+      return {
+        ok: false,
+        status: res.status,
+        data: null,
+        code: envelope?.code ?? `agent.http.${res.status}`,
+        message: envelope?.message,
+      };
+    }
+    return { ok: true, status: res.status, data: body as T };
+  }
+
+  return {
+    async listEmployees({ keyword, lifecycleState, limit, cursor }) {
+      const res = await request<EmployeeList>('/api/employees', {
+        keyword,
+        lifecycleState,
+        limit,
+        cursor,
+      });
+      if (!res.ok || !res.data) {
+        throw new UpstreamError(res.code ?? 'agent.http.unknown');
+      }
+      return res.data;
+    },
+    async getEmployee(employeeId) {
+      return request<EmployeeDetail>('/api/employee', { id: employeeId });
+    },
+    async getEffectiveConfig(employeeId) {
+      return request<EffectiveConfig>('/api/effective-config', {
+        id: employeeId,
+      });
+    },
+    async getWorkstations(employeeId) {
+      // E10 page cap is 100; overview only lists the first row + count.
+      return request<WorkstationList>('/api/workstations', {
+        id: employeeId,
+        limit: 100,
+      });
+    },
+    async countPendingApprovals(assignee) {
+      const res = await request<{ items: unknown[]; nextCursor?: string }>(
+        '/api/approvals',
+        { assignee, status: 'pending', limit: 200 },
+      );
+      if (res.ok && res.data) {
+        if (res.data.nextCursor !== undefined) {
+          // Truncated page: the count would understate reality, so we
+          // degrade to the "not wired yet" note instead of showing a lie.
+          return {
+            ok: false,
+            status: res.status,
+            data: null,
+            code: 'agent.approvals_overflow',
+          };
+        }
+        return {
+          ok: true,
+          status: res.status,
+          data: { count: res.data.items.length },
+        };
+      }
+      return res;
+    },
+  };
+}

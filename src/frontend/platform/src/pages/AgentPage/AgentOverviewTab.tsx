@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StateView, Tag } from '@bisheng/ui';
+import { Button, StateView, Tag } from '@bisheng/ui';
 import { LoadingIcon } from '@/components/bs-icons/loading';
 import type {
   AgentConsoleApi,
   ApiResult,
+  EmployeeDetail,
   OverviewBundle,
 } from '@/controllers/API/agent';
+import { AuthError } from '@/controllers/API/agent';
 import { AgentSummaryHeader } from './AgentSummaryHeader';
 import { BudgetNote } from './BudgetNote';
 
@@ -26,18 +28,53 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
   const { t } = useTranslation();
   const [bundle, setBundle] = useState<OverviewBundle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authFailed, setAuthFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
     (async () => {
-      const employee = await api.getEmployee(employeeId);
+      // Network/5xx failures degrade every block independently; an AuthError
+      // from any call means the session is gone -> full re-login view.
+      const degrade = <T,>(err: unknown): ApiResult<T> => ({
+        ok: false,
+        status: 0,
+        data: null,
+        code: err instanceof AuthError ? 'agent.auth.expired' : 'agent.upstream',
+      });
+      let employee: ApiResult<EmployeeDetail>;
+      try {
+        employee = await api.getEmployee(employeeId);
+      } catch (err) {
+        if (!alive) return;
+        if (err instanceof AuthError) {
+          setAuthFailed(true);
+          setLoading(false);
+          return;
+        }
+        employee = degrade<EmployeeDetail>(err);
+        setBundle({
+          employee,
+          config: degrade(err),
+          workstations: degrade(err),
+          pendingApprovals: degrade(err),
+        });
+        setLoading(false);
+        return;
+      }
       const owner = employee.data?.ownerUserId;
+      const settle = async <T,>(p: Promise<ApiResult<T>>): Promise<ApiResult<T>> => {
+        try {
+          return await p;
+        } catch (err) {
+          return degrade<T>(err);
+        }
+      };
       const [config, workstations, pendingApprovals] = await Promise.all([
-        api.getEffectiveConfig(employeeId),
-        api.getWorkstations(employeeId),
+        settle(api.getEffectiveConfig(employeeId)),
+        settle(api.getWorkstations(employeeId)),
         owner
-          ? api.countPendingApprovals(`human:${owner}`)
+          ? settle(api.countPendingApprovals(`human:${owner}`))
           : Promise.resolve({
               ok: false,
               status: 0,
@@ -67,6 +104,22 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
   }
 
   if (!bundle) return null;
+
+  if (authFailed) {
+    return (
+      <StateView
+        title={t('agentConsole.auth.expired')}
+        action={
+          <Button
+            variant="outlined"
+            onClick={() => window.location.assign('/login')}
+          >
+            {t('agentConsole.auth.relogin')}
+          </Button>
+        }
+      />
+    );
+  }
 
   if (!bundle.employee.ok || !bundle.employee.data) {
     return (
@@ -125,6 +178,9 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
         <dd>
           {pa.ok && pa.data ? (
             <Tag color="approving">{String(pa.data.count)}</Tag>
+          ) : pa.code === 'agent.approvals_overflow' ||
+            pa.code === 'agent.approvals_not_wired' ? (
+            t('agentConsole.overview.pendingWiring')
           ) : (
             t('agentConsole.overview.pendingUnavailable')
           )}
