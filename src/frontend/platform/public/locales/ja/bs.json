@@ -4289,8 +4289,11 @@
       "back": "戻る"
     },
     "lifecycle": {
+      "draft": "下書き",
+      "onboarding": "オンボーディング中",
       "active": "稼働中",
       "paused": "一時停止",
+      "offboarding": "オフボーディング中",
       "suspended": "利用停止",
       "archived": "アーカイブ済み"
     },
@@ -4307,8 +4310,7 @@
       "emptyHint": "キーワードを変更して再試行",
       "error": "エージェント一覧の読み込みに失敗",
       "retry": "再試行",
-      "loadMore": "さらに読み込む",
-      "cursorNote": "カーソルページネーションの仮置き（E11 接続後に有効）"
+      "loadMore": "さらに読み込む"
     },
     "overview": {
       "complex": "カスタム",

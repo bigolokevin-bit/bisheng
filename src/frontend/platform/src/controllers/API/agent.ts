@@ -17,7 +17,17 @@
 
 // ---------- Contract types (subset used by slice 1) ----------
 
-export type LifecycleState = 'active' | 'paused' | 'suspended' | 'archived';
+// Lifecycle per contracts EMPLOYEE.md §2: draft -> onboarding -> active ⇄
+// paused; active/paused -> offboarding -> archived. 'suspended' is NOT a
+// lifecycle state (legacy value, 工位语义 only) kept tolerated for old stubs.
+export type LifecycleState =
+  | 'draft'
+  | 'onboarding'
+  | 'active'
+  | 'paused'
+  | 'offboarding'
+  | 'archived'
+  | 'suspended';
 
 /** E11 EmployeeSummary: list rows carry exactly these 6 fields. */
 export interface EmployeeSummary {

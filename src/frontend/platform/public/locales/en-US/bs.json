@@ -4344,8 +4344,11 @@
       "back": "Back"
     },
     "lifecycle": {
+      "draft": "Draft",
+      "onboarding": "Onboarding",
       "active": "Active",
       "paused": "Paused",
+      "offboarding": "Offboarding",
       "suspended": "Suspended",
       "archived": "Archived"
     },
@@ -4362,8 +4365,7 @@
       "emptyHint": "Adjust the keyword and try again",
       "error": "Failed to load employee list",
       "retry": "Retry",
-      "loadMore": "Load more",
-      "cursorNote": "Cursor pagination placeholder (effective after E11 integration)"
+      "loadMore": "Load more"
     },
     "overview": {
       "complex": "Custom",

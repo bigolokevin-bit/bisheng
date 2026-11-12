@@ -322,11 +322,11 @@ export default function MainLayout() {
                             <NavLink
                               to="/agent"
                               className={({ isActive }) =>
-                                `navlink inline-flex rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]${isActive ? " active" : ""}`
+                                `navlink inline-flex items-center rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]${isActive ? " active" : ""}`
                               }
                             >
-                                <Outlined.People className="h-4 w-4 my-4 mr-2 shrink-0" />
-                                <span className="mx-[14px] max-w-[48px] text-[14px] leading-[48px]">
+                                <Outlined.People className="h-4 w-4 mr-2 shrink-0" />
+                                <span className="mx-[14px] max-w-none whitespace-nowrap text-[14px] leading-none">
                                   {t("menu.agentConsole")}
                                 </span>
                               </NavLink>

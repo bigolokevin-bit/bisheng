@@ -4289,8 +4289,11 @@
       "back": "返回"
     },
     "lifecycle": {
+      "draft": "草稿",
+      "onboarding": "入职中",
       "active": "在岗",
       "paused": "已暂停",
+      "offboarding": "离职中",
       "suspended": "已停用",
       "archived": "已归档"
     },
@@ -4307,8 +4310,7 @@
       "emptyHint": "调整关键字后重试",
       "error": "员工列表加载失败",
       "retry": "重试",
-      "loadMore": "加载更多",
-      "cursorNote": "游标分页占位（真实分页接入 E11 后生效）"
+      "loadMore": "加载更多"
     },
     "overview": {
       "complex": "自定义",

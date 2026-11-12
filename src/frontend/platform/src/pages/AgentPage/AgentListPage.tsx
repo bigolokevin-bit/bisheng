@@ -229,9 +229,6 @@ export function AgentListPage({ api, pageSize = 20, onSelect }: AgentListPagePro
                 </Button>
               </div>
             )}
-            <div className="mt-2 text-sm text-text-2">
-              {t('agentConsole.list.cursorNote')}
-            </div>
           </>
         ) : loaded ? (
           <StateView
