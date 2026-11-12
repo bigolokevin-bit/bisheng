@@ -132,11 +132,15 @@ export function AgentListPage({ api, pageSize = 20, onSelect }: AgentListPagePro
                   <li key={e.employeeId} className="min-w-0 rounded border border-border-base p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 break-words font-medium">{e.name}</div>
-                      <StatusChip state={e.lifecycleState} />
+                      {/* Keep the status chip on one line; it must never be squeezed
+                          to a vertical column by a long name. */}
+                      <div className="shrink-0 whitespace-nowrap">
+                        <StatusChip state={e.lifecycleState} />
+                      </div>
                     </div>
                     <div className="mt-1 break-words text-sm text-text-2">{e.title}</div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-sm text-text-2">
-                      <div className="min-w-0 break-all">{e.ownerUserId}</div>
+                      <div className="min-w-0 [overflow-wrap:anywhere]">{e.ownerUserId}</div>
                       <div className="shrink-0">{e.updatedAt.replace('T', ' ').replace('Z', '')}</div>
                     </div>
                     <div className="mt-2 flex justify-end">
