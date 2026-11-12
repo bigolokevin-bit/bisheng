@@ -51,7 +51,7 @@ export function ApprovalDetail({ api, approval }: ApprovalDetailProps) {
   const load = useCallback(async () => {
     setView({ kind: 'loading' });
     try {
-      const fresh = await api.getApproval(approval.approvalId, approval);
+      const fresh = await api.getApproval(approval.approvalId);
       setView(fresh ? { kind: 'ready', approval: fresh } : { kind: 'notFound' });
     } catch (err) {
       setView({

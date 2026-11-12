@@ -166,10 +166,7 @@ describe('AgentApprovalsPage', () => {
 
     fireEvent.click(await screen.findByText('agentConsole.list.detail'));
     await screen.findByTestId('agent-approval-detail');
-    expect(spy).toHaveBeenCalledWith(
-      DEMO_APPROVAL_1,
-      expect.objectContaining({ approvalId: DEMO_APPROVAL_1 }),
-    );
+    expect(spy).toHaveBeenCalledWith(DEMO_APPROVAL_1);
     expect(screen.getByText('Publish the new employee version')).toBeTruthy();
     expect(screen.getByText('th_demo_0001')).toBeTruthy();
     expect(screen.getByText('user · u_demo_requester')).toBeTruthy();
@@ -187,6 +184,23 @@ describe('AgentApprovalsPage', () => {
     // Back returns to the list.
     fireEvent.click(screen.getByText('agentConsole.detail.back'));
     await screen.findByText(DEMO_APPROVAL_1);
+  });
+
+  it('renders the AP3 payload, not the stale list row', async () => {
+    const api = createStubAgentApprovalsApi();
+    const fresh = makeApproval(DEMO_APPROVAL_1);
+    fresh.reasonText = 'Refreshed by AP3';
+    const detailApi: AgentApprovalsApi = {
+      listApprovals: api.listApprovals,
+      getApproval: async () => fresh,
+    };
+    renderPage(detailApi, 'demo-approver');
+    fireEvent.click(await screen.findByText('agentConsole.list.detail'));
+    await screen.findByTestId('agent-approval-detail');
+    expect(screen.getByText('Refreshed by AP3')).toBeTruthy();
+    expect(
+      screen.queryByText('Publish the new employee version'),
+    ).toBeNull();
   });
 
   it('collapses not-found into a single fail-closed message', async () => {
@@ -305,18 +319,19 @@ describe('http approvals adapter', () => {
     expect(calls[0]).toContain('/agent-api/api/approvals?assignee=human%3A1');
   });
 
-  it('keeps the AP4 row when the BFF has no AP3 route (unknown_route)', async () => {
-    const { fn } = fetchMock([
-      {
-        ok: false,
-        status: 404,
-        body: { code: 'console.unknown_route' },
-      },
+  it('fetches AP3 via /api/approval?id= and returns the payload', async () => {
+    const fresh = makeApproval(DEMO_APPROVAL_1);
+    fresh.reasonText = 'Refreshed by AP3';
+    const { fn, calls } = fetchMock([
+      { ok: true, status: 200, body: fresh },
     ]);
     vi.stubGlobal('fetch', fn);
     const api = createHttpAgentApprovalsApi({ getToken: () => null });
-    const row = makeApproval(DEMO_APPROVAL_1);
-    await expect(api.getApproval(DEMO_APPROVAL_1, row)).resolves.toBe(row);
+    const res = await api.getApproval(DEMO_APPROVAL_1);
+    expect(calls[0]).toBe(
+      `/agent-api/api/approval?id=${DEMO_APPROVAL_1}`,
+    );
+    expect(res?.reasonText).toBe('Refreshed by AP3');
   });
 
   it('returns null for approval.not_found and throws other codes', async () => {

@@ -96,15 +96,11 @@ export interface ListApprovalsParams {
 export interface AgentApprovalsApi {
   listApprovals(params: ListApprovalsParams): Promise<ApprovalList>;
   /**
-   * AP3 detail. Resolves null when the domain reports approval.not_found
-   * (404 is identical for "missing", "cross-tenant" and "not your approval"
-   * — never reveal which). `fallback` lets the caller keep the AP4 row when
-   * the BFF does not expose the AP3 route at all (console.unknown_route).
+   * AP3 detail via `/api/approval?id=...`. A 404 `approval.not_found`
+   * resolves to null: cross-tenant ids and unknown ids are
+   * indistinguishable by design (fail closed, never reveal which).
    */
-  getApproval(
-    approvalId: string,
-    fallback?: Approval | null,
-  ): Promise<Approval | null>;
+  getApproval(approvalId: string): Promise<Approval | null>;
 }
 
 /**
@@ -385,16 +381,18 @@ export function createHttpAgentApprovalsApi(
         nextCursor: res.data.nextCursor ?? undefined,
       };
     },
-    async getApproval(approvalId, fallback = null) {
+    async getApproval(approvalId) {
       if (!approvalId) throw new UpstreamError('console.missing_filter');
+      // AP3 real route: /agent-api/api/approval?id=... -> BFF -> domain
+      // GET /v1/approvals/{id}. 404 approval.not_found maps to null so the
+      // UI can show the fail-closed "not found or no access" copy.
       const res = await request<Approval>(
-        `/api/approvals/${encodeURIComponent(approvalId)}`,
-        {},
+        '/api/approval',
+        { id: approvalId },
         getToken,
       );
       if (res.ok && res.data) return res.data;
       if (res.code === 'approval.not_found') return null;
-      if (res.code === 'console.unknown_route' && fallback) return fallback;
       throw new UpstreamError(res.code ?? 'agent.http.unknown');
     },
   };
