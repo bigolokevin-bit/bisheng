@@ -153,18 +153,20 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
   const SCOPE_LABEL_KEYS: Record<string, string> = {
     tenant: 'agentConsole.overview.scope.tenant',
   };
-  const policyValue = bundle.config.data?.version?.responsePolicy;
-  const scopeValue = bundle.config.data?.version?.memoryScope;
-  const policyText = policyValue
-    ? POLICY_LABEL_KEYS[policyValue]
-      ? t(POLICY_LABEL_KEYS[policyValue])
-      : policyValue
-    : '—';
-  const scopeText = scopeValue
-    ? SCOPE_LABEL_KEYS[scopeValue]
-      ? t(SCOPE_LABEL_KEYS[scopeValue])
-      : scopeValue
-    : '—';
+  // Real E5 data may return these as objects (e.g. memoryScope =
+  // {employeeScope, teamScopeIds, retentionDays}); rendering a non-string
+  // value as a React child throws, so objects degrade to a readable label.
+  const enumOrLabel = (value: unknown, labels: Record<string, string>): string => {
+    if (typeof value === 'string' && value) {
+      return labels[value] ? t(labels[value]) : value;
+    }
+    if (value && typeof value === 'object') {
+      return t('agentConsole.overview.complex');
+    }
+    return '—';
+  };
+  const policyText = enumOrLabel(bundle.config.data?.version?.responsePolicy, POLICY_LABEL_KEYS);
+  const scopeText = enumOrLabel(bundle.config.data?.version?.memoryScope, SCOPE_LABEL_KEYS);
 
   return (
     <div className="w-full max-w-full">

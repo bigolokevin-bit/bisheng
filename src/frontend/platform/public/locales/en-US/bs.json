@@ -4366,6 +4366,7 @@
       "cursorNote": "Cursor pagination placeholder (effective after E11 integration)"
     },
     "overview": {
+      "complex": "Custom",
       "policy": {
         "approvalRequiredOnWrite": "Approval required for writes"
       },

@@ -4311,6 +4311,7 @@
       "cursorNote": "カーソルページネーションの仮置き（E11 接続後に有効）"
     },
     "overview": {
+      "complex": "カスタム",
       "policy": {
         "approvalRequiredOnWrite": "書き込みに承認が必要"
       },

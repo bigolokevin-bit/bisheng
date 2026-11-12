@@ -4311,6 +4311,7 @@
       "cursorNote": "游标分页占位（真实分页接入 E11 后生效）"
     },
     "overview": {
+      "complex": "自定义",
       "policy": {
         "approvalRequiredOnWrite": "写入需审批"
       },
