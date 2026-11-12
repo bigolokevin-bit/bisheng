@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StateView, Tag } from '@bisheng/ui';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/bs-ui/table';
 import { LoadingIcon } from '@/components/bs-icons/loading';
 import type {
   AgentConsoleApi,
@@ -96,7 +88,7 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
       : wsItems.length === 0
         ? t('agentConsole.workstation.empty')
         : wsItems.length > 1
-          ? `${wsItems[0].status} · ${wsItems[0].channel} ${t('agentConsole.overview.workstationMore')} ${wsItems.length}`
+          ? `${wsItems[0].status} · ${wsItems[0].channel} ${t('agentConsole.overview.workstationMore', { count: wsItems.length })}`
           : `${wsItems[0].status} · ${wsItems[0].channel}`;
 
   const pa = bundle.pendingApprovals;
@@ -107,7 +99,7 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
 
       <dl className="mt-4 grid w-full grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-[auto_minmax(0,1fr)]">
         <dt className="text-text-2">{t('agentConsole.overview.workstations')}</dt>
-        <dd className="break-all">{workstationText}</dd>
+        <dd className="min-w-0 break-all">{workstationText}</dd>
 
         <dt className="text-text-2">{t('agentConsole.overview.pendingApprovals')}</dt>
         <dd>
@@ -119,12 +111,12 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
         </dd>
 
         <dt className="text-text-2">{t('agentConsole.overview.responsePolicy')}</dt>
-        <dd className="break-all">
+        <dd className="min-w-0 break-all">
           {bundle.config.data?.version?.responsePolicy ?? '—'}
         </dd>
 
         <dt className="text-text-2">{t('agentConsole.overview.memoryScope')}</dt>
-        <dd className="break-all">
+        <dd className="min-w-0 break-all">
           {bundle.config.data?.version?.memoryScope ?? '—'}
         </dd>
       </dl>
@@ -134,32 +126,36 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
           {t('agentConsole.overview.grantsTitle')}
         </div>
         {bundle.config.ok && (bundle.config.data?.grants?.length ?? 0) > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('agentConsole.overview.grantColScope')}</TableHead>
-                <TableHead>{t('agentConsole.overview.grantColResource')}</TableHead>
-                <TableHead>{t('agentConsole.overview.grantColActions')}</TableHead>
-                <TableHead>{t('agentConsole.overview.grantColExpires')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {bundle.config.data?.grants.map((g) => (
-                <TableRow key={g.id}>
-                  <TableCell className="max-w-[200px] min-w-0">
-                    <div className="break-all">{g.scopeType}</div>
-                  </TableCell>
-                  <TableCell className="max-w-[220px] min-w-0">
-                    <div className="break-all">{g.resourceSelector}</div>
-                  </TableCell>
-                  <TableCell className="break-all">{g.actions.join(', ')}</TableCell>
-                  <TableCell>
-                    {g.expiresAt ? g.expiresAt.replace('T', ' ').replace('Z', '') : '—'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {bundle.config.data?.grants.map((g) => (
+              <li key={g.id} className="min-w-0 rounded border border-border-base p-3">
+                <div className="break-all">
+                  <span className="text-text-2">
+                    {t('agentConsole.overview.grantColScope')}
+                  </span>{' '}
+                  {g.scopeType}
+                </div>
+                <div className="break-all">
+                  <span className="text-text-2">
+                    {t('agentConsole.overview.grantColResource')}
+                  </span>{' '}
+                  {g.resourceSelector}
+                </div>
+                <div className="break-all">
+                  <span className="text-text-2">
+                    {t('agentConsole.overview.grantColActions')}
+                  </span>{' '}
+                  {g.actions.join(', ')}
+                </div>
+                <div className="break-all">
+                  <span className="text-text-2">
+                    {t('agentConsole.overview.grantColExpires')}
+                  </span>{' '}
+                  {g.expiresAt ? g.expiresAt.replace('T', ' ').replace('Z', '') : '—'}
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : (
           <div className="mt-1 text-sm text-text-2">
             {t('agentConsole.overview.noGrants')}

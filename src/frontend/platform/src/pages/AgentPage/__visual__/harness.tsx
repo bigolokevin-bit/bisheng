@@ -9,6 +9,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
+// Must run before '@/i18n' initializes the language detector.
+import './setLang';
 import '@/i18n';
 import '@/style/index.css';
 

@@ -4327,5 +4327,59 @@
       "admin": "Administrators",
       "children": "Includes subdepartments"
     }
+  },
+  "agentConsole": {
+    "breadcrumb": {
+      "root": "Agent Console"
+    },
+    "cost": {
+      "pending": "Cost summary pending contract"
+    },
+    "detail": {
+      "back": "Back"
+    },
+    "lifecycle": {
+      "active": "Active",
+      "paused": "Paused",
+      "suspended": "Suspended",
+      "archived": "Archived"
+    },
+    "list": {
+      "detail": "Detail",
+      "colName": "Name",
+      "colTitle": "Title",
+      "colLifecycle": "Status",
+      "colOwner": "Owner",
+      "colUpdatedAt": "Updated At",
+      "colAction": "Actions",
+      "searchPlaceholder": "Search by name or title",
+      "empty": "No employees found",
+      "emptyHint": "Adjust the keyword and try again",
+      "error": "Failed to load employee list",
+      "retry": "Retry",
+      "loadMore": "Load more",
+      "cursorNote": "Cursor pagination placeholder (effective after E11 integration)"
+    },
+    "overview": {
+      "workstations": "Workstations",
+      "workstationMore": "and {{count}} more",
+      "pendingApprovals": "Pending approvals",
+      "pendingCount": "Pending approvals",
+      "pendingUnavailable": "Pending approvals unavailable",
+      "versionUnknown": "Version unknown",
+      "responsePolicy": "Response policy",
+      "memoryScope": "Memory scope",
+      "grantsTitle": "Grants summary",
+      "noGrants": "No grants",
+      "error": "Failed to load employee overview",
+      "grantColScope": "Scope",
+      "grantColResource": "Resource",
+      "grantColActions": "Actions",
+      "grantColExpires": "Expires"
+    },
+    "workstation": {
+      "empty": "No workstations",
+      "unavailable": "Workstation status unavailable"
+    }
   }
 }

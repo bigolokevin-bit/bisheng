@@ -4272,5 +4272,59 @@
       "admin": "管理员",
       "children": "包含下级部门"
     }
+  },
+  "agentConsole": {
+    "breadcrumb": {
+      "root": "数字员工控制台"
+    },
+    "cost": {
+      "pending": "成本汇总待契约"
+    },
+    "detail": {
+      "back": "返回"
+    },
+    "lifecycle": {
+      "active": "在岗",
+      "paused": "已暂停",
+      "suspended": "已停用",
+      "archived": "已归档"
+    },
+    "list": {
+      "detail": "详情",
+      "colName": "姓名",
+      "colTitle": "岗位",
+      "colLifecycle": "状态",
+      "colOwner": "负责人",
+      "colUpdatedAt": "更新时间",
+      "colAction": "操作",
+      "searchPlaceholder": "搜索员工姓名或岗位",
+      "empty": "未找到员工",
+      "emptyHint": "调整关键字后重试",
+      "error": "员工列表加载失败",
+      "retry": "重试",
+      "loadMore": "加载更多",
+      "cursorNote": "游标分页占位（真实分页接入 E11 后生效）"
+    },
+    "overview": {
+      "workstations": "工位",
+      "workstationMore": "等 {{count}} 个",
+      "pendingApprovals": "待办审批",
+      "pendingCount": "待办审批",
+      "pendingUnavailable": "待办审批不可用",
+      "versionUnknown": "版本未知",
+      "responsePolicy": "响应策略",
+      "memoryScope": "记忆范围",
+      "grantsTitle": "授权摘要",
+      "noGrants": "暂无授权",
+      "error": "员工概览加载失败",
+      "grantColScope": "范围",
+      "grantColResource": "资源",
+      "grantColActions": "动作",
+      "grantColExpires": "过期"
+    },
+    "workstation": {
+      "empty": "暂无工位",
+      "unavailable": "工位状态不可用"
+    }
   }
 }
