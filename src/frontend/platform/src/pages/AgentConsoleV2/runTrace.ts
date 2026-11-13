@@ -6,8 +6,9 @@
  * Discipline (design.md §2, verbatim semantics):
  * - Pure function: no state, no network, no React; same input → same output.
  * - Stable seq-ascending order; shuffled input is never guessed.
- * - stepSeq = Number(payload.stepSeq) || seq (falsy/NaN → event seq),
- *   matching trace.py's `int(payload.get("stepSeq") or seq)` governance rule.
+ * - stepSeq = payload.stepSeq when it is an integer ≠ 0, else event seq
+ *   (3.5/NaN/0 fall back), mirroring trace.py's
+ *   `int(payload.get("stepSeq") or seq)` governance rule.
  * - Non-object payload → fail-soft: parsed=false, original kept in
  *   rawPayload, never dropped, never guessed.
  * - Terminal vocabulary {completed, failed, interrupted, cancelled}; a
@@ -15,11 +16,14 @@
  *   greater are kept and flagged postTerminal but derive no steps and
  *   never mutate existing steps; the terminal event itself (seq ==
  *   terminalSeq) is not flagged and stays pairable.
- * - Pair key (stepSeq, toolName): tool_call opens a pending step; a
- *   second call on the same key flags anomaly=duplicate-call on that
- *   event (earliest owns the step); a result matching the key settles
- *   the step (resultSeq recorded) and a later result on the same key
- *   overwrites; an unmatched result flags anomaly=orphan-result.
+ * - Pair key (stepSeq, toolName), two structures like trace.py:
+ *   seenCalls records every key ever called; openCalls holds steps still
+ *   awaiting settlement. tool_call opens a pending step and is only
+ *   registered in openCalls for a first-seen key (a second call on the
+ *   same key flags anomaly=duplicate-call, earliest wins). tool_result
+ *   POPS its key: a hit settles the step (resultSeq recorded), so a
+ *   later result on the same key misses and flags anomaly=orphan-result
+ *   — settled results are never overwritten.
  * - Roles: tool_call=call, tool_result=result, everything else=flow.
  *   token/message events never become steps; approval_requested /
  *   approval_responded are flow and gate nothing, ever.
@@ -116,10 +120,10 @@ function parsePayload(raw: unknown): {
   };
 }
 
-/** 治理口径：Number(payload.stepSeq) || seq，非有限数回落事件 seq。 */
+/** 治理口径：整数且非 0 才采用 payload.stepSeq，3.5/NaN/0 回落事件 seq（镜像 int(...)）。 */
 function stepSeqOf(payload: Record<string, unknown>, seq: number): number {
   const n = Number(payload.stepSeq);
-  return Number.isFinite(n) && n !== 0 ? n : seq;
+  return Number.isInteger(n) && n !== 0 ? n : seq;
 }
 
 /**
@@ -136,9 +140,12 @@ export function buildRunTrace(events: RunEvent[]): RunTraceResult {
   let terminalSeq: number | null = null;
   const traceEvents: TraceEvent[] = [];
   const steps: RunStep[] = [];
-  // Pair key (stepSeq, toolName) → the earliest call's step; results settle
-  // and later results overwrite; a duplicate call never enters this map.
-  const stepsByKey = new Map<string, RunStep>();
+  // Pair key (stepSeq, toolName), mirroring trace.py's two structures:
+  // seenCalls owns "earliest call wins"; openCalls holds unsettled steps
+  // and a result pops its key, so a second result on a settled key misses
+  // and orphans instead of overwriting.
+  const seenCalls = new Set<string>();
+  const openCalls = new Map<string, RunStep>();
 
   for (const { event } of ordered) {
     const seq = event.seq;
@@ -175,7 +182,7 @@ export function buildRunTrace(events: RunEvent[]): RunTraceResult {
       if (toolName !== '') {
         const key = `${stepSeq}\u0000${toolName}`;
         if (item.role === 'call') {
-          const duplicate = stepsByKey.has(key);
+          const duplicate = seenCalls.has(key);
           const step: RunStep = {
             stepSeq,
             toolName,
@@ -187,17 +194,21 @@ export function buildRunTrace(events: RunEvent[]): RunTraceResult {
           };
           steps.push(step);
           if (duplicate) {
-            // 最早为准：重复 call 标记事件本身，不接管配对键。
+            // 最早为准：重复 call 标记事件本身，不再进入 openCalls（与
+            // trace.py 一致，settled 后再来的同键 call 同样只标 duplicate-call）。
             item.anomaly = 'duplicate-call';
           } else {
-            stepsByKey.set(key, step);
+            seenCalls.add(key);
+            openCalls.set(key, step);
           }
         } else {
-          const step = stepsByKey.get(key);
+          const step = openCalls.get(key);
           if (step === undefined) {
+            // openCalls 已被首个 result 弹出：后到同键 result 一律孤挂，
+            // 绝不覆盖已结算 step 的 result（trace.py open_calls.pop 语义）。
             item.anomaly = 'orphan-result';
           } else {
-            // 已结算同键的后到 result 覆盖先前 result。
+            openCalls.delete(key);
             step.resultEvent = item;
             step.resultSeq = seq;
             step.state = 'settled';

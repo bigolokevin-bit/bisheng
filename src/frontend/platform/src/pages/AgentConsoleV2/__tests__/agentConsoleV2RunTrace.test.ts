@@ -145,14 +145,30 @@ describe('buildRunTrace pairing matrix', () => {
     expect(trace.events[0].role).toBe('result');
   });
 
-  it('lets a later result on a settled key overwrite the first result', () => {
+  it('second result on a settled key is orphan-result and the first result persists', () => {
     const trace = buildRunTrace([call(1, 1), result(4, 1), result(6, 1)]);
     expect(trace.steps).toHaveLength(1);
-    expect(trace.steps[0].resultSeq).toBe(6);
-    expect(trace.steps[0].resultEvent?.seq).toBe(6);
-    // Overwriting is not an anomaly; nothing was orphaned.
-    expect(trace.events.find((e) => e.seq === 6)?.anomaly).toBeUndefined();
+    // trace.py pops the key on the first result: settlement is frozen.
+    expect(trace.steps[0].resultSeq).toBe(4);
+    expect(trace.steps[0].resultEvent?.seq).toBe(4);
+    // The later result never overwrites — it orphans on its own event.
     expect(trace.events.find((e) => e.seq === 4)?.anomaly).toBeUndefined();
+    expect(trace.events.find((e) => e.seq === 6)?.anomaly).toBe('orphan-result');
+  });
+
+  it('a call re-issued on a settled key is duplicate-call and never re-opens pairing', () => {
+    const trace = buildRunTrace([call(1, 1), result(2, 1), call(3, 1), result(4, 1)]);
+    // Exactly two rows: the settled call's step + the duplicate's pending step.
+    expect(trace.steps).toHaveLength(2);
+    expect(trace.steps.find((s) => s.callEvent.seq === 1)).toMatchObject({
+      state: 'settled',
+      resultSeq: 2,
+    });
+    const dup = trace.steps.find((s) => s.callEvent.seq === 3);
+    expect(dup).toMatchObject({ state: 'pending', anomaly: 'duplicate-call' });
+    expect(trace.events.find((e) => e.seq === 3)?.anomaly).toBe('duplicate-call');
+    // The duplicate never enters openCalls: its result orphans as well.
+    expect(trace.events.find((e) => e.seq === 4)?.anomaly).toBe('orphan-result');
   });
 
   it('keeps a tool event without toolName as a stream fact, deriving no step', () => {
@@ -215,14 +231,15 @@ describe('buildRunTrace pairing matrix', () => {
     expect(resultEvent?.postTerminal).toBeUndefined();
   });
 
-  it('falls back to the event seq when payload.stepSeq is missing, NaN, or 0', () => {
+  it('falls back to the event seq when payload.stepSeq is missing, NaN, 0, or fractional', () => {
     const trace = buildRunTrace([
       ev(3, 'tool_call', { toolName: 'a' }), // missing → 3
       ev(4, 'tool_call', { stepSeq: 'abc', toolName: 'b' }), // NaN → 4
       ev(5, 'tool_call', { stepSeq: 0, toolName: 'c' }), // falsy → 5
+      ev(6, 'tool_call', { stepSeq: 3.5, toolName: 'd' }), // non-integer → 6
     ]);
-    expect(trace.steps.map((s) => s.stepSeq)).toEqual([3, 4, 5]);
-    expect(trace.events.map((e) => e.stepSeq)).toEqual([3, 4, 5]);
+    expect(trace.steps.map((s) => s.stepSeq)).toEqual([3, 4, 5, 6]);
+    expect(trace.events.map((e) => e.stepSeq)).toEqual([3, 4, 5, 6]);
   });
 
   it('fail-softs on a non-object payload: parsed=false, rawPayload kept, no step', () => {
