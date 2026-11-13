@@ -213,7 +213,9 @@ export function AgentOverviewTab({ api, employeeId }: AgentOverviewTabProps) {
                   <span className="text-text-2">
                     {t('agentConsole.overview.grantColResource')}
                   </span>{' '}
-                  {g.resourceSelector}
+                  {typeof g.resourceSelector === 'string'
+                    ? g.resourceSelector
+                    : String(g.resourceSelector?.type ?? 'grant')}
                 </div>
                 <div className="break-all">
                   <span className="text-text-2">
