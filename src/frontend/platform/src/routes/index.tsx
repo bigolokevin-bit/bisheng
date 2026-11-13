@@ -36,6 +36,7 @@ const TaskApps = lazy(() => import("@/pages/LabelPage/taskApps"));
 const LogPage = lazy(() => import("@/pages/LogPage").then(module => ({ default: module.LogPage })));
 const AgentConsolePage = lazy(() => import("@/pages/AgentPage").then(module => ({ default: module.AgentPage })));
 const AgentApprovalsPage = lazy(() => import("@/pages/AgentApprovalsPage").then(module => ({ default: module.AgentApprovalsPage })));
+const AgentWorkspaceBindPage = lazy(() => import("@/pages/AgentWorkspaceBind/AgentWorkspaceBind").then(module => ({ default: module.AgentWorkspaceBind })));
 const AppChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/appChatDetail"));
 const DailyChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/dailyChatDetail"));
 const Doc = lazy(() => import("@/pages/ModelPage/doc"));
@@ -122,6 +123,11 @@ const privateRouter = [
       {
         path: "agent/approvals",
         element: <AgentApprovalsPage />,
+        permission: "agent",
+      },
+      {
+        path: "agent/workspace",
+        element: <AgentWorkspaceBindPage />,
         permission: "agent",
       },
     ],

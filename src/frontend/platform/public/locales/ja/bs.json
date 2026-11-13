@@ -2243,6 +2243,7 @@
   "menu.department": "組織管理",
   "menu.agentConsole": "エージェントコンソール",
   "menu.agentApprovals": "エージェント承認",
+  "menu.agentWorkspaceBind": "ワークスペース紐付け",
   "department.assignRolesEmptyHint": "割り当て可能なロールがありません。先にロール管理で可視ロールを作成してください。",
   "department.refreshRoles": "ロールを再読み込み",
   "department.memberEditTitleLocal": "メンバー編集（ローカル）",
@@ -4276,6 +4277,30 @@
     }
   },
   "agentConsole": {
+    "workspace": {
+      "tabTitle": "ワークスペース紐付け",
+      "tabBind": "紐付け確認",
+      "tabApprovals": "関連承認",
+      "runIdLabel": "実行ID",
+      "runIdPlaceholder": "例 run_01…",
+      "query": "照会",
+      "loading": "照会中…",
+      "invalidRunId": "不正な実行ID",
+      "noPermission": "権限がありません",
+      "errorQuery": "照会に失敗しました。再試行してください",
+      "emptyTasks": "この実行に紐付くタスクはありません",
+      "emptyApprovals": "この実行に紐付く承認はありません",
+      "scopeNote": "現在のユーザーの保留中承認のみを対象に実行バインドで絞り込み",
+      "colTaskId": "タスクID",
+      "colTitle": "タイトル",
+      "colStatus": "状態",
+      "colAssignee": "担当者",
+      "colApprovalId": "承認ID",
+      "colAction": "操作",
+      "colRisk": "リスク",
+      "colDigest": "引数ダイジェスト",
+      "detail": "詳細"
+},
     "approvals": {
       "filterStatus": "ステータス選択",
       "colId": "承認 ID",

@@ -20,6 +20,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { Separator } from "../components/bs-ui/separator";
 import { darkContext } from "../contexts/darkContext";
 import { userContext } from "../contexts/userContext";
+import { workspaceBindEnabled } from "@/controllers/API/agentConsoleRead";
 import { logoutApi } from "../controllers/API/user";
 import { User } from "../types/api/user";
 import { getBrandAssetUrl } from "../utils/brand";
@@ -345,7 +346,23 @@ export default function MainLayout() {
                                     {t("menu.agentApprovals")}
                                   </span>
                                 </NavLink>
-                              </>
+                                                              {workspaceBindEnabled() &&
+                                  (user.web_menu?.includes("admin") ||
+                                    user.web_menu?.includes("backend")) && (
+                                    <NavLink
+                                      to="/agent/workspace"
+                                      end
+                                      className={({ isActive }) =>
+                                        `navlink inline-flex items-center rounded-lg w-full px-6 hover:bg-nav-hover h-12 mb-[3.5px]${isActive ? " active" : ""}`
+                                      }
+                                    >
+                                      <Outlined.People className="h-4 w-4 mr-2 shrink-0" />
+                                      <span className="mx-[14px] max-w-none whitespace-nowrap text-[14px] leading-none">
+                                        {t("menu.agentWorkspaceBind")}
+                                      </span>
+                                    </NavLink>
+                                  )}
+                                </>
                             )}
                             {showAdminNav("evaluation") && (
                                 <NavLink

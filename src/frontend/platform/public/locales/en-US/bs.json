@@ -2293,6 +2293,7 @@
   "menu.department": "Organization",
   "menu.agentConsole": "Agent Console",
   "menu.agentApprovals": "Agent Approvals",
+  "menu.agentWorkspaceBind": "Workspace binding",
   "department.assignRolesEmptyHint": "No assignable roles found. Please create a visible role in Role Management first.",
   "department.refreshRoles": "Refresh roles",
   "department.memberEditTitleLocal": "Edit member (local)",
@@ -4331,6 +4332,30 @@
     }
   },
   "agentConsole": {
+    "workspace": {
+      "tabTitle": "Workspace run binding",
+      "tabBind": "Binding check",
+      "tabApprovals": "Related approvals",
+      "runIdLabel": "Run ID",
+      "runIdPlaceholder": "e.g. run_01…",
+      "query": "Query",
+      "loading": "Querying…",
+      "invalidRunId": "Invalid run ID",
+      "noPermission": "No permission",
+      "errorQuery": "Query failed, please retry later",
+      "emptyTasks": "No tasks linked to this run",
+      "emptyApprovals": "No approvals linked to this run",
+      "scopeNote": "Scoped to the current user's pending approvals and filtered by run binding",
+      "colTaskId": "Task ID",
+      "colTitle": "Title",
+      "colStatus": "Status",
+      "colAssignee": "Assignee",
+      "colApprovalId": "Approval ID",
+      "colAction": "Action",
+      "colRisk": "Risk",
+      "colDigest": "Args digest",
+      "detail": "Detail"
+},
     "approvals": {
       "filterStatus": "Status filter",
       "colId": "Approval ID",

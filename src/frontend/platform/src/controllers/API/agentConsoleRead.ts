@@ -172,6 +172,14 @@ export function hasAnyAuditFilter(params: ListAuditParams): boolean {
  * `listEmployees` stub exactly: clamp limit (default 20, cap `max`), numeric
  * offset cursor, OMIT the nextCursor key on the last page.
  */
+/**
+ * S10b workspace-bind build-time flag. Off = the page renders nothing and
+ * issues no requests (unreachable); on = /agent/workspace is available.
+ */
+export function workspaceBindEnabled(): boolean {
+  return import.meta.env.VITE_AGENT_WORKSPACE_BIND === '1';
+}
+
 export function stubKeysetPage<T>(
   rows: T[],
   limit: number | undefined,

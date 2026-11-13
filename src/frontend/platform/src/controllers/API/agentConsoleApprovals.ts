@@ -112,7 +112,7 @@ export function approvalWriteEnabled(): boolean {
 }
 
 export interface AgentApprovalsApi {
-  listApprovals(params: ListApprovalsParams): Promise<ApprovalList>;
+  listApprovals(params: ListApprovalsParams, signal?: AbortSignal): Promise<ApprovalList>;
   /**
    * AP3 detail via `/api/approval?id=...`. A 404 `approval.not_found`
    * resolves to null: cross-tenant ids and unknown ids are
@@ -365,6 +365,7 @@ async function request<T>(
   path: string,
   params: Record<string, string | number | undefined>,
   getToken: () => string | null,
+  signal?: AbortSignal,
 ): Promise<Envelope<T>> {
   const search = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -377,7 +378,7 @@ async function request<T>(
   if (token) headers.Authorization = `Bearer ${token}`;
   let res: Response;
   try {
-    res = await fetch(url, { headers });
+    res = await fetch(url, { headers, signal });
   } catch {
     throw new UpstreamError('console request failed (network)');
   }
@@ -456,7 +457,7 @@ export function createHttpAgentApprovalsApi(
     });
 
   return {
-    async listApprovals(params) {
+    async listApprovals(params, signal) {
       // AP4 requires an assignee; never issue an unfiltered query.
       if (!params.assignee) throw new UpstreamError('console.missing_filter');
       const res = await request<
@@ -470,6 +471,7 @@ export function createHttpAgentApprovalsApi(
           cursor: params.cursor,
         },
         getToken,
+        signal,
       );
       if (!res.ok || !res.data) {
         throw new UpstreamError(res.code ?? 'agent.http.unknown');

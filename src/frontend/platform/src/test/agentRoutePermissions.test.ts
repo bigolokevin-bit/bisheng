@@ -38,4 +38,18 @@ describe("agent route permissions (S10b-5)", () => {
   it("an admin holding only the agent menu lands on /agent", () => {
     expect(resolveAdminLandingPath(["agent"], false)).toBe("/agent")
   })
+
+  it("strips the workspace-bind route without the agent grant", () => {
+    const router = getPrivateRouter(["admin"])
+    const paths = pathsOf(router.routes as RouteNode[])
+    expect(paths).not.toContain("agent/workspace")
+    router.dispose()
+  })
+
+  it("keeps the workspace-bind route with the agent grant", () => {
+    const router = getPrivateRouter(["admin", "agent"])
+    const paths = pathsOf(router.routes as RouteNode[])
+    expect(paths).toContain("agent/workspace")
+    router.dispose()
+  })
 })

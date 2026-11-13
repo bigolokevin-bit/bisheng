@@ -177,7 +177,7 @@ export interface AgentConsoleApi {
   /** AP4: assignee=human:<current user> + status=pending; slice 1 returns the count only. */
   countPendingApprovals(assignee: string): Promise<ApiResult<{ count: number }>>;
   /** T5 read-only task list; the tabs always pass assignee (no unfiltered query). */
-  listTasks(params: ListTasksParams): Promise<TaskList>;
+  listTasks(params: ListTasksParams, signal?: AbortSignal): Promise<TaskList>;
   /** R5 read-only run list; the tabs always pass employeeId. */
   listRuns(params: ListRunsParams): Promise<RunList>;
   /**
@@ -456,6 +456,7 @@ export function createHttpAgentConsoleApi(
   async function request<T>(
     path: string,
     params: Record<string, string | number | undefined>,
+    signal?: AbortSignal,
   ): Promise<ApiResult<T>> {
     const qs = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -473,7 +474,7 @@ export function createHttpAgentConsoleApi(
 
     let res: Response;
     try {
-      res = await fetch(url, { headers });
+      res = await fetch(url, { headers, signal });
     } catch {
       throw new UpstreamError('console request failed (network)');
     }
@@ -554,14 +555,15 @@ export function createHttpAgentConsoleApi(
       return res;
     },
 
-    async listTasks({ assignee, status, dueBefore, limit, cursor }) {
+    async listTasks({ assignee, status, dueBefore, runId, limit, cursor }, signal) {
       const res = await request<TaskList>('/api/tasks', {
         assignee,
         status,
         dueBefore,
+        runId,
         limit,
         cursor,
-      });
+      }, signal);
       if (!res.ok || !res.data) {
         throw new UpstreamError(res.code ?? 'agent.http.unknown');
       }
