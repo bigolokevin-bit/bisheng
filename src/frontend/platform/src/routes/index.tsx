@@ -1,5 +1,6 @@
 // @ts-strict-ignore
 import { lazy, useEffect } from "react";
+import { agentConsoleV2Enabled } from "@/pages/AgentConsoleV2/flag";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layout/MainLayout";
 import { LoginPage } from "../pages/LoginPage/login";
@@ -36,6 +37,7 @@ const TaskApps = lazy(() => import("@/pages/LabelPage/taskApps"));
 const LogPage = lazy(() => import("@/pages/LogPage").then(module => ({ default: module.LogPage })));
 const AgentConsolePage = lazy(() => import("@/pages/AgentPage").then(module => ({ default: module.AgentPage })));
 const AgentApprovalsPage = lazy(() => import("@/pages/AgentApprovalsPage").then(module => ({ default: module.AgentApprovalsPage })));
+const AgentConsoleV2Page = lazy(() => import("@/pages/AgentConsoleV2/AgentConsoleV2Page").then(module => ({ default: module.AgentConsoleV2Page })));
 const AppChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/appChatDetail"));
 const DailyChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/dailyChatDetail"));
 const Doc = lazy(() => import("@/pages/ModelPage/doc"));
@@ -118,14 +120,32 @@ const privateRouter = [
       { path: "tenant", element: <TenantPage />, permission: 'sys' },
       { path: "department", element: <Navigate to="/sys" replace /> },
       { path: "menu-pending", element: <MenuPermissionPlaceholder /> },
-      { path: "agent", element: <AgentConsolePage />, permission: "agent" },
-      {
-        path: "agent/approvals",
-        element: <AgentApprovalsPage />,
-        permission: "agent",
-      },
+      // ADR-0012: with the v2 flag on, the agent screens live OUTSIDE the
+      // Bisheng MainLayout and use their own rail/topbar shell; auth and
+      // permission keys stay identical. With the flag off the legacy
+      // in-MainLayout routes below stay byte-identical.
+      ...(agentConsoleV2Enabled()
+        ? []
+        : [
+            { path: "agent", element: <AgentConsolePage />, permission: "agent" },
+            {
+              path: "agent/approvals",
+              element: <AgentApprovalsPage />,
+              permission: "agent",
+            },
+          ]),
     ],
   },
+  ...(agentConsoleV2Enabled()
+    ? [
+        { path: "agent", element: <AgentConsoleV2Page />, permission: "agent" },
+        {
+          path: "agent/approvals",
+          element: <AgentConsoleV2Page initialSection="appr" />,
+          permission: "agent",
+        },
+      ]
+    : []),
   { path: "dashboard/:id", element: <EditorPage />, errorElement: <RouteErrorBoundary />, permission: 'board', },
   { path: "dashboard/share/:boardId", element: <SharePage />, errorElement: <RouteErrorBoundary /> },
   { path: "model/doc", element: <Doc />, errorElement: <RouteErrorBoundary /> },

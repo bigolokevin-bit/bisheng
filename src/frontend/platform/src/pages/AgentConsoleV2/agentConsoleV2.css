@@ -1,0 +1,247 @@
+/*
+ * Console v2 token layer (docs/product/design/console-v2/DESIGN-SYSTEM.md).
+ * EVERY selector is scoped under .agent-app so tokens and rules can never
+ * leak to the rest of the platform. Dark is the default; the light block is
+ * isomorphic (only theme tokens change — zero layout shift on toggle).
+ */
+.agent-app {
+  --background: 240 9% 4.3%;
+  --card: 240 7% 8.4%;
+  --surface: 240 9% 11.8%;
+  --surface-2: 240 10% 15%;
+  --border: rgba(255, 255, 255, 0.16);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --foreground: 220 16% 93%;
+  --muted-foreground: 236 8% 63%;
+  --micro-foreground: 236 8% 55%;
+  --accent: 248 78% 68%;
+  --accent-soft: rgba(129, 118, 247, 0.14);
+  --accent-border: rgba(129, 118, 247, 0.45);
+  --primary: 225 20% 94%;
+  --primary-foreground: #0e0e11;
+  --danger: 1 82% 71%;
+  --danger-soft: rgba(244, 115, 122, 0.14);
+  --warning: 38 90% 66%;
+  --warning-soft: rgba(242, 177, 85, 0.14);
+  --success: 153 58% 50%;
+  --success-soft: rgba(54, 188, 132, 0.14);
+  --neutral-pill-fg: 236 8% 70%;
+  --neutral-pill-bg: rgba(255, 255, 255, 0.07);
+  --hover: rgba(255, 255, 255, 0.04);
+  --scrim: rgba(4, 4, 6, 0.6);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Inter Variable', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  min-height: 100%;
+}
+.agent-app[data-theme='light'] {
+  --background: 225 15% 97%;
+  --card: 0 0% 100%;
+  --surface: 228 20% 97%;
+  --surface-2: 228 14% 94%;
+  --border: 226 12% 87%;
+  --hairline: 240 8% 91%;
+  --foreground: 240 13% 11%;
+  --muted-foreground: 233 7% 39%;
+  --micro-foreground: 230 5% 45%;
+  --accent: 250 58% 46%;
+  --accent-soft: rgba(75, 65, 196, 0.07);
+  --accent-border: rgba(75, 65, 196, 0.35);
+  --primary: #18181e;
+  --primary-foreground: #ffffff;
+  --danger: 357 58% 46%;
+  --danger-soft: rgba(191, 51, 61, 0.12);
+  --warning: 32 78% 33%;
+  --warning-soft: rgba(150, 89, 26, 0.12);
+  --success: 152 65% 25%;
+  --success-soft: rgba(23, 107, 68, 0.12);
+  --neutral-pill-fg: 233 7% 39%;
+  --neutral-pill-bg: 228 14% 94%;
+  --hover: rgba(24, 24, 30, 0.035);
+  --scrim: rgba(24, 24, 30, 0.35);
+}
+.agent-app *:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
+}
+.agent-app .a2-ambient {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 30%;
+  pointer-events: none;
+  background: radial-gradient(60% 100% at 50% 0, var(--accent-soft), transparent);
+}
+.agent-app[data-theme='light'] .a2-ambient { display: none; }
+.agent-app .a2-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  min-height: 100%;
+  overflow-x: clip;
+}
+.agent-app .a2-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+  border-right: 1px solid var(--hairline);
+  background: hsl(var(--card));
+}
+.agent-app .a2-rail-logo {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-weight: 600;
+  color: hsl(var(--accent));
+  background: var(--accent-soft);
+  margin-bottom: 8px;
+}
+.agent-app .a2-rail-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+}
+.agent-app .a2-rail-btn:hover { background: var(--hover); }
+.agent-app .a2-rail-btn.is-active {
+  background: var(--accent-soft);
+  color: hsl(var(--accent));
+}
+.agent-app .a2-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: hsl(var(--danger));
+}
+.agent-app .a2-main { display: flex; flex-direction: column; min-width: 0; }
+.agent-app .a2-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--hairline);
+}
+.agent-app .a2-title { font-size: 15px; font-weight: 600; }
+.agent-app .a2-body { padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+.agent-app .a2-h1 { font-size: 32px; line-height: 40px; font-weight: 600; margin: 0; }
+.agent-app .a2-h2 { font-size: 15px; line-height: 22px; font-weight: 600; margin: 0 0 12px; }
+.agent-app .a2-meta { font-size: 12px; line-height: 16px; color: hsl(var(--muted-foreground)); }
+.agent-app .a2-micro {
+  font-size: 10.5px;
+  line-height: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2-mono {
+  font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.agent-app .a2-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.agent-app .a2-kpi {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: hsl(var(--card));
+  padding: 12px 16px;
+}
+.agent-app .a2-kpi-num {
+  font-size: 40px;
+  line-height: 44px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace;
+}
+.agent-app .a2-card {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: hsl(var(--card));
+  padding: 16px;
+}
+.agent-app .a2-pending {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+}
+.agent-app .a2-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.agent-app .a2-search {
+  flex: 1 1 220px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
+}
+.agent-app .a2-btn {
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  cursor: pointer;
+}
+.agent-app .a2-btn.is-primary {
+  background: hsl(var(--primary));
+  color: var(--primary-foreground);
+  border-color: transparent;
+}
+.agent-app .a2-btn:hover { background: var(--hover); }
+.agent-app .a2-btn.is-primary:hover { background: hsl(var(--primary)); opacity: 0.92; }
+.agent-app .a2-table { width: 100%; border-collapse: collapse; }
+.agent-app .a2-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.agent-app .a2-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--neutral-pill-bg);
+  color: hsl(var(--neutral-pill-fg));
+}
+.agent-app .a2-pill.is-ok { background: var(--success-soft); color: hsl(var(--success)); }
+.agent-app .a2-pill.is-warn { background: var(--warning-soft); color: hsl(var(--warning)); }
+.agent-app .a2-pill.is-danger { background: var(--danger-soft); color: hsl(var(--danger)); }
+.agent-app .a2-pill.is-accent { background: var(--accent-soft); color: hsl(var(--accent)); }
+.agent-app .a2-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.agent-app .a2-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .agent-app *, .agent-app *::before, .agent-app *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

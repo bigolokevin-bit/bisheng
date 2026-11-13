@@ -4331,6 +4331,39 @@
     }
   },
   "agentConsole": {
+    "v2": {
+      "title": "Console",
+      "navEmployees": "Digital employees",
+      "navApprovals": "Approvals",
+      "themeToggle": "Toggle theme",
+      "themeDark": "Dark",
+      "themeLight": "Light",
+      "search": "Search employees",
+      "query": "Query",
+      "loading": "Loading…",
+      "errorQuery": "Query failed, please retry",
+      "emptyList": "No employees",
+      "emptyApprovals": "No pending approvals",
+      "emptyGrants": "No effective grants",
+      "emptyTrend": "Trend data pending",
+      "emptyChain": "Version data pending integration",
+      "emptyBudget": "Budget usage data pending",
+      "colName": "Name",
+      "colId": "ID",
+      "colStatus": "Status",
+      "colOwner": "Owner",
+      "colApproval": "Approval",
+      "colAction": "Action",
+      "colRisk": "Risk",
+      "detail": "Detail",
+      "back": "Back",
+      "identityPanel": "Identity",
+      "versionPanel": "Current version",
+      "grantsBlast": "Blast radius (effective grants)",
+      "quotaPanel": "Budget usage",
+      "kpiOnDutyPage": "On duty (this page)",
+      "kpiPendingMine": "My pending"
+    },
     "approvals": {
       "filterStatus": "Status filter",
       "colId": "Approval ID",
@@ -4400,7 +4433,7 @@
       "runId": "Run ID",
       "createdAt": "Created at"
     },
-        "auth": {
+    "auth": {
       "expired": "Login expired, please sign in again",
       "relogin": "Re-login"
     },

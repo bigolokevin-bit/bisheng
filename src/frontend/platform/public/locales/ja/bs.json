@@ -4276,6 +4276,39 @@
     }
   },
   "agentConsole": {
+    "v2": {
+      "title": "コンソール",
+      "navEmployees": "デジタル社員",
+      "navApprovals": "承認",
+      "themeToggle": "テーマ切替",
+      "themeDark": "ダーク",
+      "themeLight": "ライト",
+      "search": "社員を検索",
+      "query": "照会",
+      "loading": "読み込み中…",
+      "errorQuery": "照会に失敗しました。再試行してください",
+      "emptyList": "社員はいません",
+      "emptyApprovals": "保留中の承認はありません",
+      "emptyGrants": "有効な権限はありません",
+      "emptyTrend": "トレンドデータは未接入",
+      "emptyChain": "バージョンデータ未接続",
+      "emptyBudget": "予算使用量データは未接入",
+      "colName": "名前",
+      "colId": "ID",
+      "colStatus": "状態",
+      "colOwner": "担当者",
+      "colApproval": "承認",
+      "colAction": "操作",
+      "colRisk": "リスク",
+      "detail": "詳細",
+      "back": "戻る",
+      "identityPanel": "アイデンティティ",
+      "versionPanel": "現在のバージョン",
+      "grantsBlast": "爆心地範囲（有効な権限）",
+      "quotaPanel": "予算使用量",
+      "kpiOnDutyPage": "このページの稼働中",
+      "kpiPendingMine": "自分の保留中"
+    },
     "approvals": {
       "filterStatus": "ステータス選択",
       "colId": "承認 ID",
@@ -4345,7 +4378,7 @@
       "runId": "実行 ID",
       "createdAt": "作成日時"
     },
-        "auth": {
+    "auth": {
       "expired": "ログインの有効期限が切れました。再度ログインしてください",
       "relogin": "再ログイン"
     },

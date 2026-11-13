@@ -4276,6 +4276,39 @@
     }
   },
   "agentConsole": {
+    "v2": {
+      "title": "控制台",
+      "navEmployees": "数字员工",
+      "navApprovals": "审批",
+      "themeToggle": "切换主题",
+      "themeDark": "深色",
+      "themeLight": "浅色",
+      "search": "搜索员工",
+      "query": "查询",
+      "loading": "加载中…",
+      "errorQuery": "查询失败，请重试",
+      "emptyList": "暂无员工",
+      "emptyApprovals": "暂无待办审批",
+      "emptyGrants": "暂无生效授权",
+      "emptyTrend": "趋势数据待接入",
+      "emptyChain": "版本数据待接入",
+      "emptyBudget": "预算用量数据待接入",
+      "colName": "名称",
+      "colId": "编号",
+      "colStatus": "状态",
+      "colOwner": "负责人",
+      "colApproval": "审批编号",
+      "colAction": "动作",
+      "colRisk": "风险",
+      "detail": "详情",
+      "back": "返回",
+      "identityPanel": "身份",
+      "versionPanel": "当前版本",
+      "grantsBlast": "爆炸半径（生效授权）",
+      "quotaPanel": "预算用量",
+      "kpiOnDutyPage": "本页在岗",
+      "kpiPendingMine": "我的待办"
+    },
     "approvals": {
       "filterStatus": "筛选状态",
       "colId": "审批 ID",
@@ -4345,7 +4378,7 @@
       "runId": "运行 ID",
       "createdAt": "创建时间"
     },
-        "auth": {
+    "auth": {
       "expired": "登录已失效，请重新登录",
       "relogin": "重新登录"
     },
