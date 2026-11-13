@@ -17,6 +17,8 @@
  * in localStorage, prefers-color-scheme only as the initial value, and the
  * theme switch produces zero layout shift (colors only).
  */
+
+const NARROW_QUERY = '(max-width: 767px)';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -172,10 +174,42 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
     return String(s);
   };
 
+  // Mobile rework (S10b-v2 acceptance): below 768px the list and approvals
+  // panels render single-column cards instead of wide tables. jsdom without a
+  // matchMedia stub stays wide, so existing table tests are unaffected.
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia(NARROW_QUERY).matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(NARROW_QUERY);
+    const onChange = (ev: MediaQueryListEvent) => setNarrow(ev.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  const STATE_LABEL_KEYS: Record<string, string> = {
+    draft: 'agentConsole.states.draft',
+    onboarding: 'agentConsole.states.onboarding',
+    active: 'agentConsole.states.active',
+    paused: 'agentConsole.states.paused',
+    offboarding: 'agentConsole.states.offboarding',
+    archived: 'agentConsole.states.archived',
+  };
+
   const statePill = (state: string) => {
     const cls =
       state === 'active' ? 'is-ok' : state === 'paused' || state === 'suspended' ? 'is-warn' : state === 'archived' || state === 'offboarding' ? 'is-danger' : '';
-    return <span className={`a2-pill ${cls}`}>{t(`agentConsole.states.${state}`, state)}</span>;
+    const key = STATE_LABEL_KEYS[state];
+    if (key === undefined) {
+      // The contract defines exactly six lifecycle states. Anything else is an
+      // upstream bug: log it loudly, then degrade to the raw value.
+      console.error('[AgentConsoleV2] unknown employee lifecycle state:', state);
+      return <span className={`a2-pill ${cls}`}>{state}</span>;
+    }
+    return <span className={`a2-pill ${cls}`}>{t(key)}</span>;
   };
 
   return (
@@ -256,6 +290,25 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
                     <p className="a2-meta" data-testid="agent-v2-list-error">{t('agentConsole.v2.errorQuery')}</p>
                   ) : list.value.length === 0 ? (
                     <p className="a2-meta" data-testid="agent-v2-list-empty">{t('agentConsole.v2.emptyList')}</p>
+                  ) : narrow ? (
+                    <div className="a2-cards">
+                      {list.value.map((e) => (
+                        <div key={e.employeeId} className="a2-card a2-card-item" data-testid="agent-v2-card">
+                          <div className="a2-card-head">
+                            <span>{e.name}</span>
+                            {statePill(e.lifecycleState)}
+                          </div>
+                          <div className="a2-card-sub a2-mono">{e.employeeId}</div>
+                          <div className="a2-card-sub">{e.ownerUserId}</div>
+                          <div className="a2-card-sub a2-mono">{String(e.updatedAt).slice(0, 16).replace("T", " ")}</div>
+                          <div className="a2-card-actions">
+                            <button type="button" className="a2-btn" onClick={() => openDetail(e)}>
+                              {t('agentConsole.v2.detail')}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <table className="a2-table">
                       <thead>
@@ -363,7 +416,31 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
                     <p className="a2-meta" data-testid="agent-v2-appr-empty">{t('agentConsole.v2.emptyApprovals')}</p>
                   ) : null}
                   {apprRows.phase === 'ok' && apprRows.value.length > 0 ? (
-                    <table className="a2-table">
+                    narrow ? (
+                      <div className="a2-cards">
+                        {apprRows.value.map((a) => (
+                          <div key={a.approvalId} className="a2-card a2-card-item" data-testid="agent-v2-appr-card">
+                            <div className="a2-card-head">
+                              <span className="a2-mono">{a.approvalId}</span>
+                              <span className={`a2-pill${a.riskLevel === 'high' ? ' is-danger' : a.riskLevel === 'medium' ? ' is-warn' : ''}`}>
+                                {a.riskLevel}
+                              </span>
+                            </div>
+                            <div className="a2-card-sub">{a.action}</div>
+                            <div className="a2-card-actions">
+                              <button
+                                type="button"
+                                className="a2-btn"
+                                onClick={() => setApprSelected(apprSelected?.approvalId === a.approvalId ? null : a)}
+                              >
+                                {t('agentConsole.v2.detail')}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <table className="a2-table">
                       <thead>
                         <tr>
                           <th>{t('agentConsole.v2.colApproval')}</th>
@@ -394,7 +471,8 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
                           </tr>
                         ))}
                       </tbody>
-                    </table>
+                      </table>
+                    )
                   ) : null}
                 </div>
                 {apprSelected ? (

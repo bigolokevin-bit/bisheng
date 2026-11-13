@@ -4,7 +4,7 @@
  * theme persistence, and the honest no-fake-metrics / no-snapshotRef rules.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 import { userContext } from '@/contexts/userContext';
 import type { AgentConsoleApi } from '@/controllers/API/agent';
@@ -270,5 +270,76 @@ describe('agentConsoleV2 theme', () => {
     renderV2(consoleApi(), approvalsApi([]));
     const rehydrated = await screen.findByTestId('agent-console-v2');
     expect(rehydrated.getAttribute('data-theme')).toBe('light');
+  });
+
+  it('renders single-column cards with real data at narrow widths (375px rework)', async () => {
+    const spy = vi
+      .spyOn(window, 'matchMedia')
+      .mockImplementation((query: string) => ({ matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as unknown as MediaQueryList);
+    try {
+      renderV2(consoleApi(), approvalsApi([]));
+      const cards = await screen.findAllByTestId('agent-v2-card');
+      expect(cards.length).toBe(2);
+      expect(screen.queryByTestId('agent-v2-row')).toBeNull();
+      expect(document.querySelector('table')).toBeNull();
+      expect(cards[0].textContent).toContain('Koi Claw');
+      expect(cards[0].textContent).toContain('emp_1');
+      fireEvent.click(within(cards[0]).getByText('agentConsole.v2.detail'));
+      expect(await screen.findByTestId('agent-v2-identity')).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('renders approval queue cards at narrow widths and opens detail from a card', async () => {
+    const spy = vi
+      .spyOn(window, 'matchMedia')
+      .mockImplementation((query: string) => ({ matches: true, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as unknown as MediaQueryList);
+    try {
+      renderV2(consoleApi(), approvalsApi([approvalRow('ap_mobile_1')]));
+      fireEvent.click(screen.getByLabelText('agentConsole.v2.navApprovals'));
+      const card = await screen.findByTestId('agent-v2-appr-card');
+      expect(card.textContent).toContain('ap_mobile_1');
+      expect(card.textContent).toContain('employee.version.create');
+      expect(card.textContent).toContain('high');
+      expect(screen.queryByTestId('agent-v2-appr-row')).toBeNull();
+      fireEvent.click(within(card).getByText('agentConsole.v2.detail'));
+      expect(await screen.findByTestId('agent-v2-approval-detail')).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('keeps the wide table layout when matchMedia reports wide', async () => {
+    const spy = vi
+      .spyOn(window, 'matchMedia')
+      .mockImplementation((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as unknown as MediaQueryList);
+    try {
+      renderV2(consoleApi(), approvalsApi([]));
+      const rows = await screen.findAllByTestId('agent-v2-row');
+      expect(rows.length).toBe(2);
+      expect(screen.queryByTestId('agent-v2-card')).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('logs an error for lifecycle states outside the contract six', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const api = consoleApi({
+        listEmployees: vi.fn().mockResolvedValue({
+          items: [
+            { employeeId: 'emp_x', name: 'Odd', title: 'qa', lifecycleState: 'retired', ownerUserId: 'opsadmin', updatedAt: '2026-11-13T00:00:00Z' },
+          ],
+        }),
+      });
+      renderV2(api, approvalsApi([]));
+      const rows = await screen.findAllByTestId('agent-v2-row');
+      expect(rows[0].textContent).toContain('retired');
+      expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('unknown employee lifecycle state'), 'retired');
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 });

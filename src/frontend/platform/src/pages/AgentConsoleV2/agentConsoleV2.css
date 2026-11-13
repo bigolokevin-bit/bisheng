@@ -239,6 +239,22 @@
 .agent-app .a2-pill.is-accent { background: var(--accent-soft); color: hsl(var(--accent)); }
 .agent-app .a2-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .agent-app .a2-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.agent-app .a2-cards { display: flex; flex-direction: column; gap: 10px; }
+.agent-app .a2-card-item { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.agent-app .a2-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.agent-app .a2-card-head > span { min-width: 0; overflow-wrap: anywhere; }
+.agent-app .a2-card-head .a2-pill { flex-shrink: 0; }
+.agent-app .a2-card-sub { font-size: 12px; overflow-wrap: anywhere; }
+.agent-app .a2-card-actions { align-self: flex-start; }
+@media (max-width: 767px) {
+  .agent-app .a2-main { padding: 16px 12px 40px; }
+  .agent-app .a2-toolbar { flex-wrap: wrap; }
+  .agent-app .a2-input { width: 100%; max-width: none; }
+  .agent-app .a2-kpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .agent-app .a2-grid2 { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .a2-topbar { padding: 0 12px; gap: 8px; }
+  .agent-app .a2-crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 @media (prefers-reduced-motion: reduce) {
   .agent-app *, .agent-app *::before, .agent-app *::after {
     transition: none !important;
