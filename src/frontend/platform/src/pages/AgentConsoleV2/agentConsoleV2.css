@@ -35,14 +35,19 @@
   font-size: 14px;
   line-height: 20px;
   min-height: 100%;
+  /* Mount point is `div.flex.h-full.flex-col`; without this the explicit
+     min-height above defeats the flex-item automatic min size and the
+     container shrinks to viewport height, spilling content over the white
+     page background (measured 375x812: app 812px vs shell 1399px). */
+  flex: 1 0 auto;
 }
 .agent-app[data-theme='light'] {
   --background: 225 15% 97%;
   --card: 0 0% 100%;
   --surface: 228 20% 97%;
   --surface-2: 228 14% 94%;
-  --border: 226 12% 87%;
-  --hairline: 240 8% 91%;
+  --border: hsl(226 12% 87%);
+  --hairline: hsl(240 8% 91%);
   --foreground: 240 13% 11%;
   --muted-foreground: 233 7% 39%;
   --micro-foreground: 230 5% 45%;
