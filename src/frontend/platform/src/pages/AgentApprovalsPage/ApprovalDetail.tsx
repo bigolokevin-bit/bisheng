@@ -6,7 +6,11 @@ import type {
   AgentApprovalsApi,
   Approval,
 } from '@/controllers/API/agentConsoleApprovals';
-import { effectiveApprovalStatus } from '@/controllers/API/agentConsoleApprovals';
+import {
+  approvalWriteEnabled,
+  effectiveApprovalStatus,
+} from '@/controllers/API/agentConsoleApprovals';
+import type { ApprovalDecisionVerdict } from '@/controllers/API/agentConsoleApprovals';
 import { AuthError, UpstreamError } from '@/controllers/API/agent';
 import {
   APPROVAL_RISK_LABEL_KEYS,
@@ -18,8 +22,10 @@ import {
 
 export interface ApprovalDetailProps {
   api: AgentApprovalsApi;
-  /** The AP4 row that opened this view; used only when the BFF has no AP3 route. */
+  /** The AP4 row selected in the list; the view re-loads it through AP3. */
   approval: Approval;
+  /** 'human:<id>' literal of the current Bisheng user (S10b-6 p2 gating). */
+  currentHumanId?: string;
 }
 
 type DetailView =
@@ -39,15 +45,18 @@ function refText(ref: { type: string; id: string } | null | undefined): string {
 }
 
 /**
- * Read-only AP3 detail. Cross-tenant / unknown ids collapse into a single
- * "not found or not visible" state (the domain 404 is identical for both).
- * No verdict controls exist anywhere on this page (S10b-6 owns writes).
+ * AP3 detail plus the S10b-6 approval write area. Cross-tenant / unknown ids
+ * collapse into a single "not found or not visible" state (the domain 404 is
+ * identical for both). Verdict controls render only when approvalWriteEnabled()
+ * (VITE_AGENT_APPROVAL_WRITE=1 build) and the current user is a pending
+ * approver without a ballot yet; with the flag off the DOM is byte-identical
+ * to the read-only page. The BFF CONSOLE_APPROVAL_WRITE_ENABLED switch is the
+ * second, server-side gate. Failures never optimistically update the ballots.
  */
-export function ApprovalDetail({ api, approval }: ApprovalDetailProps) {
+export function ApprovalDetail({ api, approval, currentHumanId }: ApprovalDetailProps) {
   const { t } = useTranslation();
   const enumLabel = useEnumLabel();
   const [view, setView] = useState<DetailView>({ kind: 'loading' });
-
   const load = useCallback(async () => {
     setView({ kind: 'loading' });
     try {
@@ -69,6 +78,68 @@ export function ApprovalDetail({ api, approval }: ApprovalDetailProps) {
   useEffect(() => {
     void load();
   }, [load]);
+  // S10b-6 p2 write controls (ticket §1/§4). Server stays the only source for
+  // ballots: a accepted decision refreshes through load(), errors map to copy.
+  const [verdict, setVerdict] = useState<ApprovalDecisionVerdict | null>(null);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [writeError, setWriteError] = useState<string | undefined>(undefined);
+
+  const resetWriteState = useCallback(() => {
+    setVerdict(null);
+    setComment('');
+    setWriteError(undefined);
+  }, []);
+
+  const submitDecision = useCallback(async () => {
+    if (!api.decideApproval || !verdict || submitting) {
+      return;
+    }
+    if (view.kind !== 'ready' || effectiveApprovalStatus(view.approval) !== 'pending') {
+      return;
+    }
+    setSubmitting(true);
+    setWriteError(undefined);
+    try {
+      await api.decideApproval(approval.approvalId, {
+        verdict,
+        comment: comment.trim() || undefined,
+      });
+      resetWriteState();
+      await load();
+    } catch (err) {
+      const code = err instanceof UpstreamError ? err.message : '';
+      if (code === 'console.read_only') {
+        // BFF write switch off: the server flag is the source of truth, so we
+        // show honest copy and keep the area mounted (no client lockout).
+        setWriteError('agentConsole.approvals.write.disabled');
+      } else if (code === 'approval.already_decided') {
+        setWriteError('agentConsole.approvals.write.alreadyDecided');
+        await load();
+      } else if (code === 'approval.expired') {
+        setWriteError('agentConsole.approvals.write.expired');
+        await load();
+      } else if (code === 'approval.not_approver') {
+        setWriteError('agentConsole.approvals.write.notApprover');
+      } else if (code === 'request.invalid_body') {
+        setWriteError('agentConsole.approvals.write.invalidBody');
+      } else if (code === 'approval.unavailable') {
+        setWriteError('agentConsole.approvals.write.unavailable');
+      } else if (
+        code === 'approval.service_unavailable' ||
+        code === 'upstream.unavailable' ||
+        /^agent\.http\.5/.test(code)
+      ) {
+        setWriteError('agentConsole.approvals.write.unavailableService');
+      } else {
+        setWriteError('agentConsole.approvals.write.failed');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }, [api, approval.approvalId, verdict, comment, submitting, load, resetWriteState, view]);
+
+
 
   if (view.kind === 'loading') {
     return (
@@ -115,6 +186,17 @@ export function ApprovalDetail({ api, approval }: ApprovalDetailProps) {
 
   const row = view.approval;
   const status = effectiveApprovalStatus(row);
+
+  // Visibility conjunction: build flag, an api that exposes the write member,
+  // pending status, membership in approvers[], and no ballot yet from this
+  // user. A server-side flag gap is handled by the 405 mapping on submit.
+  const canVote =
+    approvalWriteEnabled() &&
+    typeof api.decideApproval === 'function' &&
+    status === 'pending' &&
+    Boolean(currentHumanId) &&
+    row.approvers.some((a) => a.userId === currentHumanId) &&
+    !row.decisions.some((d) => d.userId === currentHumanId);
 
   return (
     <div
@@ -229,6 +311,47 @@ export function ApprovalDetail({ api, approval }: ApprovalDetailProps) {
         <dt className="text-text-2">{t('agentConsole.approvals.createdAt')}</dt>
         <dd className="min-w-0 break-all">{formatTime(row.createdAt)}</dd>
       </dl>
+      {canVote && (
+        <div data-testid="agent-approval-write" className="mt-4 space-y-3 border-t border-border pt-4">
+          <div role="group" className="flex items-center gap-2 flex-wrap">
+            {(['approve', 'reject', 'revise'] as const).map((v) => (
+              <Button
+                key={v}
+                variant="link"
+                aria-pressed={verdict === v}
+                disabled={submitting}
+                onClick={() => {
+                  setWriteError(undefined);
+                  setVerdict(v);
+                }}
+              >
+                {t(`agentConsole.approvals.verdict.${v}`)}
+              </Button>
+            ))}
+          </div>
+          <textarea
+            aria-label={t('agentConsole.approvals.write.commentPlaceholder')}
+            value={comment}
+            rows={3}
+            disabled={submitting}
+            placeholder={t('agentConsole.approvals.write.commentPlaceholder')}
+            onChange={(e) => setComment(e.target.value)}
+            className="w-full rounded-md border border-border bg-transparent px-3 py-2 text-sm"
+          />
+          <Button
+            variant="primary"
+            disabled={!verdict || submitting}
+            onClick={() => void submitDecision()}
+          >
+            {t('agentConsole.approvals.write.submit')}
+          </Button>
+          {writeError && (
+            <p data-testid="agent-approval-write-error" className="text-text-3 text-xs break-all">
+              {t(writeError)}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

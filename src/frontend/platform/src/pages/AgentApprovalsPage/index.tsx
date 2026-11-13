@@ -54,7 +54,11 @@ export function AgentApprovalsPage({
             {t('agentConsole.detail.back')}
           </Button>
         </div>
-        <ApprovalDetail api={api} approval={selected} />
+        <ApprovalDetail
+          api={api}
+          approval={selected}
+          currentHumanId={`human:${userId}`}
+        />
       </div>
     );
   }

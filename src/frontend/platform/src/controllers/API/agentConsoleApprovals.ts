@@ -38,6 +38,14 @@ export interface ApprovalBinding {
   effectiveFrom?: string | null;
 }
 
+/** AP2 verdict literals — mirrors the generated DecisionRequest enum. */
+export type ApprovalDecisionVerdict = 'approve' | 'reject' | 'revise';
+
+export interface ApprovalDecisionInput {
+  verdict: ApprovalDecisionVerdict;
+  comment?: string;
+}
+
 export interface ApprovalApprover {
   userId: string;
   role?: string | null;
@@ -93,6 +101,16 @@ export interface ListApprovalsParams {
   cursor?: string;
 }
 
+/**
+ * Build-time write feature flag (S10b-6 p2). Off by default so the shipped
+ * read-only console keeps a byte-identical DOM; the test build sets
+ * VITE_AGENT_APPROVAL_WRITE=1. There is no runtime frontend toggle — the
+ * server-side gate is the BFF's own CONSOLE_APPROVAL_WRITE_ENABLED flag.
+ */
+export function approvalWriteEnabled(): boolean {
+  return import.meta.env.VITE_AGENT_APPROVAL_WRITE === '1';
+}
+
 export interface AgentApprovalsApi {
   listApprovals(params: ListApprovalsParams): Promise<ApprovalList>;
   /**
@@ -101,6 +119,16 @@ export interface AgentApprovalsApi {
    * indistinguishable by design (fail closed, never reveal which).
    */
   getApproval(approvalId: string): Promise<Approval | null>;
+  /**
+   * AP2 decision submit (S10b-6). Optional: pages must hide every write
+   * control when the injected api lacks this member (read-only stub layers,
+   * older deployments). The HTTP adapter attaches no Authorization on the
+   * POST — BFF authenticates the write through the same-origin session
+   * cookie only; failures throw UpstreamError carrying the BFF error code as
+   * the message so the UI can map copy (approval.unavailable,
+   * console.read_only, approval.already_decided, ...).
+   */
+  decideApproval?(approvalId: string, decision: ApprovalDecisionInput): Promise<void>;
 }
 
 /**
@@ -288,6 +316,32 @@ export function createStubAgentApprovalsApi(
       const found = all().find((a) => a.approvalId === approvalId);
       return found ?? null;
     },
+    async decideApproval(approvalId, decision) {
+      const approval = all().find((a) => a.approvalId === approvalId);
+      if (!approval) {
+        throw new UpstreamError('approval.not_found');
+      }
+      const fixture = fixtures.find((f) => f.approval === approval);
+      if (!fixture || !fixture.assignees.includes(DEMO_ASSIGNEE)) {
+        throw new UpstreamError('approval.not_approver');
+      }
+      if (approval.decisions.some((d) => d.userId === DEMO_ASSIGNEE)) {
+        throw new UpstreamError('approval.already_decided');
+      }
+      if (effectiveApprovalStatus(approval) !== 'pending') {
+        throw new UpstreamError('approval.expired');
+      }
+      // Test-scaffolding semantics only (mirrors domain idempotency shape; the
+      // domain stays authoritative in production). Mutating the live fixture is
+      // intentional: getApproval returns the same reference, so a refetch after
+      // a successful decideApproval shows the new ballot.
+      approval.decisions.push({
+        userId: DEMO_ASSIGNEE,
+        verdict: decision.verdict,
+        ...(decision.comment ? { comment: decision.comment } : {}),
+        decidedAt: new Date().toISOString(),
+      });
+    },
   };
 }
 
@@ -343,6 +397,51 @@ async function request<T>(
   };
 }
 
+/**
+ * Same-origin write call against the BFF approval whitelist route. Unlike the
+ * GET `request` above this NEVER attaches `Authorization` or any internal
+ * token: the browser must not carry credentials material into the write path
+ * (ADR-0010 boundary), and the BFF injects the approver identity from the
+ * session cookie. `X-Console-Write: 1` is one of the CSRF triple gates.
+ */
+async function postWrite(
+  path: string,
+  params: Record<string, string>,
+  body: unknown,
+): Promise<Envelope<unknown>> {
+  const qs = new URLSearchParams(params).toString();
+  const url = `/agent-api${path}${qs ? `?${qs}` : ''}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Console-Write': '1',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new UpstreamError('console request failed (network)');
+  }
+  if (res.status === 401) {
+    throw new AuthError();
+  }
+  let parsed: unknown = null;
+  try {
+    parsed = await res.json();
+  } catch {
+    parsed = null;
+  }
+  const record =
+    parsed !== null && typeof parsed === 'object'
+      ? (parsed as Record<string, unknown>)
+      : null;
+  const code =
+    typeof record?.code === 'string' ? record.code : `agent.http.${res.status}`;
+  return { ok: res.ok, status: res.status, data: res.ok ? parsed : null, code };
+}
+
 export function createHttpAgentApprovalsApi(
   options: HttpAgentApprovalsApiOptions = {},
 ): AgentApprovalsApi {
@@ -394,6 +493,21 @@ export function createHttpAgentApprovalsApi(
       if (res.ok && res.data) return res.data;
       if (res.code === 'approval.not_found') return null;
       throw new UpstreamError(res.code ?? 'agent.http.unknown');
+    },
+    async decideApproval(approvalId, decision) {
+      if (!approvalId) {
+        throw new UpstreamError('console.missing_filter');
+      }
+      // Body stays the exact {verdict, comment?} pair the BFF whitelist
+      // accepts; a blank comment is omitted instead of sent as ''.
+      const body: Record<string, string> = { verdict: decision.verdict };
+      if (decision.comment) {
+        body.comment = decision.comment;
+      }
+      const res = await postWrite('/api/approval/decision', { id: approvalId }, body);
+      if (!res.ok) {
+        throw new UpstreamError(res.code ?? 'agent.http.unknown');
+      }
     },
   };
 }

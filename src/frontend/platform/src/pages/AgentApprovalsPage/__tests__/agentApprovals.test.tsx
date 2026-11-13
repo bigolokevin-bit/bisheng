@@ -24,6 +24,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 function renderPage(api: AgentApprovalsApi, userId: string | number | undefined) {
@@ -354,5 +355,190 @@ describe('http approvals adapter', () => {
     await expect(api.listApprovals({ assignee: 'human:1' })).rejects.toBeInstanceOf(
       AuthError,
     );
+  });
+});
+
+describe('approval write UI (S10b-6 p2)', () => {
+  const PLACEHOLDER = 'agentConsole.approvals.write.commentPlaceholder';
+  const SUBMIT = 'agentConsole.approvals.write.submit';
+
+  function memberApproval(): Approval {
+    return makeApproval(DEMO_APPROVAL_1);
+  }
+
+  function apiWith(decideApproval: unknown, approval: Approval): AgentApprovalsApi {
+    return {
+      listApprovals: async () => ({ items: [approval] }),
+      getApproval: async () => approval,
+      decideApproval: decideApproval as AgentApprovalsApi['decideApproval'],
+    };
+  }
+
+  async function openDetail(api: AgentApprovalsApi) {
+    renderPage(api, 'demo-approver');
+    fireEvent.click(await screen.findByText('agentConsole.list.detail'));
+    await screen.findByTestId('agent-approval-detail');
+  }
+
+  it('renders zero write DOM while the build flag is off', async () => {
+    const api = createStubAgentApprovalsApi();
+    await openDetail(api);
+    expect(screen.queryByTestId('agent-approval-write')).toBeNull();
+  });
+
+  it('shows verdicts, the comment box and submit when the flag is on', async () => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+    await openDetail(createStubAgentApprovalsApi());
+    await screen.findByTestId('agent-approval-write');
+    for (const v of ['approve', 'reject', 'revise']) {
+      expect(screen.getByText(`agentConsole.approvals.verdict.${v}`)).toBeTruthy();
+    }
+    expect(screen.getByLabelText(PLACEHOLDER)).toBeTruthy();
+    expect(screen.getByText(SUBMIT)).toBeTruthy();
+  });
+
+  it('hides the write area from non-approvers', async () => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+    const approval = memberApproval();
+    approval.approvers = [{ userId: 'human:other' }];
+    await openDetail(apiWith(async () => undefined, approval));
+    expect(screen.queryByTestId('agent-approval-write')).toBeNull();
+  });
+
+  it('hides the write area on rows past their expiry', async () => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+    const approval = memberApproval();
+    approval.expiresAt = '2020-01-01T00:00:00Z';
+    await openDetail(apiWith(async () => undefined, approval));
+    expect(screen.queryByTestId('agent-approval-write')).toBeNull();
+  });
+
+  it('hides re-voting once this user already decided, keeping the ballot', async () => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+    const approval = memberApproval();
+    approval.decisions = [
+      { userId: DEMO_ASSIGNEE, verdict: 'approve', decidedAt: '2026-11-13T00:00:00.000Z' },
+    ];
+    await openDetail(apiWith(async () => undefined, approval));
+    expect(screen.queryByTestId('agent-approval-write')).toBeNull();
+    expect(screen.getByText(/agentConsole\.approvals\.verdict\.approve/)).toBeTruthy();
+  });
+
+  it('submits approve, resets the form and refetches the ballot', async () => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+    const base = memberApproval();
+    const decided = memberApproval();
+    decided.decisions = [
+      { userId: DEMO_ASSIGNEE, verdict: 'approve', decidedAt: '2026-11-13T00:00:00.000Z' },
+    ];
+    let fetches = 0;
+    const decideSpy = vi.fn(async () => undefined);
+    const api: AgentApprovalsApi = {
+      listApprovals: async () => ({ items: [base] }),
+      getApproval: async () => {
+        fetches += 1;
+        return fetches >= 2 ? decided : base;
+      },
+      decideApproval: decideSpy,
+    };
+    await openDetail(api);
+    fireEvent.click(screen.getByText('agentConsole.approvals.verdict.approve'));
+    fireEvent.click(screen.getByText(SUBMIT));
+    expect(decideSpy).toHaveBeenCalledWith(DEMO_APPROVAL_1, {
+      verdict: 'approve',
+      comment: undefined,
+    });
+    // Refetch is the only source of the ballot — no optimistic update.
+    await screen.findByText(/agentConsole\.approvals\.verdict\.approve/);
+    expect(screen.queryByTestId('agent-approval-write')).toBeNull();
+  });
+
+  it('trims the comment and sends it only when non-empty', async () => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+    const decideSpy = vi.fn(async () => undefined);
+    await openDetail(apiWith(decideSpy, memberApproval()));
+    await screen.findByTestId('agent-approval-write');
+    fireEvent.change(screen.getByLabelText(PLACEHOLDER), { target: { value: '  no  ' } });
+    fireEvent.click(screen.getByText('agentConsole.approvals.verdict.reject'));
+    fireEvent.click(screen.getByText(SUBMIT));
+    expect(decideSpy).toHaveBeenCalledWith(DEMO_APPROVAL_1, {
+      verdict: 'reject',
+      comment: 'no',
+    });
+  });
+
+  const copyCases: Array<[string, string]> = [
+    ['console.read_only', 'agentConsole.approvals.write.disabled'],
+    ['approval.not_approver', 'agentConsole.approvals.write.notApprover'],
+    ['approval.already_decided', 'agentConsole.approvals.write.alreadyDecided'],
+    ['approval.expired', 'agentConsole.approvals.write.expired'],
+    ['approval.unavailable', 'agentConsole.approvals.write.unavailable'],
+    ['request.invalid_body', 'agentConsole.approvals.write.invalidBody'],
+    ['upstream.unavailable', 'agentConsole.approvals.write.unavailableService'],
+    ['agent.http.503', 'agentConsole.approvals.write.unavailableService'],
+  ];
+  for (const [code, key] of copyCases) {
+    it(`maps ${code} to its honest copy`, async () => {
+      vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+      await openDetail(apiWith(vi.fn().mockRejectedValue(new UpstreamError(code)), memberApproval()));
+      fireEvent.click(await screen.findByText('agentConsole.approvals.verdict.approve'));
+      fireEvent.click(screen.getByText(SUBMIT));
+      await screen.findByText(key);
+    });
+  }
+
+  it('maps AuthError and unexpected errors to the generic failure copy', async () => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+    for (const err of [new AuthError(), new Error('boom')]) {
+      await openDetail(apiWith(vi.fn().mockRejectedValue(err), memberApproval()));
+      fireEvent.click(await screen.findByText('agentConsole.approvals.verdict.approve'));
+      fireEvent.click(screen.getByText(SUBMIT));
+      await screen.findByText('agentConsole.approvals.write.failed');
+      cleanup();
+    }
+  });
+
+  it('posts the decision with cookie-only auth and the CSRF marker', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+        return { ok: true, status: 200, json: async () => ({ approvalId: 'ap_x' }) };
+      }),
+    );
+    const api = createHttpAgentApprovalsApi({ getToken: () => 'tok-x' });
+    await api.decideApproval!('ap_x', { verdict: 'approve', comment: 'ok' });
+    expect(calls[0].url).toBe('/agent-api/api/approval/decision?id=ap_x');
+    expect(calls[0].init?.method).toBe('POST');
+    expect(calls[0].init?.headers).toEqual({
+      'Content-Type': 'application/json',
+      'X-Console-Write': '1',
+    });
+    expect(JSON.parse(String(calls[0].init?.body))).toEqual({
+      verdict: 'approve',
+      comment: 'ok',
+    });
+    // Blank comments are omitted, not sent as ''.
+    await api.decideApproval!('ap_y', { verdict: 'reject', comment: '' });
+    expect(JSON.parse(String(calls[1].init?.body))).toEqual({ verdict: 'reject' });
+  });
+
+  it('surfaces BFF error codes and 401s distinctly', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 403, json: async () => ({ code: 'approval.unavailable' }) })),
+    );
+    const api = createHttpAgentApprovalsApi({ getToken: () => 'tok-x' });
+    await expect(api.decideApproval!('ap_x', { verdict: 'approve' })).rejects.toThrow(
+      'approval.unavailable',
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })),
+    );
+    await expect(
+      createHttpAgentApprovalsApi({}).decideApproval!('ap_x', { verdict: 'approve' }),
+    ).rejects.toBeInstanceOf(AuthError);
   });
 });

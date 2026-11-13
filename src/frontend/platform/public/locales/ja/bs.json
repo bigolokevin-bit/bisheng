@@ -4327,6 +4327,18 @@
       "requiredApprovals": "必要な承認数",
       "decisions": "決定記録",
       "decisionsEmpty": "決定記録はまだありません",
+      "write": {
+        "submit": "決定を送信",
+        "commentPlaceholder": "コメント（任意）",
+        "disabled": "承認書き込みは未有効",
+        "notApprover": "あなたは承認者ではありません",
+        "alreadyDecided": "すでに投票済み",
+        "expired": "承認は期限切れです",
+        "unavailable": "承認が見つからないか表示できません",
+        "unavailableService": "承認サービスは一時的に利用できません。後ほど再試行してください",
+        "invalidBody": "不正なリクエストです",
+        "failed": "決定の送信に失敗しました"
+      },
       "expiresAt": "有効期限",
       "consumedAt": "消費日時",
       "policyDecisionId": "ポリシー決定 ID",

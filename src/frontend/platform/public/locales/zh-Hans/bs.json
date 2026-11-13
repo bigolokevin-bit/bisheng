@@ -4327,6 +4327,18 @@
       "requiredApprovals": "需要审批人数",
       "decisions": "决策记录",
       "decisionsEmpty": "暂无决策记录",
+      "write": {
+        "submit": "提交决策",
+        "commentPlaceholder": "审批意见（可选）",
+        "disabled": "审批写入未开启",
+        "notApprover": "你不在该单的审批人列表中",
+        "alreadyDecided": "你已提交过决策",
+        "expired": "该审批已过期",
+        "unavailable": "未找到或无权查看该审批",
+        "unavailableService": "审批服务暂不可用，请稍后重试",
+        "invalidBody": "请求体非法",
+        "failed": "决策提交失败"
+      },
       "expiresAt": "到期时间",
       "consumedAt": "消费时间",
       "policyDecisionId": "策略决定 ID",

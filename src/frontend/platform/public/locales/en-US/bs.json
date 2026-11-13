@@ -4382,6 +4382,18 @@
       "requiredApprovals": "Required approvals",
       "decisions": "Decisions",
       "decisionsEmpty": "No decisions yet",
+      "write": {
+        "submit": "Submit decision",
+        "commentPlaceholder": "Comment (optional)",
+        "disabled": "Approval writing is not enabled",
+        "notApprover": "You are not an approver for this approval",
+        "alreadyDecided": "You have already decided",
+        "expired": "This approval has expired",
+        "unavailable": "Approval not found or not visible",
+        "unavailableService": "Approval service unavailable; please retry later",
+        "invalidBody": "Invalid request body",
+        "failed": "Failed to submit decision"
+      },
       "expiresAt": "Expires at",
       "consumedAt": "Consumed at",
       "policyDecisionId": "Policy decision ID",
