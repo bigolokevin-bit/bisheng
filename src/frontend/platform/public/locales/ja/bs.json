@@ -4306,6 +4306,10 @@
       "versionPanel": "現在のバージョン",
       "grantsBlast": "爆心地範囲（有効な権限）",
       "quotaPanel": "予算使用量",
+      "chatTitle": "アプリ会話",
+      "chatUnbound": "アプリがバインドされていません。バインドするとここで会話できます",
+      "chatOpenExternal": "Bisheng で開く",
+      "chatFrameError": "会話の読み込みに失敗しました。Bisheng で開いてください",
       "kpiOnDutyPage": "このページの稼働中",
       "kpiPendingMine": "自分の保留中",
       "kpiTrend": "トレンド"

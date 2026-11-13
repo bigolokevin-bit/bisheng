@@ -4306,6 +4306,10 @@
       "versionPanel": "当前版本",
       "grantsBlast": "爆炸半径（生效授权）",
       "quotaPanel": "预算用量",
+      "chatTitle": "应用对话",
+      "chatUnbound": "未绑定应用，绑定应用后可在此对话",
+      "chatOpenExternal": "在 Bisheng 中打开",
+      "chatFrameError": "对话加载失败，请尝试在 Bisheng 中打开",
       "kpiOnDutyPage": "本页在岗",
       "kpiPendingMine": "我的待办",
       "kpiTrend": "趋势"

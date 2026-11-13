@@ -50,6 +50,7 @@ function consoleApi(over: Record<string, unknown> = {}): AgentConsoleApi {
         snapshotRef: SNAP,
       },
     }),
+    getWorkstations: vi.fn().mockResolvedValue({ ok: true, data: { items: [] } }),
     ...over,
   } as unknown as AgentConsoleApi;
 }
@@ -219,6 +220,88 @@ describe('agentConsoleV2 detail', () => {
       const blast = document.querySelector('[data-testid="agent-v2-blast"]');
       expect(blast?.textContent).toContain('agentConsole.v2.errorQuery');
     });
+  });
+});
+
+describe('agentConsoleV2 detail app-chat (S10b-v2-2)', () => {
+  function wstation(id: string, over: Record<string, unknown> = {}) {
+    return {
+      id, employeeId: 'emp_1', bindingType: 'dm', channel: 'wecom',
+      externalRef: 'x', capabilities: ['reply'], status: 'active', ...over,
+    };
+  }
+
+  async function openDetailChat(items: unknown[] | 'reject') {
+    const api = consoleApi({
+      getWorkstations:
+        items === 'reject'
+          ? vi.fn().mockRejectedValue(new Error('e10 down'))
+          : vi.fn().mockResolvedValue({ ok: true, data: { items } }),
+    });
+    renderV2(api, approvalsApi([]));
+    await screen.findByText('Koi Claw');
+    fireEvent.click(screen.getAllByText('agentConsole.v2.detail')[0]);
+    return screen.findByTestId('agent-v2-chat');
+  }
+
+  it('no active app binding shows guidance and no chat affordances at all', async () => {
+    const chat = await openDetailChat([]);
+    expect(await within(chat).findByTestId('agent-v2-chat-unbound')).toBeTruthy();
+    expect(chat.textContent).toContain('agentConsole.v2.chatUnbound');
+    expect(within(chat).queryByTestId('agent-v2-chat-iframe')).toBeNull();
+    expect(chat.querySelector('iframe, input, textarea, button')).toBeNull();
+  });
+
+  it('active app binding renders exact same-origin iframe src and external link', async () => {
+    const chat = await openDetailChat([wstation('ws_a', { bindingType: 'app', channel: 'bisheng', externalRef: 'ast_1' })]);
+    const frame = within(chat).getByTestId('agent-v2-chat-iframe') as HTMLIFrameElement;
+    expect(frame.getAttribute('src')).toBe('/workspace/chat/assistant/auth/ast_1');
+    const link = within(chat).getByTestId('agent-v2-chat-open') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('/workspace/chat/assistant/auth/ast_1');
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener');
+    expect(within(chat).getByTestId('agent-v2-chat-binding').textContent).toContain('bisheng');
+    expect(within(chat).queryByTestId('agent-v2-chat-unbound')).toBeNull();
+  });
+
+  it('dm bindings never unlock the chat panel', async () => {
+    const chat = await openDetailChat([wstation('ws_d', { bindingType: 'dm', status: 'active' })]);
+    expect(within(chat).getByTestId('agent-v2-chat-unbound')).toBeTruthy();
+    expect(within(chat).queryByTestId('agent-v2-chat-iframe')).toBeNull();
+  });
+
+  it('suspended and pending app bindings do not unlock the chat panel', async () => {
+    const chat = await openDetailChat([
+      wstation('ws_s', { bindingType: 'app', status: 'suspended', externalRef: 'ast_s' }),
+      wstation('ws_p', { bindingType: 'app', status: 'pending', externalRef: 'ast_p' }),
+    ]);
+    expect(within(chat).getByTestId('agent-v2-chat-unbound')).toBeTruthy();
+    expect(within(chat).queryByTestId('agent-v2-chat-iframe')).toBeNull();
+  });
+
+  it('picks the first ACTIVE app binding when several exist', async () => {
+    const chat = await openDetailChat([
+      wstation('ws_p', { bindingType: 'app', status: 'pending', externalRef: 'ast_p' }),
+      wstation('ws_a1', { bindingType: 'app', status: 'active', externalRef: 'ast_a1' }),
+      wstation('ws_a2', { bindingType: 'app', status: 'active', externalRef: 'ast_a2' }),
+    ]);
+    const frame = within(chat).getByTestId('agent-v2-chat-iframe') as HTMLIFrameElement;
+    expect(frame.getAttribute('src')).toBe('/workspace/chat/assistant/auth/ast_a1');
+  });
+
+  it('percent-encodes special characters in the flow id', async () => {
+    const chat = await openDetailChat([
+      wstation('ws_e', { bindingType: 'app', externalRef: 'a b/c?d&e=f' }),
+    ]);
+    const frame = within(chat).getByTestId('agent-v2-chat-iframe') as HTMLIFrameElement;
+    expect(frame.getAttribute('src')).toBe('/workspace/chat/assistant/auth/a%20b%2Fc%3Fd%26e%3Df');
+  });
+
+  it('E10 failure is an honest error state, never a fake unbound guidance', async () => {
+    const chat = await openDetailChat('reject');
+    expect(await within(chat).findByTestId('agent-v2-chat-error')).toBeTruthy();
+    expect(within(chat).queryByTestId('agent-v2-chat-unbound')).toBeNull();
+    expect(within(chat).queryByTestId('agent-v2-chat-iframe')).toBeNull();
   });
 });
 

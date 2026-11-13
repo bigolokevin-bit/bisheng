@@ -9,8 +9,9 @@
  * - The historical version chain has no GET endpoint in the contract (E4 is
  *   write-only), so the detail shows the CURRENT version from E5 plus a
  *   pending-chain note; no fake chain is drawn.
- * - No chat panel exists in P1, so no message input can ever appear for an
- *   unbound application.
+ * - The app-chat panel (S10b-v2-2) is read-only and appears only for an
+ *   ACTIVE app workstation binding; unbound employees see guidance, never
+ *   an input, and no message UI is ever faked here.
  * - snapshotRef (internal BFF binding id) is never rendered.
  *
  * Theming: two isomorphic token blocks (dark default), user toggle persisted
@@ -29,6 +30,7 @@ import {
   type EffectiveConfig,
   type EmployeeDetail,
   type EmployeeSummary,
+  type Workstation,
 } from '@/controllers/API/agent';
 import {
   createHttpAgentApprovalsApi,
@@ -83,6 +85,11 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
   const [selected, setSelected] = useState<EmployeeSummary | null>(null);
   const [detail, setDetail] = useState<Box<EmployeeDetail | null>>(boxLoading);
   const [config, setConfig] = useState<Box<EffectiveConfig | null>>(boxLoading);
+  // E10 workstations feed the read-only app-chat panel (S10b-v2-2). Unlike
+  // detail/config, a failed read must surface as an error here: degrading to
+  // "unbound" would be indistinguishable from a genuinely unbound employee.
+  const [stations, setStations] = useState<Box<Workstation[]>>(boxLoading);
+  const [frameState, setFrameState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [apprRows, setApprRows] = useState<Box<Approval[]>>(boxLoading);
   const [apprSelected, setApprSelected] = useState<Approval | null>(null);
 
@@ -136,6 +143,14 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
     setApprSelected(null);
     setDetail(boxLoading);
     setConfig(boxLoading);
+    setStations(boxLoading);
+    setFrameState('loading');
+    api
+      .getWorkstations(row.employeeId)
+      .then((res) =>
+        res.ok && res.data ? setStations({ phase: 'ok', value: res.data.items }) : setStations({ phase: 'error' }),
+      )
+      .catch(() => setStations({ phase: 'error' }));
     api
       .getEmployee(row.employeeId)
       .then((res) => setDetail(res.ok && res.data ? { phase: 'ok', value: res.data } : { phase: 'ok', value: null }))
@@ -211,6 +226,13 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
     }
     return <span className={`a2-pill ${cls}`}>{t(key)}</span>;
   };
+
+  // Read-only app-chat (S10b-v2-2): only an ACTIVE app binding unlocks the
+  // panel. dm/group bindings and pending/suspended app rows must not render
+  // any chat surface — the client route exists solely for app workstations.
+  const chatBinding =
+    stations.phase === 'ok' ? stations.value.find((w) => w.bindingType === 'app' && w.status === 'active') ?? null : null;
+  const chatSrc = chatBinding ? `/workspace/chat/assistant/auth/${encodeURIComponent(chatBinding.externalRef)}` : '';
 
   return (
     <div className="agent-app" data-theme={theme} data-testid="agent-console-v2">
@@ -402,6 +424,52 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
                     <h2 className="a2-h2">{t('agentConsole.v2.quotaPanel')}</h2>
                     <div className="a2-pending">{t('agentConsole.v2.emptyBudget')}</div>
                   </div>
+                </div>
+                <div className="a2-card a2-chat-card" data-testid="agent-v2-chat">
+                  <h2 className="a2-h2">{t('agentConsole.v2.chatTitle')}</h2>
+                  {stations.phase === 'loading' ? <p className="a2-meta">{t('agentConsole.v2.loading')}</p> : null}
+                  {stations.phase === 'error' ? (
+                    <p className="a2-meta" data-testid="agent-v2-chat-error">{t('agentConsole.v2.errorQuery')}</p>
+                  ) : null}
+                  {stations.phase === 'ok' && !chatBinding ? (
+                    <div className="a2-pending" data-testid="agent-v2-chat-unbound">{t('agentConsole.v2.chatUnbound')}</div>
+                  ) : null}
+                  {chatBinding ? (
+                    <>
+                      <p className="a2-meta a2-chat-bind" data-testid="agent-v2-chat-binding">
+                        <span className="a2-pill is-ok">{chatBinding.channel}</span>{' '}
+                        <span className="a2-mono" title={chatBinding.id}>{chatBinding.externalRef}</span>
+                      </p>
+                      <p className="a2-meta">
+                        <a
+                          className="a2-chat-open"
+                          data-testid="agent-v2-chat-open"
+                          href={chatSrc}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {t('agentConsole.v2.chatOpenExternal')}
+                        </a>
+                      </p>
+                      {frameState === 'error' ? (
+                        <p className="a2-meta" data-testid="agent-v2-chat-frame-error">{t('agentConsole.v2.chatFrameError')}</p>
+                      ) : (
+                        <>
+                          {frameState === 'loading' ? (
+                            <p className="a2-meta" data-testid="agent-v2-chat-frame-loading">{t('agentConsole.v2.loading')}</p>
+                          ) : null}
+                          <iframe
+                            className="a2-chat-frame"
+                            data-testid="agent-v2-chat-iframe"
+                            title={t('agentConsole.v2.chatTitle')}
+                            src={chatSrc}
+                            onLoad={() => setFrameState('loaded')}
+                            onError={() => setFrameState('error')}
+                          />
+                        </>
+                      )}
+                    </>
+                  ) : null}
                 </div>
               </>
             ) : null}

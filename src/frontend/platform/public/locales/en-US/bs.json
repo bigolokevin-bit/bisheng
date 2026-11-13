@@ -4361,6 +4361,10 @@
       "versionPanel": "Current version",
       "grantsBlast": "Blast radius (effective grants)",
       "quotaPanel": "Budget usage",
+      "chatTitle": "App chat",
+      "chatUnbound": "No app bound — bind an application to chat here",
+      "chatOpenExternal": "Open in Bisheng",
+      "chatFrameError": "Failed to load the chat. Try opening it in Bisheng.",
       "kpiOnDutyPage": "On duty (this page)",
       "kpiPendingMine": "My pending",
       "kpiTrend": "Trend"
