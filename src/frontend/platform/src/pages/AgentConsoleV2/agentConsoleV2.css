@@ -264,12 +264,25 @@
   .agent-app .a2-chat-frame { height: 480px; }
 }
 @media (max-width: 767px) {
-  .agent-app .a2-main { padding: 16px 12px 40px; }
+  /* collapse the 72px rail into a top bar so the single column uses the full 375px */
+  .agent-app .a2-shell { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .a2-rail {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 8px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .agent-app .a2-rail-logo { width: 32px; height: 32px; margin-bottom: 0; }
+  .agent-app .a2-rail-btn { width: 32px; height: 32px; }
+  .agent-app .a2-main { padding: 16px; }
+  .agent-app .a2-body { padding-left: 0; padding-right: 0; }
   .agent-app .a2-toolbar { flex-wrap: wrap; }
   .agent-app .a2-input { width: 100%; max-width: none; }
   .agent-app .a2-kpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
   .agent-app .a2-grid2 { grid-template-columns: minmax(0, 1fr); }
-  .agent-app .a2-topbar { padding: 0 12px; gap: 8px; }
+  .agent-app .a2-topbar { padding: 0 16px; gap: 8px; }
   .agent-app .a2-crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (prefers-reduced-motion: reduce) {
