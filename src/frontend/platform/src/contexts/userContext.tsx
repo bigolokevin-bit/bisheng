@@ -190,6 +190,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     || web_menu.some((k: string) => adminMenuKeys.has(k))
                 )
             if (!canAccessPlatform) {
+                // ADR-0011 guard correction (NOT a route change): a console deep
+                // link for an account without the agent grant must resolve to the
+                // explicit 403 page. Without this, the workspace hard-redirect
+                // below (or the router catch-all 404) would swallow /agent*.
+                const requestedConsolePath = location.pathname.replace(BASE_URL, '').replace(/\/+$/, '') || '/'
+                if (requestedConsolePath === '/agent' || requestedConsolePath.startsWith('/agent/')) {
+                    history.pushState(null, '', BASE_URL + '/403')
+                    return
+                }
                 // Check if the user can at least access the workspace client.
                 // If neither platform nor workspace is accessible, redirect to /403
                 // to avoid a back-and-forth redirect loop between the two apps.
@@ -218,7 +227,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
             // Jump to the route based on permissions
             if (pathName === '/admin') {
                 const adminApprovalMode = Boolean(res.menu_approval_mode_admin ?? res.menu_approval_mode);
-                const target = resolveAdminLandingPath(web_menu, adminApprovalMode);
+                // ADR-0011 era: /admin is the agent console entry for grantees;
+                // only accounts without the agent grant keep the legacy landing.
+                const target = web_menu.includes('agent') ? '/agent' : resolveAdminLandingPath(web_menu, adminApprovalMode);
                 history.pushState(null, '', BASE_URL + target);
             } else {
                 // 403
@@ -232,6 +243,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     '/evaluation': 'evaluation',
                     '/label': 'mark_task',
                     '/log': 'log',
+                    // ADR-0011: /agent deep links must land on the explicit
+                    // 403 page, never the router catch-all 404 or a blank.
+                    '/agent': 'agent',
+                    '/agent/approvals': 'agent',
                 }
                 const normalizedPath = pathName.replace(/\/+$/, '') || '/'
                 let menuName = MENU_KEY_MAP[normalizedPath]
@@ -240,6 +255,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 }
                 if (!menuName && normalizedPath.startsWith('/log')) {
                     menuName = 'log'
+                }
+                if (!menuName && normalizedPath.startsWith('/agent')) {
+                    menuName = 'agent'
                 }
                 if (
                     menuName

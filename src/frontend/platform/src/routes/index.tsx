@@ -82,7 +82,8 @@ const privateRouter = [
     errorElement: <RouteErrorBoundary />,
     children: [
       // Normalize the legacy /admin redirect before userContext chooses the landing page.
-      { path: "admin", element: <Navigate to="/label" replace /> },
+      // ADR-0011 era console entry: /admin lands on the agent console, not /label.
+      { path: "admin", element: <Navigate to="/agent" replace /> },
       { path: "filelib", element: <KnowledgePage />, permission: 'knowledge', },
       { path: "filelib/:id", element: <FilesPage />, permission: 'knowledge', },
       { path: "filelib/upload/:id", element: <FilesUpload />, permission: 'knowledge', },
