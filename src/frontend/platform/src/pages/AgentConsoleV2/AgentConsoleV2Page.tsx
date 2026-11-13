@@ -37,7 +37,13 @@ import {
   type AgentApprovalsApi,
   type Approval,
 } from '@/controllers/API/agentConsoleApprovals';
+import {
+  createHttpAgentConsoleTrendsApi,
+  type AgentConsoleTrendsApi,
+} from '@/controllers/API/agentConsoleTrends';
 import { ApprovalDetail } from '@/pages/AgentApprovalsPage/ApprovalDetail';
+
+import { TrendsCostsSection } from './TrendsCostsSection';
 
 import './agentConsoleV2.css';
 
@@ -67,13 +73,16 @@ export interface AgentConsoleV2Props {
   initialSection?: Section;
   consoleApi?: AgentConsoleApi;
   approvalsApi?: AgentApprovalsApi;
+  /** P0-5 v2-3: R6/R7/P9 read-only trends & costs adapter. */
+  trendsApi?: AgentConsoleTrendsApi;
 }
 
-export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }: AgentConsoleV2Props = {}) {
+export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, initialSection }: AgentConsoleV2Props = {}) {
   const { t } = useTranslation();
   const { user } = useContext(userContext);
   const api = useMemo(() => consoleApi ?? createHttpAgentConsoleApi(), [consoleApi]);
   const approvals = useMemo(() => approvalsApi ?? createHttpAgentApprovalsApi(), [approvalsApi]);
+  const trends = useMemo(() => trendsApi ?? createHttpAgentConsoleTrendsApi(), [trendsApi]);
   const uid = String(user?.user_id ?? '');
   const humanId = uid ? `human:${uid}` : '';
 
@@ -425,6 +434,9 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
                     <div className="a2-pending">{t('agentConsole.v2.emptyBudget')}</div>
                   </div>
                 </div>
+                {/* P0-5 v2-3: real R6/R7/P9 data replaces the pending-only
+                    story once these routes land; blocks degrade per-block. */}
+                <TrendsCostsSection employeeId={selected.employeeId} api={trends} />
                 <div className="a2-card a2-chat-card" data-testid="agent-v2-chat">
                   <h2 className="a2-h2">{t('agentConsole.v2.chatTitle')}</h2>
                   {stations.phase === 'loading' ? <p className="a2-meta">{t('agentConsole.v2.loading')}</p> : null}
