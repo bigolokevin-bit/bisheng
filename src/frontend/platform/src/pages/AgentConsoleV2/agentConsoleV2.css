@@ -153,6 +153,7 @@
   font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
+.agent-app .a2-chat-bind .a2-mono { overflow-wrap: anywhere; }
 .agent-app .a2-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .agent-app .a2-kpi {
   border: 1px solid var(--hairline);
