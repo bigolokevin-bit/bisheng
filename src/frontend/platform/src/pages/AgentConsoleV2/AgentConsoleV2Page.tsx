@@ -1,7 +1,8 @@
 /**
  * Console v2 P1 surface (l4-console-v2): own shell (rail + topbar), employee
  * list on real E11 data, employee detail on real E2/E5 data with grants
- * blast radius, and the approval queue on real AP4/AP3 data.
+ * blast radius, the approval queue on real AP4/AP3 data, and the read-only
+ * runs & trace surface on real R5/R3 data (P0-6 v2-4).
  *
  * Honest-data rules (S10b-v2 card + CR-031):
  * - Trend/heat/aggregate KPI numbers that no read model can compute yet are
@@ -38,16 +39,21 @@ import {
   type Approval,
 } from '@/controllers/API/agentConsoleApprovals';
 import {
+  createHttpAgentConsoleRunsApi,
+  type AgentConsoleRunsApi,
+} from '@/controllers/API/agentConsoleRuns';
+import {
   createHttpAgentConsoleTrendsApi,
   type AgentConsoleTrendsApi,
 } from '@/controllers/API/agentConsoleTrends';
 import { ApprovalDetail } from '@/pages/AgentApprovalsPage/ApprovalDetail';
 
+import { RunsSection } from './RunsSection';
 import { TrendsCostsSection } from './TrendsCostsSection';
 
 import './agentConsoleV2.css';
 
-type Section = 'list' | 'detail' | 'appr';
+type Section = 'list' | 'detail' | 'appr' | 'runs';
 type Box<T> = { phase: 'loading' } | { phase: 'ok'; value: T } | { phase: 'error' };
 
 const THEME_KEY = 'agentConsole.v2.theme';
@@ -75,14 +81,17 @@ export interface AgentConsoleV2Props {
   approvalsApi?: AgentApprovalsApi;
   /** P0-5 v2-3: R6/R7/P9 read-only trends & costs adapter. */
   trendsApi?: AgentConsoleTrendsApi;
+  /** P0-6 v2-4: R5/R3 read-only runs & trace adapter. */
+  runsApi?: AgentConsoleRunsApi;
 }
 
-export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, initialSection }: AgentConsoleV2Props = {}) {
+export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsApi, initialSection }: AgentConsoleV2Props = {}) {
   const { t } = useTranslation();
   const { user } = useContext(userContext);
   const api = useMemo(() => consoleApi ?? createHttpAgentConsoleApi(), [consoleApi]);
   const approvals = useMemo(() => approvalsApi ?? createHttpAgentApprovalsApi(), [approvalsApi]);
   const trends = useMemo(() => trendsApi ?? createHttpAgentConsoleTrendsApi(), [trendsApi]);
+  const runs = useMemo(() => runsApi ?? createHttpAgentConsoleRunsApi(), [runsApi]);
   const uid = String(user?.user_id ?? '');
   const humanId = uid ? `human:${uid}` : '';
 
@@ -101,6 +110,9 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, initia
   const [frameState, setFrameState] = useState<'loading' | 'loaded' | 'error'>('loading');
   const [apprRows, setApprRows] = useState<Box<Approval[]>>(boxLoading);
   const [apprSelected, setApprSelected] = useState<Approval | null>(null);
+  // P0-6 v2-4: employee preset carried into the runs section from a detail
+  // page (null = all employees). RunsSection remounts when it changes.
+  const [runsEmployeeId, setRunsEmployeeId] = useState<string | null>(null);
 
   const toggleTheme = () => {
     setTheme((prev) => {
@@ -182,6 +194,15 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, initia
       .listApprovals({ assignee: humanId, status: 'pending', limit: 20 })
       .then((res) => setApprRows({ phase: 'ok', value: res.items }))
       .catch(() => setApprRows({ phase: 'error' }));
+  };
+
+  // P0-6 v2-4: read-only runs surface. Entering from an employee detail
+  // pre-filters R5 by that employee; the rail entry keeps it unfiltered
+  // (the section still always sends the 7-day `since`).
+  const openRuns = (presetEmployeeId: string | null) => {
+    setRunsEmployeeId(presetEmployeeId);
+    setSection('runs');
+    setApprSelected(null);
   };
 
   const onDuty = list.phase === 'ok' ? list.value.filter((e) => e.lifecycleState === 'active').length : null;
@@ -270,6 +291,16 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, initia
           >
             ◆
             {pendingCount.phase === 'ok' && pendingCount.value > 0 ? <span className="a2-badge" aria-hidden="true" /> : null}
+          </button>
+          {/* P0-6 v2-4: ▶ matches the ■/◆ glyph idiom of the rail. */}
+          <button
+            type="button"
+            className={`a2-rail-btn${section === 'runs' ? ' is-active' : ''}`}
+            title={t('agentConsole.v2.navRuns')}
+            aria-label={t('agentConsole.v2.navRuns')}
+            onClick={() => openRuns(null)}
+          >
+            ▶
           </button>
         </nav>
         <div className="a2-main">
@@ -379,6 +410,16 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, initia
                     {t('agentConsole.v2.back')}
                   </button>
                   <h1 className="a2-h1">{selected.name}</h1>
+                  {/* P0-6 v2-4: read-only entry into the runs surface,
+                      pre-filtered by this employee. */}
+                  <button
+                    type="button"
+                    className="a2-btn"
+                    data-testid="agent-v2-runs-view"
+                    onClick={() => openRuns(selected.employeeId)}
+                  >
+                    {t('agentConsole.v2.runsView')}
+                  </button>
                 </div>
                 <div className="a2-grid2">
                   <div className="a2-card" data-testid="agent-v2-identity">
@@ -560,6 +601,20 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, initia
                     <ApprovalDetail api={approvals} approval={apprSelected} currentHumanId={humanId || undefined} />
                   </div>
                 ) : null}
+              </>
+            ) : null}
+
+            {section === 'runs' ? (
+              <>
+                <h1 className="a2-h1">{t('agentConsole.v2.navRuns')}</h1>
+                {/* key on the preset: entering from a different employee must
+                    remount with that employee pre-selected. */}
+                <RunsSection
+                  key={`runs:${runsEmployeeId ?? ''}`}
+                  api={runs}
+                  consoleApi={api}
+                  initialEmployeeId={runsEmployeeId}
+                />
               </>
             ) : null}
           </div>

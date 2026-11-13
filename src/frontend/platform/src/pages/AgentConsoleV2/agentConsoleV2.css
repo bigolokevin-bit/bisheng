@@ -386,3 +386,262 @@
   .agent-app .a2-trends-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .agent-app .a2-trends-grid > .a2-trends-block:last-child { grid-column: 1 / -1; }
 }
+
+/* ---------- P0-6 v2-4: runs & trace section ----------
+   Existing tokens only, and every track is fr / minmax(0,1fr): long mono
+   values (runId, ISO time) ellipsis, event payloads wrap. Nothing on this
+   screen can exceed its box, so 375px stays free of horizontal overflow
+   (the .a2-shell `overflow-x: clip` above is the outer backstop). */
+.agent-app .a2-run-toolbar {
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.agent-app .a2-run-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+.agent-app .a2-run-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+.agent-app .a2-run-seg-btn {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.agent-app .a2-run-seg-btn[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: hsl(var(--accent));
+}
+.agent-app .a2-run-select {
+  min-width: 0;
+  max-width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+.agent-app .a2-run-window {
+  align-self: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-app .a2-run-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-app .a2-runs-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+}
+.agent-app .a2-run-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: hsl(var(--surface));
+}
+.agent-app .a2-run-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-app .a2-run-head > .a2-pill {
+  flex-shrink: 0;
+}
+.agent-app .a2-run-id {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .a2-run-name {
+  min-width: 0;
+  flex: 1 1 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .a2-run-time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2-run-toggle {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.agent-app .a2-run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2-run-value {
+  min-width: 0;
+  color: hsl(var(--foreground));
+  overflow-wrap: anywhere;
+}
+/* Badge text must be able to wrap inside its own box at 375px (the longest
+   single token, e.g. "upstream measured", never exceeds the column). */
+.agent-app .a2-run-meta > .a2-pill,
+.agent-app .a2-ev-line > .a2-pill,
+.agent-app .a2-ev-step > .a2-pill {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.agent-app .a2-run-timeline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2-ev-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+}
+.agent-app .a2-ev-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+.agent-app .a2-ev-tool {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .a2-ev-head,
+.agent-app .a2-ev-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+.agent-app .a2-ev-head > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .a2-ev-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 0;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2-ev-line {
+  font-size: 12px;
+}
+.agent-app .a2-ev-num {
+  flex-shrink: 0;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2-ev-type,
+.agent-app .a2-ev-time {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agent-app .a2-ev-time {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2-ev-payload {
+  min-width: 0;
+  max-width: 100%;
+}
+.agent-app .a2-ev-payload > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.agent-app .a2-ev-payload > summary::-webkit-details-marker {
+  display: none;
+}
+.agent-app .a2-ev-json {
+  max-width: 100%;
+  max-height: 260px;
+  margin: 6px 0 0;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-size: 11px;
+  line-height: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.agent-app .a2-ev-more {
+  align-self: flex-start;
+  height: 28px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.agent-app .a2-ev-more:disabled {
+  opacity: 0.6;
+}
+@media (max-width: 767px) {
+  .agent-app .a2-run-toolbar {
+    align-items: stretch;
+    gap: 10px;
+  }
+  .agent-app .a2-run-seg-btn {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  .agent-app .a2-run-card {
+    padding: 10px;
+  }
+  .agent-app .a2-run-toggle,
+  .agent-app .a2-ev-more {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
