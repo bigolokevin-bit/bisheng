@@ -40,19 +40,27 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+/**
+ * Rolling 7-day window as ISO timestamps (runtime parses bare YYYY-MM-DD as
+ * local midnight and treats `to` as an EXCLUSIVE upper bound, which dropped
+ * today's runs — so we send explicit instants): `from` is the local start of
+ * the day 6 days ago, `to` is tomorrow's local midnight, guaranteeing every
+ * run up to "now" falls inside the window. `period` stays YYYY-MM for P9.
+ */
+export function buildWindow(): { from: string; to: string; period: string } {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return {
+    from: from.toISOString(),
+    to: to.toISOString(),
+    period: `${now.getFullYear()}-${pad2(now.getMonth() + 1)}`,
+  };
 }
 
-/** Rolling 7-day window ending today + the current month, both local-time. */
-function buildWindow(): { from: string; to: string; period: string } {
-  const to = new Date();
-  const from = new Date(to.getTime() - 6 * 24 * 60 * 60 * 1000);
-  return {
-    from: localDateStr(from),
-    to: localDateStr(to),
-    period: `${to.getFullYear()}-${pad2(to.getMonth() + 1)}`,
-  };
+/** MM-DD label from an upstream bucketStart (ISO instant or bare date). */
+function dayLabel(bucketStart: string): string {
+  return bucketStart.slice(5, 10);
 }
 
 function fmtCost(v: number): string {
@@ -192,10 +200,10 @@ export function TrendsCostsSection({ employeeId, api }: TrendsCostsSectionProps)
                     const okPct = okN + badN > 0 ? (okN / (okN + badN)) * 100 : 0;
                     return (
                       <div
-                        key={b.period}
+                        key={b.bucketStart}
                         className="a2-trend-col"
                         data-testid="agent-v2-trend-bar"
-                        title={`${b.period} ✓${okN} ✗${badN}`}
+                        title={`${b.bucketStart.slice(0, 10)} ✓${okN} ✗${badN}`}
                       >
                         <div className="a2-trend-coltrack">
                           <div className="a2-trend-stack" style={{ height: `${hPct}%` }}>
@@ -203,7 +211,7 @@ export function TrendsCostsSection({ employeeId, api }: TrendsCostsSectionProps)
                             <div className="a2-trend-seg-ok" style={{ height: `${okPct}%` }} />
                           </div>
                         </div>
-                        <div className="a2-trend-day a2-mono">{b.period.slice(5)}</div>
+                        <div className="a2-trend-day a2-mono">{dayLabel(b.bucketStart)}</div>
                       </div>
                     );
                   });

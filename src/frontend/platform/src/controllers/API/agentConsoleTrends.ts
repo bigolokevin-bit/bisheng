@@ -13,9 +13,14 @@ import { AuthError, UpstreamError, type ApiResult } from './agent';
 
 // ---------- Shapes (BSS: BFF forwards upstream bodies unmodified) ----------
 
-/** One R6 bucket. `period` is the day string (bucket=day → YYYY-MM-DD). */
+/**
+ * One R6 bucket. `bucketStart` is the upstream ISO bucket-start timestamp
+ * (e.g. "2026-11-12T00:00:00.000Z") — verified against the live runtime
+ * GET /v1/runs/stats?bucket=day and the generated contract model
+ * services/domain/schemas/agentrun_models.py. There is no `period` field.
+ */
 export interface RunStatsBucket {
-  period: string;
+  bucketStart: string;
   runs?: number;
   succeeded: number;
   failed: number;

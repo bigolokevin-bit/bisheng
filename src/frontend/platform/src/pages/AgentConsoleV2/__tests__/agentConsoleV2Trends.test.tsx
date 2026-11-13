@@ -36,6 +36,7 @@ vi.mock('react-i18next', async () => {
 });
 
 import { AgentConsoleV2Page } from '../AgentConsoleV2Page';
+import { buildWindow } from '../TrendsCostsSection';
 import { userContext } from '@/contexts/userContext';
 import type {
   AgentConsoleTrendsApi,
@@ -114,8 +115,8 @@ describe('console v2 trends & costs section (P0-5)', () => {
       trendsApi({
         stats: {
           buckets: [
-            { period: '2026-11-08', succeeded: 3, failed: 1, upstreamRuns: 4, estimatedRuns: 0 },
-            { period: '2026-11-09', succeeded: 0, failed: 2, upstreamRuns: 0, estimatedRuns: 5, costUsd: 1.2 },
+            { bucketStart: '2026-11-08T00:00:00.000Z', runs: 4, succeeded: 3, failed: 1, upstreamRuns: 4, estimatedRuns: 0, unknownRuns: 0 },
+            { bucketStart: '2026-11-09T00:00:00.000Z', runs: 7, succeeded: 0, failed: 2, upstreamRuns: 0, estimatedRuns: 5, unknownRuns: 0, costUsd: 1.2 },
           ],
         },
       }),
@@ -124,11 +125,44 @@ describe('console v2 trends & costs section (P0-5)', () => {
     expect(within(section).getByTestId('agent-v2-trend-chip-estimated').textContent).toBe('含估算');
     expect(within(section).queryByTestId('agent-v2-trend-chip-uncounted')).toBeNull();
     expect(within(section).getAllByTestId('agent-v2-trend-bar')).toHaveLength(2);
+    // MM-DD labels are taken from the ISO bucketStart, not a bare-date field.
+    expect(within(section).getByText('11-08')).toBeTruthy();
+    expect(within(section).getByText('11-09')).toBeTruthy();
+  });
+
+  it('R6: real upstream sample (bucketStart/runs/costUsd) renders 7 bars with correct labels', async () => {
+    // Shape copied from the live runtime response of
+    // GET /v1/runs/stats?from=…&to=…&bucket=day (X-Tenant-Id: t_seakoi_pilot):
+    // {"bucketStart":"2026-11-12T00:00:00.000Z","runs":1,"succeeded":1,
+    //  "failed":0,"costUsd":0.009875,"upstreamRuns":1,"estimatedRuns":0,"unknownRuns":0}
+    const days = ['07', '08', '09', '10', '11', '12', '13'];
+    const section = await openTrends(
+      trendsApi({
+        stats: {
+          buckets: days.map((d, i) => ({
+            bucketStart: `2026-11-${d}T00:00:00.000Z`,
+            runs: i === 5 ? 1 : 0,
+            succeeded: i === 5 ? 1 : 0,
+            failed: 0,
+            costUsd: i === 5 ? 0.009875 : null,
+            upstreamRuns: i === 5 ? 1 : 0,
+            estimatedRuns: 0,
+            unknownRuns: 0,
+          })),
+        },
+      }),
+    );
+    expect(within(section).getAllByTestId('agent-v2-trend-bar')).toHaveLength(7);
+    for (const d of days) expect(within(section).getByText(`11-${d}`)).toBeTruthy();
+    // No p95 in the upstream sample → 样本不足, and no chips for zero-count markers.
+    expect(within(section).getByTestId('agent-v2-trend-p95').textContent).toBe('样本不足');
+    expect(within(section).queryByTestId('agent-v2-trend-chip-estimated')).toBeNull();
+    expect(within(section).queryByTestId('agent-v2-trend-chip-uncounted')).toBeNull();
   });
 
   it('R6: p95 present shows the number; empty buckets show empty state with zero bars', async () => {
     const section = await openTrends(
-      trendsApi({ stats: { buckets: [{ period: '2026-11-10', succeeded: 9, failed: 0, p95DurationMs: 1830 }] } }),
+      trendsApi({ stats: { buckets: [{ bucketStart: '2026-11-10T00:00:00.000Z', succeeded: 9, failed: 0, p95DurationMs: 1830 }] } }),
     );
     expect(within(section).getByTestId('agent-v2-trend-p95').textContent).toBe('1830 ms');
     cleanup();
@@ -221,15 +255,44 @@ describe('console v2 trends & costs section (P0-5)', () => {
     expect(within(section).getByTestId('agent-v2-cost-error').textContent).toBe('成本数据获取失败');
   });
 
-  it('requests the documented BFF params (bucket=day, weeks=4, tz, month period)', async () => {
+  it('requests the documented BFF params (ISO window, bucket=day, weeks=4, tz, month period)', async () => {
     const api = trendsApi({});
     await openTrends(api);
+    const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
     expect(api.getRunStats).toHaveBeenCalledWith(
-      expect.objectContaining({ employeeId: 'emp_1', bucket: 'day', from: expect.any(String), to: expect.any(String) }),
+      expect.objectContaining({
+        employeeId: 'emp_1',
+        bucket: 'day',
+        from: expect.stringMatching(isoRe),
+        to: expect.stringMatching(isoRe),
+      }),
     );
     expect(api.getRunActivity).toHaveBeenCalledWith({ weeks: 4, employeeId: 'emp_1', tz: 'Asia/Shanghai' });
     expect(api.getBudgetUsage).toHaveBeenCalledWith(
       expect.objectContaining({ employeeId: 'emp_1', periodKind: 'month', period: expect.stringMatching(/^\d{4}-\d{2}$/) }),
     );
+  });
+
+  it('R6 window: ISO timestamps, to > from, and the window contains the current instant', () => {
+    const before = Date.now();
+    const span = buildWindow();
+    const from = Date.parse(span.from);
+    const to = Date.parse(span.to);
+    // Both are explicit ISO instants, not bare YYYY-MM-DD dates (the latter
+    // parsed as local midnight and excluded today's runs — review defect 2).
+    expect(span.from).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(span.to).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(to).toBeGreaterThan(from);
+    // `from` is the local start of the day 6 days ago ⇒ ≤ today's local midnight.
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    expect(from).toBeLessThanOrEqual(todayStart.getTime());
+    // `to` is tomorrow's local midnight ⇒ strictly after "now" (exclusive bound
+    // still keeps every run that already happened inside the window).
+    expect(to).toBeGreaterThan(Date.now());
+    expect(to - from).toBeGreaterThanOrEqual(6 * 24 * 60 * 60 * 1000);
+    expect(to - from).toBeLessThanOrEqual(8 * 24 * 60 * 60 * 1000);
+    expect(span.period).toMatch(/^\d{4}-\d{2}$/);
+    expect(before).toBeLessThanOrEqual(Date.now());
   });
 });
