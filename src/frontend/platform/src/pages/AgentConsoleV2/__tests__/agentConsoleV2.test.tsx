@@ -129,6 +129,53 @@ describe('agentConsoleV2 shell + list', () => {
     expect(nums[1].textContent).toBe('—');
   });
 
+  it('shows the digit 1 on first screen when real pending count is 1', async () => {
+    const api = consoleApi({ countPendingApprovals: vi.fn().mockResolvedValue({ ok: true, data: { count: 1 } }) });
+    renderV2(api, approvalsApi([]));
+    await screen.findByText('Koi Claw');
+    const nums = document.querySelectorAll('.a2-kpi-num');
+    expect(nums[1].textContent).toBe('1');
+  });
+
+  it('deep-link approvals section fetches the queue on mount without a click', async () => {
+    const list = vi.fn().mockResolvedValue({ items: [] });
+    const base = approvalsApi([]) as unknown as Record<string, unknown>;
+    const api = consoleApi();
+    render(
+      <userContext.Provider
+        value={{ user: { user_id: 1, web_menu: ['admin', 'agent'] }, setUser: vi.fn(), savedComponents: [], addSavedComponent: vi.fn(), checkComponentsName: vi.fn(), delComponent: vi.fn() } as never}
+      >
+        <AgentConsoleV2Page consoleApi={api} approvalsApi={{ ...base, listApprovals: list } as never} initialSection="appr" />
+      </userContext.Provider>,
+    );
+    await waitFor(() =>
+      expect(list).toHaveBeenCalledWith(
+        expect.objectContaining({ assignee: 'human:1', status: 'pending', limit: 20 }),
+      ),
+    );
+  });
+
+  it('renders object-shaped E5 resource selectors without crashing', async () => {
+    const api = consoleApi({
+      getEffectiveConfig: vi.fn().mockResolvedValue({
+        ok: true,
+        data: {
+          employee: { id: 'emp_1', tenantId: 't', name: 'Koi Claw', title: 'assistant', lifecycleState: 'active', currentVersionId: 'ver_1', ownerUserId: 'opsadmin', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-11-13T00:00:00Z' },
+          version: { id: 'ver_1', employeeId: 'emp_1', versionNo: 2, effectiveFrom: '2026-11-13T06:30:00.000Z' },
+          grants: [{ id: 'gr_1', employeeId: 'emp_1', scopeType: 'business_api', resourceSelector: { type: 'channel_event' }, actions: ['execute'], source: 'role', expiresAt: null }],
+          resolvedAt: '2026-11-13T11:31:27.558Z',
+          snapshotRef: SNAP,
+        },
+      }),
+    });
+    renderV2(api, approvalsApi([]));
+    const trs = await screen.findAllByTestId('agent-v2-row');
+    fireEvent.click(trs[0].querySelector('button') as Element);
+    const chip = await screen.findByText('channel_event · execute');
+    expect(chip).toBeTruthy();
+    expect(screen.queryByText(SNAP)).toBeNull();
+  });
+
   it('empty list state is honest', async () => {
     const api = consoleApi({ listEmployees: vi.fn().mockResolvedValue({ items: [] }) });
     renderV2(api, approvalsApi([]));

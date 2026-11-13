@@ -4307,7 +4307,8 @@
       "grantsBlast": "爆心地範囲（有効な権限）",
       "quotaPanel": "予算使用量",
       "kpiOnDutyPage": "このページの稼働中",
-      "kpiPendingMine": "自分の保留中"
+      "kpiPendingMine": "自分の保留中",
+      "kpiTrend": "トレンド"
     },
     "approvals": {
       "filterStatus": "ステータス選択",
@@ -4518,6 +4519,14 @@
       "collapse": "閉じる",
       "empty": "一致する監査イベントはありません",
       "unavailable": "監査を利用できません（upstream.unavailable）"
+    },
+    "states": {
+      "draft": "下書き",
+      "onboarding": "オンボーディング中",
+      "active": "稼働中",
+      "paused": "一時停止",
+      "offboarding": "オフボーディング中",
+      "archived": "アーカイブ済み"
     }
   }
 }

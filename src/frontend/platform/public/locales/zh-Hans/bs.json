@@ -4307,7 +4307,8 @@
       "grantsBlast": "爆炸半径（生效授权）",
       "quotaPanel": "预算用量",
       "kpiOnDutyPage": "本页在岗",
-      "kpiPendingMine": "我的待办"
+      "kpiPendingMine": "我的待办",
+      "kpiTrend": "趋势"
     },
     "approvals": {
       "filterStatus": "筛选状态",
@@ -4518,6 +4519,14 @@
       "collapse": "收起",
       "empty": "无匹配审计事件",
       "unavailable": "审计暂不可用（upstream.unavailable）"
+    },
+    "states": {
+      "draft": "草稿",
+      "onboarding": "入职中",
+      "active": "在岗",
+      "paused": "已暂停",
+      "offboarding": "离职中",
+      "archived": "已归档"
     }
   }
 }

@@ -4362,7 +4362,8 @@
       "grantsBlast": "Blast radius (effective grants)",
       "quotaPanel": "Budget usage",
       "kpiOnDutyPage": "On duty (this page)",
-      "kpiPendingMine": "My pending"
+      "kpiPendingMine": "My pending",
+      "kpiTrend": "Trend"
     },
     "approvals": {
       "filterStatus": "Status filter",
@@ -4573,6 +4574,14 @@
       "collapse": "Hide details",
       "empty": "No matching audit events",
       "unavailable": "Audit unavailable (upstream.unavailable)"
+    },
+    "states": {
+      "draft": "Draft",
+      "onboarding": "Onboarding",
+      "active": "Active",
+      "paused": "Paused",
+      "offboarding": "Offboarding",
+      "archived": "Archived"
     }
   }
 }

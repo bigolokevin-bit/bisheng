@@ -119,6 +119,15 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
     }
   }, [api, humanId, loadList]);
 
+  // Deep-link entry (/agent/approvals): load the queue on mount as well,
+  // not only when the rail button is clicked.
+  useEffect(() => {
+    if (initialSection === 'appr' && humanId && apprRows.phase === 'loading') {
+      openApprovals();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSection, humanId]);
+
   const openDetail = (row: EmployeeSummary) => {
     setSelected(row);
     setSection('detail');
@@ -150,6 +159,18 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
   };
 
   const onDuty = list.phase === 'ok' ? list.value.filter((e) => e.lifecycleState === 'active').length : null;
+
+  const selectorText = (s: string | { type: string; [k: string]: unknown }): string => {
+    if (typeof s === 'string') return s;
+    if (s && typeof s === 'object') {
+      const { type, ...rest } = s as { type: string; [k: string]: unknown };
+      const parts = Object.entries(rest)
+        .filter(([, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`);
+      return parts.length ? `${type}(${parts.join(',')})` : String(type ?? 'grant');
+    }
+    return String(s);
+  };
 
   const statePill = (state: string) => {
     const cls =
@@ -209,7 +230,7 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
                     </div>
                   </div>
                   <div className="a2-kpi">
-                    <div className="a2-micro">{t('agentConsole.v2.emptyTrend')}</div>
+                    <div className="a2-micro">{t('agentConsole.v2.kpiTrend')}</div>
                     <div className="a2-pending" data-testid="agent-v2-trend-pending">{t('agentConsole.v2.emptyTrend')}</div>
                   </div>
                 </div>
@@ -310,8 +331,8 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, initialSection }:
                       ) : (
                         <div className="a2-chips">
                           {config.value.grants.map((g) => (
-                            <span key={g.id} className="a2-pill a2-mono" title={`${g.scopeType}:${g.resourceSelector}`}>
-                              {g.resourceSelector} · {g.actions.join(',')}
+                            <span key={g.id} className="a2-pill a2-mono" title={`${g.scopeType}:${selectorText(g.resourceSelector)}`}>
+                              {selectorText(g.resourceSelector)} · {g.actions.join(',')}
                             </span>
                           ))}
                         </div>

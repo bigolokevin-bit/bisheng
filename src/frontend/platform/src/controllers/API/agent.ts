@@ -112,7 +112,8 @@ export interface EmployeeDetail {
 export interface EffectiveGrant {
   id: string;
   scopeType: string;
-  resourceSelector: string;
+  /** E5 tagged selector: plain string or {type, ...} object. */
+  resourceSelector: string | { type: string; [k: string]: unknown };
   actions: string[];
   source: string;
   expiresAt: string | null;
@@ -532,7 +533,7 @@ export function createHttpAgentConsoleApi(
     async countPendingApprovals(assignee) {
       const res = await request<{ items: unknown[]; nextCursor?: string }>(
         '/api/approvals',
-        { assignee, status: 'pending', limit: 200 },
+        { assignee, status: 'pending', limit: 100 },
       );
       if (res.ok && res.data) {
         if (res.data.nextCursor !== undefined) {
