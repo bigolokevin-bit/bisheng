@@ -62,3 +62,23 @@ Phantom corrections: earlier rounds referenced commit f976752 and gate numbers 1
 - daa716e：V2 detail 挂 agent-v2-chatpanel（ChatTab 主聊天面，iframe 降为 open-in-Bisheng）。
 - ChatTab 诚实态已实现并有测试（targeted 9 files/140 passed）：乐观行+runId chip、R3 轮询、401/403/409/5xx 映射文案、缺方法降级、completed 无 message=emptyReply 不伪造。
 - run9 探针脚本语法错（SyntaxError: Invalid regular expression flags，node:internal/vm:203）记录在案；登录重试已按卡叫停。
+
+## 端到端验收轮（真实登录成功 + 真实发送，Nov 14 21:02-21:04）
+
+登录：opsadmin 经 /admin-login 真实登录成功（LOGIN_OK，LOGIN_URL=/agent；会话截图前页面无敏感明文；口令经文件注入零回显）。执行载体=ego-browser nodejs heredoc；关键修复=不再额外 fetch get_captcha，直接读页面加载那次 docker logs captcha_char（CAPTCHA_LEN=4）。
+
+E11 真实数据（EMP_STATUS=200）：items 含 emp_86A81CE8FF6F42E187BCF2B540（AgentOS 产品助理，lifecycleState=active，owner 1）与 emp_0166858D562149938FBDA22649（active）。页面中文 locale 生效（zh-Hans localStorage 注入+reload）。
+
+P0-13 真发一句（『P0-13 端到端验收：请回复本句』）：
+- ChatTab 挂载与发送链路全部工作：乐观行上屏 → POST /agent-api/api/employee-chat → BFF 鉴权/CSRF/E5/P5 通过 → R1 返回 **409 run.employee_not_active**（面板诚实显示『失败 run.employee_not_active 重试』）。
+- 契约行为确证：R5 /api/runs?employeeId=…&limit=5 → 200 items=[]（409 不落半条 run）；因此无 runId、无 R3 事件可查（NO_RUNID_FOUND）。
+- 结论：UI→BFF→E5→P5→R1 全链真实打通，最终被上游『员工未激活』拒绝 = BLOCKED-by-BW-01 证据（E11 侧 lifecycleState=active 与 runtime 判定不一致，属试点员工激活/投影问题，非面板代码问题；Hermes 回复 NOT MEASURED——不存在含回复的 run）。
+- 截图：p014-chat-send.png（失败态+错误码原文在屏）。
+
+P0-14 三面板真实读数（rail『运行指标』aria-label 点击进入，原文摘录）：
+- ①运行健康：『服务指标暂不可用 · agent.http.404』——degraded 诚实显示，未显示 0。MEASURED（降级态）。
+- ④模型与工具用量：『查询失败，请重试 · agent.http.404』（近7/30天切换均此）——无金额显示，未造 0.00。值本身=上游 404 降级；MEASURED（降级态）。404 源=8092 hermes 指标代理到 RUNTIME(8103) 的对应端点未命中，待 L7/runtime 侧核对路由。
+- ⑤活动热力：平台 7×24（近 4 周）周矩阵渲染 + 『Hermes 当日计数 暂不可用』+ 口径差异说明原文在屏——干净空态/降级，无编造数字。MEASURED（空态/降级正确）。
+- 截图：p014-metrics.png、p014-agent-list.png、p014-detail.png。
+
+原始输出：p014-login-ok.txt（首轮 LOGIN_OK）、p014-endtoend-readout.txt（发送+三面板全读数）。viewer01 403 负例：本轮未复验（缺 viewer01 会话），维持 76968e8 记录的 N1-N4 未鉴权负例口径。

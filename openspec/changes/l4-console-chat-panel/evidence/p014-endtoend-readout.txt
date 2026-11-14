@@ -1,0 +1,18 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+DETAIL_BUTTONS=2
+DETAIL_URL=http://127.0.0.1:8182/agent
+PANEL_BEFORE="聊天\n\n还没有消息，发送一条开始对话\n\n在 BiSheng 中打开\n发送"
+TEXTAREA_FOCUS=true
+SEND_CLICKED=true
+PANEL_AFTER_SEND="聊天\n我\nP0-13 端到端验收：请回复本句\n失败\nrun.employee_not_active\n重试\n在 BiSheng 中打开\n发送"
+SHOT_SEND
+R5_STATUS=200
+R5_BODY="{\"items\":[],\"nextCursor\":null}"
+NO_RUNID_FOUND
+RAIL_CLICKED=true
+P014_URL=http://127.0.0.1:8182/agent
+P014_HEALTH="运行健康\n\n服务指标暂不可用 · agent.http.404"
+P014_TODAY=null
+P014_CONTAINER="运行指标\n运行健康\n\n服务指标暂不可用 · agent.http.404\n\n模型与工具用量\n近 7 天\n近 30 天\n\n查询失败，请重试 · agent.http.404\n\n活动热力（平台对照）\n平台 7×24（近 4 周）\n周日\n周一\n周二\n周三\n周四\n周五\n周六\nHermes 当日计数\n\n暂不可用\n\n口径差异：平台侧为 R7 近 4 周 7×24 周矩阵；Hermes 侧仅为进程当日聚合计数（重启归零、不回填历史），无 7×24 粒度。"
+SHOT_METRICS
+

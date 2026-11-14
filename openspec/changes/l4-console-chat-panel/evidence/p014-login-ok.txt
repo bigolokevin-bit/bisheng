@@ -1,0 +1,22 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+CAPTCHA_LEN=4
+CLICK=denglu
+LOGIN_URL=http://127.0.0.1:8182/agent
+LOGIN_OK
+AGENT_URL=http://127.0.0.1:8182/agent
+SHOT_LIST
+EMP_CLICK_FAIL
+PANEL_BEFORE=null
+SHOT_DETAIL
+TEXTAREA_FOCUS=false
+R5_STATUS=400
+R5_BODY="{\"code\":\"request.missing_filter\",\"message\":\"at least one of employeeId/status/since is required\"}"
+R3_SKIPPED_NO_RUNID
+RAIL_FAIL=loc=text=运行指标
+RAIL_FAIL=loc=text=Metrics
+P014_URL=http://127.0.0.1:8182/agent
+P014_HEALTH=null
+P014_TODAY=null
+P014_CONTAINER=null
+SHOT_METRICS
+
