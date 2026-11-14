@@ -1,0 +1,7 @@
+schema: spec-driven
+created: 2026-11-14
+x-lane: L4
+x-change-name: l4-hermes-panels-product
+x-upstream-change: seakoi-agent-os@lane/L4-hermes-panels openspec/changes/l4-hermes-panels（BFF 数据层，HEAD 76c7427）
+x-bff-authority: apps/console/server.py PROXY /api/hermes-summary /api/hermes-usage（主仓）
+skip_specs: true
