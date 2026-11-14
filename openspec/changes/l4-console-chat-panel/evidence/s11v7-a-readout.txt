@@ -1,0 +1,23 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+URL0=http://127.0.0.1:8182/agent
+DETAIL len=379
+DETAIL_TXT=S~■~◆~▶~▦~控制台~深色~返回~AgentOS 产品助理~查看运行~身份~~AgentOS 产品助理~~emp_86A81CE8FF6F42E187BCF2B540~~产品助理（数字员工 · Pilot）~~在岗~~当前版本~~v2~~版本数据待接入~爆炸半径（生效授权）~undefined(types=["chat"]) · send~预算用量~预算用量数据待接入~趋势与成本~近 7 天运行趋势~P95 时长:~样本不足~11-14~~成功 / 失败~~7×24 活动热力（近 4 周）~周日~周一~周二~周三~周四~周五~周六~本月成本~0.12~聊天~~还没有消息，发送一条开始对话~~在 BiSheng 中打开~发送~应用对话~~feishu 2139572cd5c64a2da2e8b000e57ca7ea~~在 Bisheng 中打开
+SHOT_DETAIL_DONE
+FETCH E2=200
+FETCH E5=200
+FETCH E10=200
+FETCH R5=200
+FETCH AP4=200
+FETCH T5a=200
+FETCH T5b=400
+FETCH A3=200
+FETCH R3=200
+FETCH E11=200
+V8_RUN=NOT_IN_FIRST_PAGE
+V8_R3_COUNT=0 TYPES={}
+A3_COUNT=0 FIRST=NONE
+T5_PENDING_COUNT=0 FIRST=NONE
+APPROVALS len=27
+APPROVALS_TXT=S~■~◆~▶~▦~控制台~深色~审批~~暂无待办审批
+SHOT_APPROVALS_DONE
+S11A_COMPLETE
