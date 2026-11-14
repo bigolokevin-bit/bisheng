@@ -84,12 +84,18 @@ function chatErrorKey(status: number): string | undefined {
   return 'agentConsole.chat.error.rejected';
 }
 
-/** Design §2 / D-2: message text lives in payload.text, content as fallback. */
+/**
+ * Design §2 / D-2: message text lives in payload.text, content as fallback.
+ * Live Hermes streams reply fragments as payload.delta on message events
+ * (verified 2026-11-14, evidence fix409-run15); appendRowText accumulates
+ * them, so a delta is returned verbatim here.
+ */
 function eventText(ev: RunEventItem): string | null {
   const payload = ev.payload;
   if (!payload || typeof payload !== 'object') return null;
   if (typeof payload.text === 'string') return payload.text;
   if (typeof payload.content === 'string') return payload.content;
+  if (typeof payload.delta === 'string') return payload.delta;
   return null;
 }
 
@@ -167,9 +173,12 @@ export function ChatTab({ api, employeeId }: ChatTabProps) {
   };
 
   const appendRowText = (id: string, chunk: string) => {
+    // Live Hermes streams replies as payload.delta fragments; they must be
+    // concatenated verbatim (no separator) to rebuild the original text
+    // (verified 2026-11-14, evidence fix409-run15: fragments "P"/"0-1"/...).
     setRows((prev) =>
       prev.map((row) =>
-        row.id === id ? { ...row, text: row.text ? `${row.text}\n${chunk}` : chunk } : row,
+        row.id === id ? { ...row, text: row.text + chunk } : row,
       ),
     );
   };
@@ -218,6 +227,16 @@ export function ChatTab({ api, employeeId }: ChatTabProps) {
             appendRowText(rowId, text);
           }
         } else if (TERMINAL_STATUS[ev.eventType]) {
+          // run.completed carries the final text in payload.output when no
+          // message fragments were rendered (live Hermes shape, run15
+          // evidence); adopt it instead of showing an empty reply.
+          if (ev.eventType === 'completed' && !meta.hasText) {
+            const out = ev.payload?.output;
+            if (typeof out === 'string' && out !== '') {
+              meta.hasText = true;
+              appendRowText(rowId, out);
+            }
+          }
           meta.done = true;
           updateRow(rowId, {
             status: TERMINAL_STATUS[ev.eventType],

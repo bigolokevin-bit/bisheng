@@ -128,6 +128,67 @@ describe('ChatTab reply rendering (R3 events)', () => {
     await screen.findByText('agentConsole.chat.status.failed');
     expect(screen.getByText('upstream.timeout')).toBeInTheDocument();
   });
+
+  it('accumulates payload.delta fragments from live Hermes message events', async () => {
+    const base = stub();
+    const api: AgentConsoleApi = {
+      ...base,
+      sendChat: sendOk('01RUNCHATDELTA0000000000001'),
+      listRunEvents: vi.fn().mockResolvedValue(
+        events([
+          {
+            seq: 1,
+            eventType: 'message',
+            payload: { delta: 'hel' },
+            occurredAt: '2026-11-14T00:00:01Z',
+          },
+          {
+            seq: 2,
+            eventType: 'message',
+            payload: { delta: 'lo there' },
+            occurredAt: '2026-11-14T00:00:02Z',
+          },
+          {
+            seq: 3,
+            eventType: 'completed',
+            payload: null,
+            occurredAt: '2026-11-14T00:00:03Z',
+          },
+        ]),
+      ),
+    };
+    render(<ChatTab api={api} employeeId={EMP1} />);
+    typeAndSend('ping');
+    // appendRowText accumulates fragments into one assistant row.
+    await screen.findByText('hello there');
+    expect(screen.queryByText('agentConsole.chat.emptyReply')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/agentConsole.chat.messageUnreadable/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('run.completed payload.output renders when no message fragments arrived', async () => {
+    const base = stub();
+    const api: AgentConsoleApi = {
+      ...base,
+      sendChat: sendOk('01RUNCHATOUTPUT000000000001'),
+      listRunEvents: vi.fn().mockResolvedValue(
+        events([
+          { seq: 1, eventType: 'started', payload: null, occurredAt: '2026-11-14T00:00:01Z' },
+          {
+            seq: 2,
+            eventType: 'completed',
+            payload: { output: 'hello there' },
+            occurredAt: '2026-11-14T00:00:02Z',
+          },
+        ]),
+      ),
+    };
+    render(<ChatTab api={api} employeeId={EMP1} />);
+    typeAndSend('ping');
+    await screen.findByText('hello there');
+    expect(screen.queryByText('agentConsole.chat.emptyReply')).not.toBeInTheDocument();
+  });
 });
 
 describe('ChatTab honest failure mapping (design §1)', () => {
