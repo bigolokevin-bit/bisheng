@@ -1,0 +1,10 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+START=2026-11-14T16:26:54.284Z
+NOCOOKIE_7860_1=401 0.021009
+NOCOOKIE_7860_2=401 0.014287
+NOCOOKIE_7860_3=401 0.010934
+COOKIE_FOUND=yes len=252
+WITHCOOKIE_7860_1=200 5.207840
+WITHCOOKIE_7860_2=200 5.172864
+BROWSER_VIA_8182_E11=502 MS=10339 BODY={"code": "console.upstream_unavailable", "message": "identity service is not reachable"}
+DONE=2026-11-14T16:27:18.369Z

@@ -112,3 +112,26 @@ P0-14 三面板真实读数（rail『运行指标』aria-label 点击进入，�
 - 00:09:05 +0800 immediate differential probe: direct 7860 x5 = 401 all; through-8092 authenticated-path probe (bogus Bearer POST /api/employee-chat) x5 = 401 console.unauthenticated all; BFF log lines [bff] chat req=... result=console.unauthenticated status=401 prove the identity callback was reachable right after the 502.
 - Reading: BFF->7860 callback over the lima/ssh 80386 tunnel is intermittently failing (this is the 3rd observed occurrence: fix409-round2 run3/run4 502 x2, now run5 x1). Face is up, multiplexed tunnel drops a connection under browser burst. Not a panel/BFF/runtime-code issue. No services restarted, no code changed per constraints.
 - Status: send chain NOT MEASURED (blocked before send by the 502); awaiting L7/ops stabilization of the 7860 forwarding or a retry window.
+
+## P0-13 run7/run8 - root cause found: identity callback exceeds BFF 5s timeout only WITH a valid cookie
+
+run7 (browser-only) died 502 before capture; run8 below reproduces the
+whole loop with differential timings (2026-11-14T16:26:54Z, fix409-run8-diff.txt):
+
+| probe (same minute) | result |
+|---|---|
+| curl :7860 /api/v1/user/info WITHOUT cookie x3 | 401 in 0.010-0.021s (fast reject) |
+| same WITH access_token_cookie (len=252) x2 | 200 but 5.208s / 5.173s (earlier run: 10.234s) |
+| browser page.fetch /agent-api/api/employees (via Caddy 8182 -> BFF 8092, cookie auto-attached) | 502 console.upstream_unavailable, MS=10339 |
+| BFF apps/console/server.py identity call | single attempt, UPSTREAM_TIMEOUT=5.0s |
+
+Conclusion: Bisheng's user/info auth check takes ~5-10s for a VALID
+session cookie, exceeding the BFF's 5s upstream timeout, so every
+browser (cookie-bearing) request through /agent-api folds to 502, while
+cookieless operator probes (20/20, 15/15) always "pass". This explains
+run5/6/7 502s. Likely aggravated by bisheng-openfga being unhealthy
+(Up ~50min, unhealthy) since its last restart. NOT a panel/BFF-code/tunnel
+issue; send chain still NOT MEASURED (blocked before send). Fix belongs to
+Bisheng/L7 (restore openfga health or speed identity check) or main-repo
+BFF (raise identity timeout / async check) - both outside this lane's
+write scope. No service restarted, no code changed here.
