@@ -38,3 +38,27 @@ Real login (ego-browser, opsadmin, password injected via env - never echoed):
 P0-14 metrics eyeball: probe reached the metrics rail (RAIL_CLICK_OK; keywords 健康/用量/热力/降级/未计价/未归属/暂不可用 all present in the accessibility snapshot) but the screenshot did not persist to disk in that run; until a screenshot lands this item is recorded NOT MEASURED (no overclaiming). A retry may flip it to measured with a file path.
 
 Phantom corrections: earlier rounds referenced commit f976752 and gate numbers 1725/140 before they existed on disk; this section's numbers are from the verified reruns on daa716e above.
+
+## 口径纠正轮（总控卡 Nov 14 夜）
+按最新口径：真实登录必须管理员身份；不许猜口令、不许复用旧口令、不许注入自签 token。viewer01 的 403 属 ADR-0011 预期负例，不当通过证据。
+
+### 本拍可得的通过项：8092 写路由负例（curl 直连，Origin 同源）
+- POST /api/employee-chat 无鉴权（Content-Type json + X-Console-Write:1 + {employeeId,text,chatRequestKey}）→ **HTTP 401** `{"code": "console.unauthenticated", "message": "identity check failed"}`
+- POST 携带过期旧 token → **401** console.unauthenticated（同上响应体）
+- GET /api/employee-chat → **401**（鉴权 fail-closed 先于路由查找，实况记录）
+- POST /api/employees（非白名单写）→ **401** console.unauthenticated
+实况说明：未鉴权时所有写方法一律 401，故以上证明鉴权门在实跑，单独不能确证 CONSOLE_CHAT_WRITE_ENABLED 已开（开关前旧代码未鉴权写请求同样先 401）；开关确认需鉴权后 405 是否消失，本拍无管理员凭据无法复验。非管理员 403 负例：同样缺有效会话凭据 = 本拍 NOT MEASURED。
+
+### 逐块结论（三面板目测）
+- ① 运行健康 = NOT MEASURED（缺管理员凭据登录）
+- ④ 模型与工具用量 = NOT MEASURED（同上）
+- ⑤ 活动热力 = NOT MEASURED（同上）
+- 端到端真发（201+runId+Hermes 回复）= NOT MEASURED（不得用负例替代）
+
+### 产物新鲜度三证据（仍有效，前轮实测）
+8182/8181 root=pin build（/Users/kevin_studio/Projects/forks/bisheng/src/frontend/platform/build）；entry assets/js/index-Cd4uUS00.js mtime Nov 14 19:44:12 2026 size 1514；grep agent-v2-metrics 与 agent-v2-chatpanel 命中 assets/js/AgentConsoleV2Page-BzdMhsu5.js → 现服务=c663696 系 V2=1 产物，含三面板与 ChatTab；重 build 条件不成立。
+
+### UI 结构证据（代码层，本拍可得）
+- daa716e：V2 detail 挂 agent-v2-chatpanel（ChatTab 主聊天面，iframe 降为 open-in-Bisheng）。
+- ChatTab 诚实态已实现并有测试（targeted 9 files/140 passed）：乐观行+runId chip、R3 轮询、401/403/409/5xx 映射文案、缺方法降级、completed 无 message=emptyReply 不伪造。
+- run9 探针脚本语法错（SyntaxError: Invalid regular expression flags，node:internal/vm:203）记录在案；登录重试已按卡叫停。
