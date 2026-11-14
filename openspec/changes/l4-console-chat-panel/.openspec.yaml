@@ -1,0 +1,8 @@
+schema: spec-driven
+created: 2026-11-14
+x-lane: L4
+x-change-name: l4-console-chat-panel
+x-upstream-change: "seakoi-agent-os openspec/changes/l4-console-chat-route-a (Route A BFF write route, merged into main 575bf74)"
+x-bff-authority: "apps/console/server.py: POST /api/employee-chat (gated by CONSOLE_CHAT_WRITE_ENABLED); GET /api/run-events (R3); GET /api/runs (R5)"
+x-contract-ref: AGENTRUN@v1.4
+skip_specs: true
