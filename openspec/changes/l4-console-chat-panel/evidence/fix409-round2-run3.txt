@@ -1,0 +1,26 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+CAPTCHA_LEN=4
+LOGIN_URL=http://127.0.0.1:8182/agent
+OPEN=ROW_NOTFOUND:0
+TA=NO_PANEL
+CLICK_SEND_FAIL
+POLL0="NO_PANEL"
+POLL1="NO_PANEL"
+POLL2="NO_PANEL"
+POLL3="NO_PANEL"
+POLL4="NO_PANEL"
+POLL5="NO_PANEL"
+POLL6="NO_PANEL"
+POLL7="NO_PANEL"
+POLL8="NO_PANEL"
+POLL9="NO_PANEL"
+POLL10="NO_PANEL"
+POLL11="NO_PANEL"
+POLL12="NO_PANEL"
+POLL13="NO_PANEL"
+POLL14="NO_PANEL"
+POLL15="NO_PANEL"
+SHOT_DONE
+R5_STATUS=502
+R5_PARSE_ERR={"code": "console.upstream_unavailable", "message": "identity service is not reachable"}
+E2E3_DONE

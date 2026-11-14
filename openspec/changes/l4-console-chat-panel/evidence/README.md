@@ -95,3 +95,12 @@ P0-14 三面板真实读数（rail『运行指标』aria-label 点击进入，�
 - 新缺陷：GET /api/run-events?runId=rn_01M7D7421P5PA27TEXMT9YVDZ8 → **500 Internal Server Error**（8103 对真实 run 的 R3 端点 500）。
 - 断链定位（非面板代码）：8103 只注册 pol_dev_pilot；BFF P5 走 domain 8101 生成新 snapshotRef，两侧不通=policy provider 断层。修复归 L7/runtime+policy 侧。
 - 证据文件：fix409-readout.txt（run2 全输出）、fix409-chat-send.png（面板失败态截图）。原始日志 $T/fix409-run1.out、$T/fix409-run2.out。
+
+## P0-13 复验二（fix409-round2，Nov 15 00:04-00:12 本地时间）：BLOCKED — identity 隧道故障，未达发送
+
+- 两次真实会话尝试（浏览器已登录 opsadmin，URL_NOW=/agent 无踢出）：
+  - run3：E11/面板请求全部 502 `{"code":"console.upstream_unavailable","message":"identity service is not reachable"}`；面板 NO_PANEL、R5=502 同信封。截图 fix409-chat-round3.png。原始日志 fix409-round2-run3.txt / run4.txt。
+  - run4（间隔数分钟后重试一次）：同一 502 信封，未发送任何消息（0 条员工消息发出）。
+- 根因证据（非本车道代码）：`lsof -nP -iTCP:7860 -sTCP:LISTEN` = **ssh PID 80386**（lima/docker 端口转发隧道），BFF(8092) 的 user/info 回调经该隧道间歇拒连→URLError→502；直连 curl 7860 平时 401/200 可达。8092 无鉴权路径 401 console.unauthenticated 正常（fail-closed 无异常）。bisheng-openfga 43 分钟前重启（unhealthy），隧道劣化疑似同窗口运维副作用。
+- 结论：8103 修复（real-p6）本身与本链无冲突——上一轮（fix409-run2，昨夜）同脚本 E11=200/R5=200 全通，仅 policy 断点；本轮是 **identity 回调隧道故障**，属 L7/ops 通道，受『不重启共享服务』红线约束未处置。待隧道恢复后重跑同一条链即可（零代码改动）。
+- 本轮未产生新 run、未触碰 emptyReply、未改任何代码。
