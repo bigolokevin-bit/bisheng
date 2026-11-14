@@ -5,6 +5,7 @@ import type { AgentConsoleApi } from '@/controllers/API/agent';
 import { createHttpAgentConsoleApi } from '@/controllers/API/agent';
 import { AgentListPage } from './AgentListPage';
 import { AgentOverviewTab } from './AgentOverviewTab';
+import { ChatTab } from './ChatTab';
 import { AgentTasksTab } from './AgentTasksTab';
 import { AgentRunsTab } from './AgentRunsTab';
 import { AgentAuditTab } from './AgentAuditTab';
@@ -31,9 +32,11 @@ export interface AgentPageProps {
 }
 
 /**
- * Console page shell: employee list <-> detail tabs (overview / tasks /
- * runs / audit). All tabs are read-only; inactive tabs are not mounted, so
- * they issue no requests until opened (Radix unmounts inactive panels).
+ * Console page shell: employee list <-> detail tabs (overview / chat /
+ * tasks / runs / audit). Tasks / runs / audit are read-only; chat is the
+ * first-party conversation surface (P0-13 Route A, ADR-0013). Inactive tabs
+ * are not mounted, so they issue no requests until opened (Radix unmounts
+ * inactive panels).
  */
 export function AgentPage({ api }: AgentPageProps) {
   const { t } = useTranslation();
@@ -58,6 +61,11 @@ export function AgentPage({ api }: AgentPageProps) {
               children: (
                 <AgentOverviewTab api={resolvedApi} employeeId={employeeId} />
               ),
+            },
+            {
+              key: 'chat',
+              label: t('agentConsole.tabs.chat'),
+              children: <ChatTab api={resolvedApi} employeeId={employeeId} />,
             },
             {
               key: 'tasks',

@@ -4637,7 +4637,8 @@
       "overview": "Overview",
       "tasks": "Tasks",
       "runs": "Runs",
-      "audit": "Audit"
+      "audit": "Audit",
+      "chat": "Chat"
     },
     "tasks": {
       "colTitle": "Task",
@@ -4715,6 +4716,35 @@
       "paused": "Paused",
       "offboarding": "Offboarding",
       "archived": "Archived"
+    },
+    "chat": {
+      "empty": "No messages yet. Send one to start the conversation.",
+      "inputPlaceholder": "Type a message for this employee",
+      "send": "Send",
+      "retry": "Retry",
+      "roleUser": "You",
+      "roleAssistant": "Employee",
+      "notWired": "Chat is not wired in this console build",
+      "openInBisheng": "Open in Bisheng",
+      "stillRunning": "Still running — check back later",
+      "emptyReply": "The run completed without a reply message",
+      "messageUnreadable": "Message content unavailable (event type: {{type}})",
+      "status": {
+        "pending": "Sending",
+        "sent": "Sent",
+        "running": "Running",
+        "done": "Completed",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "interrupted": "Interrupted",
+        "stillRunning": "Still running"
+      },
+      "error": {
+        "unauthenticated": "Session expired, please sign in again",
+        "forbidden": "Not permitted from this context",
+        "rejected": "Request rejected",
+        "unavailable": "Agent service unavailable"
+      }
     }
   }
 }

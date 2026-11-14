@@ -4582,7 +4582,8 @@
       "overview": "概览",
       "tasks": "任务",
       "runs": "运行",
-      "audit": "审计"
+      "audit": "审计",
+      "chat": "聊天"
     },
     "tasks": {
       "colTitle": "任务",
@@ -4660,6 +4661,35 @@
       "paused": "已暂停",
       "offboarding": "离职中",
       "archived": "已归档"
+    },
+    "chat": {
+      "empty": "还没有消息，发送一条开始对话",
+      "inputPlaceholder": "输入要发给该员工的消息",
+      "send": "发送",
+      "retry": "重试",
+      "roleUser": "我",
+      "roleAssistant": "员工",
+      "notWired": "当前控制台未接入聊天通道",
+      "openInBisheng": "在 BiSheng 中打开",
+      "stillRunning": "任务仍在运行，请稍后刷新查看",
+      "emptyReply": "本次运行已完成，但没有回复内容",
+      "messageUnreadable": "消息内容不可读（事件类型：{{type}}）",
+      "status": {
+        "pending": "发送中",
+        "sent": "已发送",
+        "running": "运行中",
+        "done": "已完成",
+        "failed": "失败",
+        "cancelled": "已取消",
+        "interrupted": "已中断",
+        "stillRunning": "仍在运行"
+      },
+      "error": {
+        "unauthenticated": "登录已过期，请重新登录",
+        "forbidden": "当前上下文不允许此操作",
+        "rejected": "请求被拒绝",
+        "unavailable": "智能体服务不可用"
+      }
     }
   }
 }

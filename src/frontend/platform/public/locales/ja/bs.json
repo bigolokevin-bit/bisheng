@@ -4582,7 +4582,8 @@
       "overview": "概要",
       "tasks": "タスク",
       "runs": "実行",
-      "audit": "監査"
+      "audit": "監査",
+      "chat": "チャット"
     },
     "tasks": {
       "colTitle": "タスク",
@@ -4660,6 +4661,35 @@
       "paused": "一時停止",
       "offboarding": "オフボーディング中",
       "archived": "アーカイブ済み"
+    },
+    "chat": {
+      "empty": "まだメッセージがありません。送信して会話を始めましょう",
+      "inputPlaceholder": "この従業員へのメッセージを入力",
+      "send": "送信",
+      "retry": "再試行",
+      "roleUser": "あなた",
+      "roleAssistant": "従業員",
+      "notWired": "このコンソールではチャットが接続されていません",
+      "openInBisheng": "Bisheng で開く",
+      "stillRunning": "まだ実行中です。あとで更新して確認してください",
+      "emptyReply": "実行は完了しましたが返信メッセージはありません",
+      "messageUnreadable": "メッセージ内容を取得できません（イベント種別: {{type}}）",
+      "status": {
+        "pending": "送信中",
+        "sent": "送信済み",
+        "running": "実行中",
+        "done": "完了",
+        "failed": "失敗",
+        "cancelled": "キャンセル済み",
+        "interrupted": "中断",
+        "stillRunning": "まだ実行中"
+      },
+      "error": {
+        "unauthenticated": "セッションの有効期限が切れました。再度サインインしてください",
+        "forbidden": "このコンテキストからの操作は許可されていません",
+        "rejected": "リクエストが拒否されました",
+        "unavailable": "エージェントサービスを利用できません"
+      }
     }
   }
 }

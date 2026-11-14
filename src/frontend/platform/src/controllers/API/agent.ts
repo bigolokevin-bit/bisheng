@@ -168,6 +168,42 @@ export interface OverviewBundle {
   pendingApprovals: ApiResult<{ count: number }>;
 }
 
+// ---------- P0-13 Route A chat types (design §4) ----------
+
+/** Strict body of `POST /api/employee-chat` (E5 -> P5 -> R1 server-side). */
+export interface ChatRequest {
+  employeeId: string;
+  text: string;
+  /** Client-generated UUID per user message; reused verbatim on retry so the
+   * upstream idempotency key cannot create a second run for one message. */
+  chatRequestKey: string;
+}
+
+/** R1 dispatch result: the created run plus its first status. */
+export interface ChatRunResult {
+  runId: string;
+  status: string;
+}
+
+/**
+ * One R3 run event (contract vocabulary: started / message / completed /
+ * failed / cancelled / interrupted; reasonCode on failures). Narrower than
+ * `agentConsoleRuns.RunEvent`: the chat panel only reads these fields.
+ */
+export interface RunEventItem {
+  seq: number;
+  eventType: string;
+  /** Object in live captures; nullable and fail-soft on anything else. */
+  payload: Record<string, unknown> | null;
+  occurredAt: string;
+}
+
+/** R3 page normalized to `{items}` client-side (live uses `items`, older
+ * envelopes `events`; the stub uses `items`). */
+export interface RunEventList {
+  items: RunEventItem[];
+}
+
 // ---------- Narrow interface ----------
 
 export interface AgentConsoleApi {
@@ -188,9 +224,29 @@ export interface AgentConsoleApi {
    * throws UpstreamError('console.missing_filter') without sending if not.
    */
   listAudit(params: ListAuditParams): Promise<AuditList>;
+  /**
+   * P0-13 Route A: send one chat message (E5 -> P5 -> R1 server-side; the
+   * BFF returns the runId + first status). OPTIONAL so existing stubs and
+   * tests keep compiling; ChatTab degrades to "chat not wired" when absent.
+   */
+  sendChat?(input: ChatRequest): Promise<ApiResult<ChatRunResult>>;
+  /**
+   * P0-13 Route A (R3): incremental event poll for one run. `sinceSeq` is an
+   * exclusive lower bound. OPTIONAL for the same reason as sendChat.
+   */
+  listRunEvents?(
+    runId: string,
+    sinceSeq: number,
+    limit?: number,
+  ): Promise<ApiResult<RunEventList>>;
 }
 
 // ---------- Stub / fixture adapter (tests & preview only; no network, no tokens) ----------
+
+/** Fixed fake runId used by the stub chat methods (deterministic, ASCII). */
+export const STUB_CHAT_RUN_ID = '01RUNSTUBCHAT0000000000001';
+/** Fixed stub event timestamps (no clock reads, no randomness). */
+const STUB_CHAT_TS = ['2026-01-01T00:00:00Z', '2026-01-01T00:00:01Z', '2026-01-01T00:00:02Z'];
 
 export interface AgentConsoleFixtures {
   employees: EmployeeSummary[];
@@ -221,6 +277,8 @@ export function mkNotFound<T = never>(code = 'employee.not_found'): ApiResult<T>
 export function createStubAgentConsoleApi(
   fixtures: AgentConsoleFixtures,
 ): AgentConsoleApi {
+  // Last text sent through the stub chat methods (scripted echo source).
+  let lastStubChatText: string | null = null;
   return {
     async listEmployees({ keyword, lifecycleState, limit, cursor }) {
       const kw = (keyword ?? '').trim().toLowerCase();
@@ -295,6 +353,35 @@ export function createStubAgentConsoleApi(
       if (from) rows = rows.filter((a) => a.occurredAt >= from);
       if (to) rows = rows.filter((a) => a.occurredAt <= to);
       return stubKeysetPage(rows, limit, cursor, 200);
+    },
+
+    // P0-13 chat stub: deterministic scripted echo (design §4). NOT real
+    // data: one fixed runId, the echo of the last user text prefixed with
+    // "stub:", fixed timestamps; no randomness, no network, no tokens.
+    async sendChat(input) {
+      lastStubChatText = input.text;
+      return mkResult<ChatRunResult>({
+        runId: STUB_CHAT_RUN_ID,
+        status: 'running',
+      });
+    },
+
+    async listRunEvents(runId, sinceSeq) {
+      if (runId !== STUB_CHAT_RUN_ID || lastStubChatText === null) {
+        return mkResult<RunEventList>({ items: [] });
+      }
+      const all: RunEventItem[] = [
+        { seq: 1, eventType: 'started', payload: null, occurredAt: STUB_CHAT_TS[0] },
+        {
+          seq: 2,
+          eventType: 'message',
+          payload: { text: `stub:${lastStubChatText}` },
+          occurredAt: STUB_CHAT_TS[1],
+        },
+        { seq: 3, eventType: 'completed', payload: null, occurredAt: STUB_CHAT_TS[2] },
+      ];
+      const from = sinceSeq ?? 0;
+      return mkResult<RunEventList>({ items: all.filter((e) => e.seq > from) });
     },
   };
 }
@@ -443,6 +530,41 @@ export interface HttpAgentConsoleApiOptions {
   getToken?: () => string | null;
 }
 
+/**
+ * P0-13 design §1: normalize all three live error shapes —
+ * BFF `{code,message}`, runtime `{error:{code,message,details}}`,
+ * FastAPI `{detail}` — into `{code, message}`. Never fabricates: without a
+ * code in the body the fallback is `agent.http.<status>`.
+ */
+function readErrorEnvelope(
+  body: unknown,
+  status: number,
+): { code: string; message?: string } {
+  const fallbackCode = `agent.http.${status}`;
+  if (typeof body !== 'object' || body === null) {
+    return { code: fallbackCode };
+  }
+  const b = body as Record<string, unknown>;
+  if (typeof b.code === 'string') {
+    return {
+      code: b.code,
+      message: typeof b.message === 'string' ? b.message : undefined,
+    };
+  }
+  const nested = b.error;
+  if (typeof nested === 'object' && nested !== null) {
+    const e = nested as Record<string, unknown>;
+    return {
+      code: typeof e.code === 'string' ? e.code : fallbackCode,
+      message: typeof e.message === 'string' ? e.message : undefined,
+    };
+  }
+  if (typeof b.detail === 'string') {
+    return { code: fallbackCode, message: b.detail };
+  }
+  return { code: fallbackCode };
+}
+
 export function createHttpAgentConsoleApi(
   options: HttpAgentConsoleApiOptions = {},
 ): AgentConsoleApi {
@@ -500,6 +622,98 @@ export function createHttpAgentConsoleApi(
       };
     }
     return { ok: true, status: res.status, data: body as T };
+  }
+
+  /**
+   * P0-13 write variant: same-origin POST with the JSON + write-gate headers
+   * (design §4). Unlike the GET `request`, auth/network failures come back as
+   * ApiResult (status + normalized code) so the chat panel can render honest
+   * per-row failure states instead of unmounting into a page-level error.
+   */
+  async function postJson<T>(path: string, body: unknown): Promise<ApiResult<T>> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-Console-Write': '1',
+    };
+    const token = getToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    let res: Response;
+    try {
+      res = await fetch(`${base}${path}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+    } catch {
+      return {
+        ok: false,
+        status: 0,
+        data: null,
+        code: 'console.upstream_unavailable',
+        message: 'console request failed (network)',
+      };
+    }
+    let payload: unknown = null;
+    try {
+      payload = await res.json();
+    } catch {
+      if (res.ok) {
+        throw new UpstreamError('invalid JSON from console gateway');
+      }
+    }
+    if (!res.ok) {
+      const err = readErrorEnvelope(payload, res.status);
+      return { ok: false, status: res.status, data: null, code: err.code, message: err.message };
+    }
+    return { ok: true, status: res.status, data: payload as T };
+  }
+
+  /** GET variant of postJson error honesty: never throws on 401/4xx/5xx;
+   * every failure becomes ApiResult with the three-form normalized code. */
+  async function requestChecked<T>(
+    path: string,
+    params: Record<string, string | number | undefined>,
+  ): Promise<ApiResult<T>> {
+    const qs = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== '') {
+        qs.set(key, String(value));
+      }
+    }
+    const query = qs.toString();
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const token = getToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    let res: Response;
+    try {
+      res = await fetch(`${base}${path}${query ? `?${query}` : ''}`, { headers });
+    } catch {
+      return {
+        ok: false,
+        status: 0,
+        data: null,
+        code: 'console.upstream_unavailable',
+        message: 'console request failed (network)',
+      };
+    }
+    let payload: unknown = null;
+    try {
+      payload = await res.json();
+    } catch {
+      if (res.ok) {
+        throw new UpstreamError('invalid JSON from console gateway');
+      }
+    }
+    if (!res.ok) {
+      const err = readErrorEnvelope(payload, res.status);
+      return { ok: false, status: res.status, data: null, code: err.code, message: err.message };
+    }
+    return { ok: true, status: res.status, data: payload as T };
   }
 
   return {
@@ -599,6 +813,38 @@ export function createHttpAgentConsoleApi(
       // Live A3 wraps rows under `events` (not `items`); normalize both shapes.
       const rows = res.data.items ?? res.data.events ?? [];
       return { items: rows, nextCursor: res.data.nextCursor ?? undefined };
+    },
+
+    async sendChat(input) {
+      // Strict body per design §1; the BFF identity gate resolves
+      // tenant/actor from the Bisheng session. No internal token here.
+      return postJson<ChatRunResult>('/api/employee-chat', {
+        employeeId: input.employeeId,
+        text: input.text,
+        chatRequestKey: input.chatRequestKey,
+      });
+    },
+
+    async listRunEvents(runId, sinceSeq, limit) {
+      if (!runId) {
+        // A missing runId is a client bug; mirror agentConsoleRuns and fail
+        // soft as an honest unavailable result instead of sending a bad query.
+        return {
+          ok: false,
+          status: 0,
+          data: null,
+          code: 'agent.runs.missing_required_param',
+        };
+      }
+      const res = await requestChecked<
+        RunEventList & { events?: unknown[]; nextSeq?: number | null; hasMore?: boolean }
+      >('/api/run-events', { runId, sinceSeq, limit });
+      if (!res.ok || !res.data) {
+        return { ok: false, status: res.status, data: null, code: res.code, message: res.message };
+      }
+      // Live R3 wraps rows under `items`; older/harness envelopes `events`.
+      const rows = (res.data.items ?? res.data.events ?? []) as RunEventItem[];
+      return { ok: true, status: res.status, data: { items: rows } };
     },
   };
 }
