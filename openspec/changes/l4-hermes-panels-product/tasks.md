@@ -11,6 +11,6 @@
 
 ## Wave 2 — 门禁与证据
 - [x] T5 fork lint/targeted/全量(43-18-新增0)/build:platform/diff-check/secret grep 各自落盘取 exit
-- [ ] T6 evidence/gates.md 真实数字 + tasks 勾选 + 追加提交 push，HEAD=远端
+- [x] T6 evidence/gates.md 真实数字 + tasks 勾选 + 追加提交 push，HEAD=远端
 - [x] T7 真实登录①④⑤裁定：可跑则跑，否则 NOT MEASURED 写清缺口
-- [ ] T8 回报两分支 HEAD=远端（lane/L4-hermes-panels 76c7427 不动 + lane/L4-hermes-panels-product）与撤旧迎新清单
+- [x] T8 回报两分支 HEAD=远端（lane/L4-hermes-panels 76c7427 不动 + lane/L4-hermes-panels-product）与撤旧迎新清单
