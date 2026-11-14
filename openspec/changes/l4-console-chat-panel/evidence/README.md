@@ -204,3 +204,48 @@ Source: fix409-nosend-readout.txt / p013-nosend-ui-failed.png.
 - Do not treat this as P0-13 pass; run28 (old shell, rn_01M7DHDX...) remains the
   UI-level PASS reference. Fixing DB-1 (poll retry/backoff) is fork-frontend scope
   pending a follow-up card.
+
+## DB-1 poll tolerance + acceptance B re-run (card @1635@, 2026-11-15)
+
+Fix commit: f6ee26c `fix(agent-console): ChatTab poll tolerance - retry with
+backoff, terminal only on run events (DB-1)`. ChatTab now tolerates transient
+poll failures: POLL_FAIL_THRESHOLD=3 with FAIL_BACKOFF_MS=[1000,2000,4000];
+non-ok responses and thrown errors keep the row running (received delta text
+never overwritten); terminal state is written only from run events or after
+3 consecutive failures. Pinned by 3 unit tests.
+
+Gates (fresh, logs in /tmp via l4cp-db1gate3.sh): targeted AgentPage 48/48;
+full platform suite 43 failed | 1732 passed (1775), 18 failed files,
+FAIL_LINES=43 => frozen 43/18, zero new failures, passed only grew;
+lint exit 0; VITE_AGENT_CONSOLE_V2=1 build:platform exit 0
+(entry assets/js/index-ZWyz97xC.js); git diff --check 0.
+
+Deploy: ops/console.sh lan stop -> SEAKOI_CLIENT_BUILD_DIR=<worktree>/src/frontend/client/build
+lan start (caddy pid 31775). Note: lan start regenerates the Caddyfile and its
+platform root falls back to the pin checkout build dir, so the new build was
+rsynced from the worktree build/ into the pin build/ dir (gitignored artifacts,
+same precedent as earlier rounds). curl 8182 serves entry index-ZWyz97xC.js.
+
+Acceptance B re-run (ego-browser, real login session, heredoc carrier; note the
+`nodejs <file.mjs>` path mode reproducibly fails with a SyntaxError in this
+build, heredoc works):
+- detail entry = row BUTTON [详情] (row/TR click does not navigate); detail
+  surface renders chatpanel (testid present, textarea + send button found).
+- SENT_AT_UTC=2026-11-14T19:03:01.467Z, text "P0-13 DB-1 复跑：请回复本句".
+- POST /agent-api/api/employee-chat = 201 (d=5185ms); run-events poll
+  (sinceSeq=0&limit=50) = 200 (d=2500ms) — DB-2 did not reproduce this round.
+- chip runId = rn_01M7DQ282W7C197TCRXHGVNG5B (this round's new run).
+- panel final: "已发送 rn_01M7DQ282W7C197TCRXHGVNG5B" + assistant reply line
+  "已完成 ... run.upstream_completed" => reply rendered in UI.
+- R5 GET /agent-api/api/runs?employeeId=...&limit=10 = 200, items=10.
+- R3 GET /agent-api/api/run-events?runId=rn_01M7DQ282W7C197TCRXHGVNG5B = 200,
+  6 events (message x5 with payload.delta + run.completed), completed
+  output="P0-13 DB-1 复跑：请回复本句" (live Hermes echo instance),
+  interrupted=false, run_id=run_41d232d5d6a645c89eec7d7a90307897.
+- screenshot db1-chat-final.png (91715B) committed here; raw stdout in
+  fix409-db1-nosend9-readout.txt.
+
+Verdict: P0-13 acceptance B = PASS (runId + reply rendered + R5/R3 200).
+DB-1 fault-tolerance is unit-pinned; DB-2 (poll requests not reaching BFF) did
+not recur this round but remains a BW-04 concern (openfga slow identity
+checks), outside this lane.
