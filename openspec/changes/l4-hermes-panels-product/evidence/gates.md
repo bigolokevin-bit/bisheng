@@ -16,6 +16,19 @@
 | 5 | diff-check | `git diff --check origin/main..HEAD`（提交前后各一次） | 0 | 2026-11-14T04:56:32Z / 04:57Z | 无空白错误 | — |
 | 6 | staged secret grep | `git diff --cached \| grep -nEi 'CONSOLE_INTERNAL_TOKEN\|SEAKOI_RUNTIME_INTERNAL_TOKEN\|X-Internal-Token'` | 1（无命中） | 2026-11-14T04:56:32Z | 0 hits：内部 token 头/环境变量名不出现在任何前端提交文件 | — |
 
+## 修复轮再验证（tasks.md sed 事故后，应总控指令）
+
+事故披露：72ea8da 中 tasks.md 因 sed 替换串误以字面 `^` 开头而整块损坏（行首变 `^- [x]`），且 T5–T8 属预勾（其完成动作当时未发生）。已由 5ec95cd 用 write 工具整文件重写复原（T0–T4 真实完成保持 [x]，T5–T8 回落未验证）。本节为逐项再验证，全部命令重跑于盘上取数：
+
+| # | 门禁再验证 | 命令 | exit | UTC | 结果 |
+|---|---|---|---|---|---|
+| 7 | 日志实存与数字复核 | `ls` + grep p14fork-{lint,targeted,full,build}.log | 0 | 2026-11-14T05:00Z | lint 干净；targeted 6 files/94 passed；full `43 failed \| 1711 passed (1754)`、`18 failed files \| 279 passed (297)`；build `✓ built in 11.73s`——与 #1–#4 记录一致 |
+| 8 | FAILSET 一致性重证 | python3 同法归一化 p14-failset-now.txt vs b.txt | 0 | 2026-11-14T05:00Z | 43 = 43，unified diff 0 行，IDENTICAL，新增失败 0（修正了早期 grep 前导空格导致的 0 行误读） |
+| 9 | diff-check 重跑 | `git diff --check origin/main..HEAD` | 0 | 2026-11-14T05:01Z | 无空白错误 |
+| 10 | secret grep 分层复核 | `git diff origin/main..HEAD -- src/frontend/platform \| grep -cE '<token 变量名>'`；逐文件 grep agentConsoleHermes.ts / HermesMetricsSection.tsx | 0 命中 | 2026-11-14T05:01Z | 代码零命中；range 级 2 命中均为 change 文档散文（design.md 机制句 1 处、本表 #6 grep 命令自身 1 处），非密钥值 |
+
+再验证结论：T5 恢复勾选（六项门禁均有盘上 exit+UTC 证据）；T7 恢复勾选（NOT MEASURED 裁定与缺项清单已在盘上，符合卡片「做不到写 NOT MEASURED」要求）；T6/T8 按其定义（追加提交 push HEAD=远端、两分支回报）留待各自完成动作之后的追加提交中勾选，不再预勾。
+
 ## 真实登录目测（①④⑤）——NOT MEASURED
 
 生产入口真实登录未执行，缺口如实记录（依卡第 7 条，不得猜 opsadmin 口令）：
