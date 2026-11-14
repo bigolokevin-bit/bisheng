@@ -10,9 +10,11 @@
  * - The historical version chain has no GET endpoint in the contract (E4 is
  *   write-only), so the detail shows the CURRENT version from E5 plus a
  *   pending-chain note; no fake chain is drawn.
- * - The app-chat panel (S10b-v2-2) is read-only and appears only for an
- *   ACTIVE app workstation binding; unbound employees see guidance, never
- *   an input, and no message UI is ever faked here.
+ * - The app-chat iframe panel (S10b-v2-2) is read-only and appears only for
+ *   an ACTIVE app workstation binding; unbound employees see guidance, never
+ *   an input, and no message UI is ever faked there. P0-13 Route A adds the
+ *   contract chat panel (ChatTab: BFF-gated send + R3 polling) as the primary
+ *   chat surface; the iframe stays only as the open-in-Bisheng fallback.
  * - snapshotRef (internal BFF binding id) is never rendered.
  *
  * Theming: two isomorphic token blocks (dark default), user toggle persisted
@@ -38,6 +40,7 @@ import {
   type AgentApprovalsApi,
   type Approval,
 } from '@/controllers/API/agentConsoleApprovals';
+import { ChatTab } from '@/pages/AgentPage/ChatTab';
 import {
   createHttpAgentConsoleHermesApi,
   type AgentConsoleHermesApi,
@@ -500,6 +503,13 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsAp
                 {/* P0-5 v2-3: real R6/R7/P9 data replaces the pending-only
                     story once these routes land; blocks degrade per-block. */}
                 <TrendsCostsSection employeeId={selected.employeeId} api={trends} />
+                {/* P0-13 Route A: the contract chat panel (BFF-gated send +
+                    R3 polling) is the primary chat surface. The read-only
+                    app iframe below is kept only as open-in-Bisheng fallback. */}
+                <div className="a2-card" data-testid="agent-v2-chatpanel">
+                  <h2 className="a2-h2">{t('agentConsole.tabs.chat')}</h2>
+                  <ChatTab api={api} employeeId={selected.employeeId} />
+                </div>
                 <div className="a2-card a2-chat-card" data-testid="agent-v2-chat">
                   <h2 className="a2-h2">{t('agentConsole.v2.chatTitle')}</h2>
                   {stations.phase === 'loading' ? <p className="a2-meta">{t('agentConsole.v2.loading')}</p> : null}
