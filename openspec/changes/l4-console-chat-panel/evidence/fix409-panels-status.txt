@@ -1,0 +1,28 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+URL=http://127.0.0.1:8182/agent
+SUMMARY_STATUS=200
+USAGE_STATUS=200
+SHOT_TOP
+HEAT=活动热力（平台对照）
+平台 7×24（近 4 周）
+周日
+周一
+周二
+周三
+周四
+周五
+周六
+Hermes 当日计数
+正常
+日期
+2026-11-14
+请求数
+12
+消息数
+12
+token 数
+164190
+P95 延迟（ms）
+19442.64
+
+口径差异：平台侧为 R7 近 4 周 7×24 周矩阵；Hermes 侧仅为进程当日聚合计数（重启归零、不回填历史），无 7×24 粒度。

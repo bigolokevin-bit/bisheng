@@ -1,0 +1,24 @@
+=== nosend1 (viewport miss) ===
+LIST_READY_AFTER=12s
+TA_POS={"x":726,"y":1103}
+CHIP_RUNID=null
+=== nosend3 (send OK, chip, R3/R5 200) ===
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+LIST_READY=true
+TA_POS={"x":726,"y":456,"vh":927}
+TA_VALUE_LEN=16
+SEND_BTN={"x":1309,"y":456}
+SENT_AT_UTC=2026-11-14T18:42:06.942Z
+POLL1="聊天\n我\nP0-13 no-send 复跑\n已发送\nrn_01M7DNVZ091NKD92SCRVFGK5F4\n员工\n运行中\n运行中\nrn_01M7DNVZ091NKD92SCRVFGK5F4\n在 BiSheng 中打开\n发送"
+CHIP_RUNID=rn_01M7DNVZ091NKD92SCRVFGK5F4
+SHOT_DONE
+R3_STATUS=200 R3={"items":[{"runId":"rn_01M7DNVZ091NKD92SCRVFGK5F4","seq":1,"eventType":"message","payload":{"delta":"The","event":"message.delta","run_id":"run_2f3d60a4c37e41b4aab98da560f7007f","seq":0,"timestamp":1794681733.9225018,"upstreamEvent":"message.delta","upstreamSeq":0},"occurredAt":"2026-11-14T18:42:13.922Z","pulledAt":"2026-11-14T18:42:12.118Z"},{"runId":"rn_01M7DNVZ091NKD92SCRVFGK5F4","seq":2,"eventType":"message","payload":{"delta":" request","event":"message.delta","run_id":"run_2f3d60a4c37e41b4aab98da560f7007f","seq":1,"timestamp":1794681733.937696,"upstreamEvent":"message.delta","upstreamSeq":1},"occurredAt":"2026-11-14T18:42:13.937Z","pulledAt":"2026-11-14T18:42:12.118Z"},{"runId":"rn_01M
+FINAL_PANEL="聊天\n我\nP0-13 no-send 复跑\n已发送\nrn_01M7DNVZ091NKD92SCRVFGK5F4\n员工\n失败\nrn_01M7DNVZ091NKD92SCRVFGK5F4\n智能体服务不可用\n在 BiSheng 中打开\n发送"
+R5_STATUS=200 ITEMS=10 FIRST=rn_01M7D7421P5PA27TEXMT9YVDZ8 running
+
+=== nosend4 (final R3 + UI panel) ===
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+R3_STATUS=200 COUNT=54
+TYPES=1:message,2:message,3:message,4:message,5:message,6:message,7:message,8:message,9:message,10:message,11:message,12:message,13:message,14:message,15:message,16:message,17:message,18:message,19:message,20:message,21:message,22:message,23:message,24:message,25:message,26:message,27:message,28:message,29:message,30:message,31:message,32:message,33:message,34:message,35:message,36:message,37:message,38:message,39:message,40:message,41:message,42:message,43:message,44:message,45:message,46:message,47:message,48:message,49:message,50:message,51:message,52:message,53:message,54:completed
+NONMSG=[{"runId":"rn_01M7DNVZ091NKD92SCRVFGK5F4","seq":54,"eventType":"completed","payload":{"completed":true,"event":"run.completed","interrupted":false,"output":"The request \"P0-13 no-send 复跑\" appears to be an internal or context-specific instruction — likely referencing a test case, pipeline run, or debugging step (e.g., “P0-13” as a priority-zero test ID, “no-send” meaning skip network emission, “复跑” meaning re-run). But no prior context, artifact, or environment state is provided in this session.\n\nI have no:\n- Running process, test suite, or script named P0-13  \n- File, log, or config matching that identifier  \n- Active session, cron job, or background task with that label  \n- Connected service or tool configured for such a workflow  \n\nTo proceed, I need one of the following:\n- Th
+REPLY_FULL="The request \"P0-13 no-send 复跑\" appears to be an internal or context-specific instruction — likely referencing a test case, pipeline run, or debugging step (e.g., “P0-13” as a priority-zero test ID, “no-send” meaning skip network emission, “复跑” meaning re-run). But no prior context, artifact, or environment state is provided in this session.\n\nI have no:\n- Running process, test suite, or script name"

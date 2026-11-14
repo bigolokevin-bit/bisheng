@@ -146,3 +146,61 @@ write scope. No service restarted, no code changed here.
 - Runs produced by this lane: rn_01M7DET0C08T3CJVP95VT2YKMG (run12), rn_01M7DEY86XMD8J2SJZES4TGPWJ (run13), rn_01M7DF41FG124YHW9PR66CJ7HW (run15), rn_01M7DGEFH1KKWS8EZ791TCMZCZ (run19, UI-visible reply). Control (ops direct): rn_01M7D7421P5PA27TEXMT9YVDZ8.
 - Note: an untracked build.bak-20261114T161054Z/ rsync backup was moved to the temp dir (never committed); lint scans the whole platform dir so it must stay out of the tree.
 - ego-browser 0.6.2.9 upgrade notice keeps appearing; not upgraded (pending user decision).
+
+## @1568@ dual acceptance round (2026-11-15, V2 shell, admin login)
+
+### Probe verdict on the card premise
+- Card premise (frontend misses /agent-api prefix -> 404) NOT confirmed on disk:
+  agentConsoleHermes.ts:179 `base = options.base ?? '/agent-api'`; request() joins
+  `${base}${path}`. Browser page.fetch evidence (fix409-hermes404-probe.txt):
+  `/agent-api/api/hermes-summary` = 200 real runtime.hermes.summary.v1 (sources ok);
+  bare `/api/hermes-summary` = 404 (that is the path the controller curl-ed);
+  `/agent-api/api/hermes-usage?days=7` = 200 full usage. Changing the code as the
+  card suggested would double the prefix. Product code NOT changed; instead a new
+  vitest pins the URL shape (commit 67dffdf): urls === '/agent-api/api/hermes-summary'
+  and startsWith '/agent-api/api/hermes-usage?days=7', never '//agent-api'.
+- Gates for that commit: vitest src/controllers/API = 11 files / 65 tests passed,
+  lint exit 0.
+
+### Deploy path actually taken (authorized by card)
+- VITE_AGENT_CONSOLE_V2=1 build:platform exit 0, entry index-D_Ej-0dc.js -> index-DdTvd-Xa.js.
+- ops/console.sh lan stop ok; lan start first failed on client-build guard (its
+  default CLIENT_BUILD_DIR pointed at the removed console-product worktree); retried
+  with SEAKOI_CLIENT_BUILD_DIR=this worktree's client/build -> start exit 0, caddy
+  pid 28570. NOTE: lan start regenerates the Caddyfile with root = pin checkout
+  build, so the fresh V2 build was rsync-ed into the pin build dir (established
+  gitignore-artifact precedent); curl 8182 then serves index-DdTvd-Xa.js.
+
+### Acceptance A - P0-14 three panels (MEASURED, no agent.http.404)
+Source: fix409-panels-readout.txt / fix409-panels-status.txt / p014-a-panels.png.
+- V2 shell live: rail labels [数字员工, 审批, 运行, 运行指标]; clicked 运行指标.
+- Health: gateway ok; today counts requests=12 messages=12 tokens=164190,
+  p95=19442.64ms; system ok (CPU 7.5% / mem 73.6% / disk 41.3%); sessions 30/30/100
+  (api_server=28, feishu=2).
+- Usage (7d): input 281013 / output 1942 / cache-read 110637 / reasoning 0;
+  model qwen-plus 287917/2274; ledger cost total USD = 0.10031 (upstream real,
+  rows=10); per-employee cost table rendered. Never a fabricated 0.00.
+- Heat: platform 7x24 (4 weeks) matrix rendered; Hermes day counter honest.
+- HTTP: /agent-api/api/hermes-summary = 200, /agent-api/api/hermes-usage?days=7 = 200.
+- Verdict: PASS - real numbers shown, agent.http.404 gone.
+
+### Acceptance B - P0-13 no-send re-run (backend PASS, UI reply NOT PASSING)
+Source: fix409-nosend-readout.txt / p013-nosend-ui-failed.png.
+- Real login session; typed 'P0-13 no-send 复跑'; SENT_AT_UTC=2026-11-14T18:42:06.942Z.
+- POST /agent-api/api/employee-chat = 201 (BFF log line '[bff] chat req=0586f1da3c65
+  employee=emp_86A81CE8FF6F42E187BCF2B540 result=ok status=201').
+- runId chip appeared: rn_01M7DNVZ091NKD92SCRVFGK5F4 (panel showed 已发送/运行中).
+- R3 run-events for that run = 200, 54 events: seq1-53 message delta, seq54
+  completed with the real Hermes reply (English text about the instruction;
+  interrupted=false). R5 runs = 200 items=10.
+- NOT PASSING: the UI later flipped the assistant row to 失败 / 智能体服务不可用
+  and the reply text never rendered. Root: the UI's run-events poll requests never
+  reached the BFF (grep rn_01M7DNVZ in console-bff.log = 0 hits; only the POST is
+  logged), so polls died at the Caddy->BFF layer (slow identity callbacks 10-15s +
+  4s poll cadence), and ChatTab marks a run failed on the first poll error with no
+  retry tolerance. Two defects filed: DB-1 poll has no transient-failure tolerance;
+  DB-2 poll requests lost before BFF under slow-callback concurrency (Caddy/BFF
+  layer, identity slowness = known BW). Budget deny did NOT trigger for this run.
+- Do not treat this as P0-13 pass; run28 (old shell, rn_01M7DHDX...) remains the
+  UI-level PASS reference. Fixing DB-1 (poll retry/backoff) is fork-frontend scope
+  pending a follow-up card.
