@@ -249,3 +249,21 @@ Verdict: P0-13 acceptance B = PASS (runId + reply rendered + R5/R3 200).
 DB-1 fault-tolerance is unit-pinned; DB-2 (poll requests not reaching BFF) did
 not recur this round but remains a BW-04 concern (openfga slow identity
 checks), outside this lane.
+
+## Re-verification round (card @1697@, 2026-11-15)
+
+### A: P0-14 three panels, real login 8182 — PASS
+Freshness: served entry == worktree build entry == index-ZWyz97xC.js (MATCH; no
+rebuild / no lan restart needed). HEAD start c18518e.
+Rail 运行指标 (BUTTON ▦, y=236) → real numbers rendered, BODY404=false:
+- 运行健康: 网关 ok / 平台 hermes-agent / 状态 running / 当日 2026-11-14:
+  请求 14, 消息 14, token 189024, P95 19442.64ms; 系统正常 CPU18核 使用0%
+  负载1.73/1.83/2.00 内存75% 磁盘41.3%; 会话 32/32/0, 消息106,
+  来源 api_server 30 / feishu 2.
+- 模型与工具用量: 今日 请求14/消息14/token189024/P95 19442.64; 近7天输入
+  token 30万级、账本成本 0.10 USD（详见 readout CONTAINER 段）.
+- 活动热力: 7×24（近 4 周）矩阵在屏.
+Network proof: /agent-api/api/hermes-summary = 200,
+/agent-api/api/hermes-usage?days=7 = 200 (page.fetch direct).
+Raw stdout: reverify1-panels-readout.txt; screenshot reverify1-panels.png
+(184675B).

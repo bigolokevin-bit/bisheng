@@ -1,0 +1,13 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+URL0=http://127.0.0.1:8182/agent
+RAILCLICK [▦] y=236
+URL1=http://127.0.0.1:8182/agent
+BODY404=false
+HEALTH=运行健康~网关健康~正常~状态~ok~平台~hermes-agent~版本~unknown~网关状态~running~活跃 agent~0~繁忙~false~可排空~true~更新于~2026-11-14T19:23:21.024066+00:00~当日计数~日期~2026-11-14~请求数~14~消息数~14~token 数~189024~P95 延迟（ms）~19442.64~~metrics_today 为进程启动后当日计数，重启归零；不回填历史~~平台	状态	需要关注~api_server	connected	否~feishu	connected	否~系统状态~正常~版本~unknown~CPU 核数~18~CPU 使用率（%）~0~负载均值~1.7333984375 · 1.83154296875 · 2.00390625~运行时长（秒）~302056~内存 · 总量~38654705664~内存 · 可用~9675423744~内存 · 已用~14099775488~内存 · 占比（%）~75~磁盘 · 总量~494332366848~磁盘 · 已用~1902133739
+TODAY=日期~2026-11-14~请求数~14~消息数~14~token 数~189024~P95 延迟（ms）~19442.64
+CONTAINER=运行指标~运行健康~网关健康~正常~状态~ok~平台~hermes-agent~版本~unknown~网关状态~running~活跃 agent~0~繁忙~false~可排空~true~更新于~2026-11-14T19:23:21.024066+00:00~当日计数~日期~2026-11-14~请求数~14~消息数~14~token 数~189024~P95 延迟（ms）~19442.64~~metrics_today 为进程启动后当日计数，重启归零；不回填历史~~平台	状态	需要关注~api_server	connected	否~feishu	connected	否~系统状态~正常~版本~unknown~CPU 核数~18~CPU 使用率（%）~0~负载均值~1.7333984375 · 1.83154296875 · 2.00390625~运行时长（秒）~302056~内存 · 总量~38654705664~内存 · 可用~9675423744~内存 · 已用~14099775488~内存 · 占比（%）~75~磁盘 · 总量~494332366848~磁盘 · 已用~190213373952~磁盘 · 剩余~270484111360~磁盘 · 占比（%）~41.3~进程 · 常驻内存（RSS）~64274432~进程 · 线程数~9~psutil~true~会话统计~正常~会话总数~32~活跃会话~32~归档会话~0~消息数~106~来源	计数~api_server	30~feishu	2~模型与工具用量~近 7 天~近 30 天~用量来源~正常~输入 token~30
+PERF=[]
+SUMMARY_STATUS=200
+USAGE_STATUS=200
+SHOT_DONE
+REVA_COMPLETE
