@@ -1,0 +1,8 @@
+Error: E11_NOT_READY_STOP
+    at file:////[eval2]:29:92
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+INIT_URL=http://127.0.0.1:8182/agent @2026-11-14T16:08:37.728Z
+E11_STATUS=502 @2026-11-14T16:08:42.735Z
+E11_BODY={"code": "console.upstream_unavailable", "message": "identity service is not reachable"}
+
+ego's nodejs process exited with code 1.

@@ -104,3 +104,11 @@ P0-14 三面板真实读数（rail『运行指标』aria-label 点击进入，�
 - 根因证据（非本车道代码）：`lsof -nP -iTCP:7860 -sTCP:LISTEN` = **ssh PID 80386**（lima/docker 端口转发隧道），BFF(8092) 的 user/info 回调经该隧道间歇拒连→URLError→502；直连 curl 7860 平时 401/200 可达。8092 无鉴权路径 401 console.unauthenticated 正常（fail-closed 无异常）。bisheng-openfga 43 分钟前重启（unhealthy），隧道劣化疑似同窗口运维副作用。
 - 结论：8103 修复（real-p6）本身与本链无冲突——上一轮（fix409-run2，昨夜）同脚本 E11=200/R5=200 全通，仅 policy 断点；本轮是 **identity 回调隧道故障**，属 L7/ops 通道，受『不重启共享服务』红线约束未处置。待隧道恢复后重跑同一条链即可（零代码改动）。
 - 本轮未产生新 run、未触碰 emptyReply、未改任何代码。
+
+## P0-13 round-3 re-run (post 7860 tunnel recovery) - transient 502, not reproducible
+
+- 2026-11-15 00:07:55 +0800 pre-check: direct /api/v1/user/info x3 = 401 (reachable); 8092 unauthenticated = 401.
+- 00:08:42Z ego-browser same-session run5: browser-initiated E11 GET via 8182 -> 8092 returned 502 console.upstream_unavailable (identity service is not reachable) -> script stopped by design (single-shot rule), no send attempted. Log: fix409-round3-run5.txt.
+- 00:09:05 +0800 immediate differential probe: direct 7860 x5 = 401 all; through-8092 authenticated-path probe (bogus Bearer POST /api/employee-chat) x5 = 401 console.unauthenticated all; BFF log lines [bff] chat req=... result=console.unauthenticated status=401 prove the identity callback was reachable right after the 502.
+- Reading: BFF->7860 callback over the lima/ssh 80386 tunnel is intermittently failing (this is the 3rd observed occurrence: fix409-round2 run3/run4 502 x2, now run5 x1). Face is up, multiplexed tunnel drops a connection under browser burst. Not a panel/BFF/runtime-code issue. No services restarted, no code changed per constraints.
+- Status: send chain NOT MEASURED (blocked before send by the 502); awaiting L7/ops stabilization of the 7860 forwarding or a retry window.
