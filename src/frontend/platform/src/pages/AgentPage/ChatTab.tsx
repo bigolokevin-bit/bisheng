@@ -13,6 +13,12 @@ export interface ChatTabProps {
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLLS = 120;
 const EVENT_LIMIT = 50;
+/** DB-1 (card @1635@): a single transient poll failure must never finalize
+ *  the row. Consecutive failures retry with backoff; only after the
+ *  threshold do we surface a retryable error, keeping received text intact.
+ *  Terminal states are still written exclusively from run events. */
+const POLL_FAIL_THRESHOLD = 3;
+const FAIL_BACKOFF_MS = [1000, 2000, 4000];
 
 type UserStatus = 'pending' | 'sent' | 'failed';
 type AssistantStatus =
@@ -43,6 +49,8 @@ interface ChatRow {
 interface PollMeta {
   runId: string;
   sinceSeq: number;
+  /** DB-1 consecutive poll failure counter (retryable, not terminal). */
+  fails: number;
   polls: number;
   hasText: boolean;
   done: boolean;
@@ -183,11 +191,11 @@ export function ChatTab({ api, employeeId }: ChatTabProps) {
     );
   };
 
-  function schedulePoll(rowId: string) {
+  function schedulePoll(rowId: string, delay = POLL_INTERVAL_MS) {
     const timer = setTimeout(() => {
       timersRef.current.delete(timer);
       void pollRow(rowId);
-    }, POLL_INTERVAL_MS);
+    }, delay);
     timersRef.current.add(timer);
   }
 
@@ -205,6 +213,14 @@ export function ChatTab({ api, employeeId }: ChatTabProps) {
       const res = await api.listRunEvents(meta.runId, meta.sinceSeq, EVENT_LIMIT);
       if (!aliveRef.current) return;
       if (!res.ok || !res.data) {
+        // DB-1: 4xx/5xx are treated as retryable, same as network errors.
+        // The row stays in-progress until the threshold; received delta is
+        // never overwritten.
+        meta.fails += 1;
+        if (meta.fails < POLL_FAIL_THRESHOLD) {
+          schedulePoll(rowId, FAIL_BACKOFF_MS[Math.min(meta.fails - 1, FAIL_BACKOFF_MS.length - 1)]);
+          return;
+        }
         meta.done = true;
         updateRow(rowId, {
           status: 'failed',
@@ -213,6 +229,7 @@ export function ChatTab({ api, employeeId }: ChatTabProps) {
         });
         return;
       }
+      meta.fails = 0;
       for (const ev of res.data.items) {
         if (!ev || typeof ev.seq !== 'number' || ev.seq <= meta.sinceSeq) continue;
         meta.sinceSeq = ev.seq;
@@ -250,6 +267,12 @@ export function ChatTab({ api, employeeId }: ChatTabProps) {
       schedulePoll(rowId);
     } catch {
       if (!aliveRef.current) return;
+      // DB-1: a thrown poll error is retryable until the threshold too.
+      meta.fails += 1;
+      if (meta.fails < POLL_FAIL_THRESHOLD) {
+        schedulePoll(rowId, FAIL_BACKOFF_MS[Math.min(meta.fails - 1, FAIL_BACKOFF_MS.length - 1)]);
+        return;
+      }
       meta.done = true;
       updateRow(rowId, {
         status: 'failed',
@@ -273,6 +296,7 @@ export function ChatTab({ api, employeeId }: ChatTabProps) {
         pollsRef.current.set(assistantId, {
           runId,
           sinceSeq: 0,
+          fails: 0,
           polls: 0,
           hasText: false,
           done: false,

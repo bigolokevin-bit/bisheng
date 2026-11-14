@@ -191,6 +191,155 @@ describe('ChatTab reply rendering (R3 events)', () => {
   });
 });
 
+// DB-1 (card @1635@): a single poll failure must never terminate the row.
+// Polling is driven by timers (POLL_INTERVAL_MS=1500, FAIL_BACKOFF_MS=
+// 1000/2000/4000), so these tests install fake timers and advance them
+// explicitly to walk through consecutive failures / recovery.
+describe('ChatTab poll tolerance (DB-1)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const runningText = 'agentConsole.chat.status.running';
+  const failedText = 'agentConsole.chat.status.failed';
+  const sendOk = (runId: string) =>
+    vi.fn().mockResolvedValue(okResult<ChatRunResult>({ runId, status: 'running' }));
+
+  it('a rejected poll keeps the row running and preserves arrived deltas', async () => {
+    vi.useFakeTimers();
+    const base = stub();
+    const listRunEvents = vi
+      .fn()
+      .mockResolvedValueOnce(
+        events([
+          {
+            seq: 1,
+            eventType: 'message',
+            payload: { delta: 'partial' },
+            occurredAt: '2026-11-14T00:00:01Z',
+          },
+        ]),
+      )
+      .mockRejectedValueOnce(new Error('transient network'));
+    const api: AgentConsoleApi = {
+      ...base,
+      sendChat: sendOk('01RUNDB1KEEP00000000000001'),
+      listRunEvents,
+    };
+    render(<ChatTab api={api} employeeId={EMP1} />);
+    typeAndSend('ping');
+    // Poll 1 (immediate): delta lands, still running.
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText('partial')).toBeInTheDocument();
+    expect(screen.getByText(runningText)).toBeInTheDocument();
+    // Poll 2 (after 1500ms): rejection -> fails=1, below threshold.
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(listRunEvents).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(failedText)).not.toBeInTheDocument();
+    expect(screen.getByText('partial')).toBeInTheDocument();
+    expect(screen.getByText(runningText)).toBeInTheDocument();
+  });
+
+  it('three consecutive failures flip to a retryable error without erasing text', async () => {
+    vi.useFakeTimers();
+    const base = stub();
+    const listRunEvents = vi
+      .fn()
+      .mockResolvedValueOnce(
+        events([
+          {
+            seq: 1,
+            eventType: 'message',
+            payload: { delta: 'partial' },
+            occurredAt: '2026-11-14T00:00:01Z',
+          },
+        ]),
+      )
+      .mockRejectedValue(new Error('down'));
+    const api: AgentConsoleApi = {
+      ...base,
+      sendChat: sendOk('01RUNDB1FAIL00000000000001'),
+      listRunEvents,
+    };
+    render(<ChatTab api={api} employeeId={EMP1} />);
+    typeAndSend('ping');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText('partial')).toBeInTheDocument();
+    // fails 1/2/3 across poll2 (1500), poll3 (backoff 1000), poll4 (backoff 2000).
+    await vi.advanceTimersByTimeAsync(1500);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(screen.queryByText(failedText)).not.toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(listRunEvents).toHaveBeenCalledTimes(4);
+    expect(screen.getByText(failedText)).toBeInTheDocument();
+    expect(
+      screen.getByText('agentConsole.chat.error.unavailable'),
+    ).toBeInTheDocument();
+    // Received delta is NOT overwritten by the terminal error state.
+    expect(screen.getByText('partial')).toBeInTheDocument();
+    // Retry lives on user rows (send failures); a poll-failed assistant row
+    // surfaces the failed chip + error copy and the user can resend.
+    expect(
+      screen.getAllByText('agentConsole.chat.status.failed').length,
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a successful poll after failures resets the counter and completes normally', async () => {
+    vi.useFakeTimers();
+    const base = stub();
+    const listRunEvents = vi
+      .fn()
+      .mockResolvedValueOnce(
+        events([
+          {
+            seq: 1,
+            eventType: 'message',
+            payload: { delta: 'partial' },
+            occurredAt: '2026-11-14T00:00:01Z',
+          },
+        ]),
+      )
+      .mockRejectedValueOnce(new Error('transient'))
+      .mockResolvedValueOnce(
+        events([
+          {
+            seq: 2,
+            eventType: 'message',
+            payload: { delta: ' recovered' },
+            occurredAt: '2026-11-14T00:00:02Z',
+          },
+          {
+            seq: 3,
+            eventType: 'completed',
+            payload: null,
+            occurredAt: '2026-11-14T00:00:03Z',
+          },
+        ]),
+      );
+    const api: AgentConsoleApi = {
+      ...base,
+      sendChat: sendOk('01RUNDB1RECOV0000000000001'),
+      listRunEvents,
+    };
+    render(<ChatTab api={api} employeeId={EMP1} />);
+    typeAndSend('ping');
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText('partial')).toBeInTheDocument();
+    // Poll 2 fails (fails=1): still running, no terminal state.
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(screen.getByText(runningText)).toBeInTheDocument();
+    // Poll 3 succeeds after the 1000ms backoff -> completed terminal with
+    // the combined text; the failure counter reset, not a false error.
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(screen.getByText('partial recovered')).toBeInTheDocument();
+    expect(screen.getByText('agentConsole.chat.status.done')).toBeInTheDocument();
+    expect(screen.queryByText(failedText)).not.toBeInTheDocument();
+  });
+});
+
 describe('ChatTab honest failure mapping (design §1)', () => {
   it('401 envelope renders the sign-in-again copy on the user row', async () => {
     const base = stub();
