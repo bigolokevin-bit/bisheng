@@ -39,6 +39,10 @@ import {
   type Approval,
 } from '@/controllers/API/agentConsoleApprovals';
 import {
+  createHttpAgentConsoleHermesApi,
+  type AgentConsoleHermesApi,
+} from '@/controllers/API/agentConsoleHermes';
+import {
   createHttpAgentConsoleRunsApi,
   type AgentConsoleRunsApi,
 } from '@/controllers/API/agentConsoleRuns';
@@ -48,12 +52,13 @@ import {
 } from '@/controllers/API/agentConsoleTrends';
 import { ApprovalDetail } from '@/pages/AgentApprovalsPage/ApprovalDetail';
 
+import { HermesMetricsSection } from './HermesMetricsSection';
 import { RunsSection } from './RunsSection';
 import { TrendsCostsSection } from './TrendsCostsSection';
 
 import './agentConsoleV2.css';
 
-type Section = 'list' | 'detail' | 'appr' | 'runs';
+type Section = 'list' | 'detail' | 'appr' | 'runs' | 'metrics';
 type Box<T> = { phase: 'loading' } | { phase: 'ok'; value: T } | { phase: 'error' };
 
 const THEME_KEY = 'agentConsole.v2.theme';
@@ -83,15 +88,18 @@ export interface AgentConsoleV2Props {
   trendsApi?: AgentConsoleTrendsApi;
   /** P0-6 v2-4: R5/R3 read-only runs & trace adapter. */
   runsApi?: AgentConsoleRunsApi;
+  /** P0-14 (l4-hermes-panels): runtime.hermes.summary/usage read adapter. */
+  hermesApi?: AgentConsoleHermesApi;
 }
 
-export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsApi, initialSection }: AgentConsoleV2Props = {}) {
+export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsApi, hermesApi, initialSection }: AgentConsoleV2Props = {}) {
   const { t } = useTranslation();
   const { user } = useContext(userContext);
   const api = useMemo(() => consoleApi ?? createHttpAgentConsoleApi(), [consoleApi]);
   const approvals = useMemo(() => approvalsApi ?? createHttpAgentApprovalsApi(), [approvalsApi]);
   const trends = useMemo(() => trendsApi ?? createHttpAgentConsoleTrendsApi(), [trendsApi]);
   const runs = useMemo(() => runsApi ?? createHttpAgentConsoleRunsApi(), [runsApi]);
+  const hermes = useMemo(() => hermesApi ?? createHttpAgentConsoleHermesApi(), [hermesApi]);
   const uid = String(user?.user_id ?? '');
   const humanId = uid ? `human:${uid}` : '';
 
@@ -301,6 +309,20 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsAp
             onClick={() => openRuns(null)}
           >
             ▶
+          </button>
+          {/* P0-14: ▦ (heat-grid) completes the ■/◆/▶ glyph idiom. Platform
+              level section — no employee selection required. */}
+          <button
+            type="button"
+            className={`a2-rail-btn${section === 'metrics' ? ' is-active' : ''}`}
+            title={t('agentConsole.v2.navMetrics')}
+            aria-label={t('agentConsole.v2.navMetrics')}
+            onClick={() => {
+              setSection('metrics');
+              setApprSelected(null);
+            }}
+          >
+            ▦
           </button>
         </nav>
         <div className="a2-main">
@@ -615,6 +637,15 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsAp
                   consoleApi={api}
                   initialEmployeeId={runsEmployeeId}
                 />
+              </>
+            ) : null}
+
+            {section === 'metrics' ? (
+              <>
+                <h1 className="a2-h1">{t('agentConsole.v2.navMetrics')}</h1>
+                {/* P0-14 (l4-hermes-panels): platform-level read-only
+                    Hermes surface; heat side reuses the trends adapter. */}
+                <HermesMetricsSection hermesApi={hermes} trendsApi={trends} />
               </>
             ) : null}
           </div>

@@ -645,3 +645,48 @@
     font-size: 11px;
   }
 }
+
+/* ---------- P0-14 (l4-hermes-panels): 运行指标 section ----------
+   Existing a2-* tokens/pills only (card/hairline/micro/mono/pill/table/heat).
+   Every track is fr or minmax(0,1fr); auto-fit kv grids floor at 140px so a
+   375px viewport collapses to two columns and 1440px to three source columns.
+   Long mono values wrap (overflow-wrap) instead of forcing width: no
+   horizontal overflow at 375px or 1440px (acceptance criterion). */
+.agent-app .a2-metrics-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.agent-app .a2-metrics-block { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.agent-app .a2-metrics-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2-metrics-head .a2-micro { margin: 0; }
+.agent-app .a2-metrics-sub { margin: 8px 0 0; }
+.agent-app .a2-metrics-sources { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.agent-app .a2-metrics-src {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 8px;
+}
+.agent-app .a2-metrics-kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px 12px;
+  min-width: 0;
+}
+.agent-app .a2-metrics-kv-item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.agent-app .a2-metrics-kv-item .a2-micro { margin: 0; }
+.agent-app .a2-metrics-v { font-size: 12px; overflow-wrap: anywhere; }
+.agent-app .a2-metrics-note { overflow-wrap: anywhere; }
+.agent-app .a2-metrics-tablewrap { overflow-x: auto; max-width: 100%; }
+.agent-app .a2-metrics-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 900px) {
+  .agent-app .a2-metrics-sources { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  /* heat matrix keeps the wide column; the Hermes day-counter column is kv-only */
+  .agent-app .a2-metrics-side { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+}
