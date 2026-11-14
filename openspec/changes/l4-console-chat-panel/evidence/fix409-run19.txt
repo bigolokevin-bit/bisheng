@@ -1,0 +1,12 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+LIST_READY_AFTER=12s
+TABPOS={"x":278,"y":136}
+TA=TEXTAREA_OK
+SENT_TS=2026-11-14T17:07:17.139Z
+POLL0="我\nP0-13 修复后UI复验：请回复本句\n发送中\n发送"
+POLL1="我\nP0-13 修复后UI复验：请回复本句\n发送中\n在 BiSheng 中打开\n发送"
+POLL2="我\nP0-13 修复后UI复验：请回复本句\n已发送\nrn_01M7DGEFH1KKWS8EZ791TCMZCZ\n员工\n运行中\n运行中\nrn_01M7DGEFH1KKWS8EZ791TCMZCZ\n在 BiSheng 中打开\n发送"
+POLL3="我\nP0-13 修复后UI复验：请回复本句\n已发送\nrn_01M7DGEFH1KKWS8EZ791TCMZCZ\n员工\nP0-13 修复后UI复验：请回复本句\n已完成\nrn_01M7DGEFH1KKWS8EZ791TCMZCZ\nrun.upstream_completed\n在 BiSheng 中打开\n发送"
+SHOT_DONE
+R5_STATUS=200 ITEMS=7
+R5_RUNS=["rn_01M7D7421P5PA27TEXMT9YVDZ8:running:2026-11-14T14:24:28.752Z","rn_01M7DAJTBYB7BTNMK0AKEWYTGH:completed:2026-11-14T15:24:58.127Z","rn_01M7DCNYRER4X67B1TY5S73A56:completed:2026-11-14T16:01:38.070Z","rn_01M7DET0C08T3CJVP95VT2YKMG:completed:2026-11-14T16:38:47.952Z","rn_01M7DEY86XMD8J2SJZES4TGPWJ:completed:2026-11-14T16:41:07.049Z","rn_01M7DF41FG124YHW9PR66CJ7HW:completed:2026-11-14T16:44:16.759Z","rn_01M7DGEFH1KKWS8EZ791TCMZCZ:completed:2026-11-14T17:07:27.399Z"]

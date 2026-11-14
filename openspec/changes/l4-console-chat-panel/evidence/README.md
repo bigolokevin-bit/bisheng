@@ -135,3 +135,14 @@ issue; send chain still NOT MEASURED (blocked before send). Fix belongs to
 Bisheng/L7 (restore openfga health or speed identity check) or main-repo
 BFF (raise identity timeout / async check) - both outside this lane's
 write scope. No service restarted, no code changed here.
+
+## run9-run19 end-to-end PASS + delta/output UI fix (2026-11-15)
+
+- Identity timeout fix confirmed live: E11 with browser cookie returned 200 in ~10.2s (run9) - above old 5s, under new 15s CONSOLE_IDENTITY_TIMEOUT. 502 era closed.
+- List page needed ~12s for detail buttons (slow identity callback per request) - handled with a bounded 30x2s readiness poll.
+- UI defect found and fixed in 812e2b1: ChatTab now renders Hermes `payload.delta` fragments (concatenated verbatim) and falls back to `run.completed payload.output`; earlier it showed 消息内容不可读 x5 despite a real reply (run15 evidence).
+- Gates on the fix: targeted 9 files 142 passed; lint 0; full 43 failed | 1727 passed (1770) - frozen baseline, +2 new passing cases, 0 new failures; build:platform 0.
+- Final PASS run (fix409-run19.txt, fix409-chat-run19.png): sent "P0-13 修复后UI复验：请回复本句" -> 已发送 rn_01M7DGEFH1KKWS8EZ791TCMZCZ -> 运行中 -> 员工回复上屏 -> 已完成 (run.upstream_completed). R5 200, items=7, new run completed 2026-11-14T17:07:27.399Z.
+- Runs produced by this lane: rn_01M7DET0C08T3CJVP95VT2YKMG (run12), rn_01M7DEY86XMD8J2SJZES4TGPWJ (run13), rn_01M7DF41FG124YHW9PR66CJ7HW (run15), rn_01M7DGEFH1KKWS8EZ791TCMZCZ (run19, UI-visible reply). Control (ops direct): rn_01M7D7421P5PA27TEXMT9YVDZ8.
+- Note: an untracked build.bak-20261114T161054Z/ rsync backup was moved to the temp dir (never committed); lint scans the whole platform dir so it must stay out of the tree.
+- ego-browser 0.6.2.9 upgrade notice keeps appearing; not upgraded (pending user decision).

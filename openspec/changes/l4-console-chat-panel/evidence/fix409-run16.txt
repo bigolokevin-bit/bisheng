@@ -1,0 +1,30 @@
+ReferenceError: T_PLACEHOLDER is not defined
+    at file:////[eval2]:28:29
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+URL1=http://127.0.0.1:8182/agent
+E11_STATUS=200
+TABPOS=null
+TA=NOVIS
+SENT_TS=2026-11-14T17:02:21.777Z
+POLL0="GONE"
+POLL1="GONE"
+POLL2="GONE"
+POLL3="GONE"
+POLL4="GONE"
+POLL5="GONE"
+POLL6="GONE"
+POLL7="GONE"
+POLL8="GONE"
+POLL9="GONE"
+POLL10="GONE"
+POLL11="GONE"
+POLL12="GONE"
+POLL13="GONE"
+POLL14="GONE"
+POLL15="GONE"
+POLL16="GONE"
+POLL17="GONE"
+POLL18="GONE"
+POLL19="GONE"
+
+ego's nodejs process exited with code 1.

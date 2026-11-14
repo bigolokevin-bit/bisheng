@@ -1,0 +1,16 @@
+ElementResolutionError: Locator loc=text=发送 matched 2 elements (2 visible, 0 hidden). Candidates: 1. p "还没有消息，发送一条开始对话" (visible); 2. button "发送" (visible). Use a current snapshot ref or a more specific role, text, or CSS selector.
+    at ambiguityError (file:////[eval1]:10786:12)
+    at locatorCountError (file:////[eval1]:10749:12)
+    at async findUniqueLocatorContext (file:////[eval1]:10506:19)
+    at async resolveLocatorObjectId (file:////[eval1]:10477:19)
+    at async clickInPage (file:////[eval1]:14569:20)
+    at async #retryElementAction (file:////[eval1]:20285:24)
+    at async #services.gate.withPage.sessionTimeoutMs.sessionTimeoutMs (file:////[eval1]:20412:29)
+    at async file:////[eval1]:17604:28
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+LIST_READY_AFTER=12s DETAIL_BTNS=2
+DETAIL=CLICKED
+TABPOS={"x":278,"y":136,"all":["概览概览","聊天聊天","任务任务","运行运行","审计审计"]}
+TA=TEXTAREA_OK
+
+ego's nodejs process exited with code 1.

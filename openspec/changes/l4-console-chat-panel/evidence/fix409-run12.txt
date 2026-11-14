@@ -1,0 +1,15 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+TABS=[{"i":0,"text":"概览","x":218,"y":136,"sel":"true"},{"i":1,"text":"聊天","x":278,"y":136,"sel":"false"},{"i":2,"text":"任务","x":338,"y":136,"sel":"false"},{"i":3,"text":"运行","x":398,"y":136,"sel":"false"},{"i":4,"text":"审计","x":458,"y":136,"sel":"false"}]
+CHAT_MOUSE_CLICKED at 278,136
+TEXTAREA_READY
+TA=TA_OK ph=输入要发给该员工的消息
+SEND={"found":1,"x":1334,"y":562}
+PANEL_AFTER=""
+SHOT_DONE
+R5_STATUS=200 ITEMS=4
+R5_ITEM={"runId":"rn_01M7D7421P5PA27TEXMT9YVDZ8","status":"running","policySnapshotRef":"pol_dev_pilot","createdAt":"2026-11-14T14:24:28.752Z"}
+R5_ITEM={"runId":"rn_01M7DAJTBYB7BTNMK0AKEWYTGH","status":"completed","policySnapshotRef":"pol_dev_pilot","createdAt":"2026-11-14T15:24:58.127Z"}
+R5_ITEM={"runId":"rn_01M7DCNYRER4X67B1TY5S73A56","status":"completed","policySnapshotRef":"snap_8badad496d3323b5ae7319e0bed618e9","createdAt":"2026-11-14T16:01:38.070Z"}
+R5_ITEM={"runId":"rn_01M7DET0C08T3CJVP95VT2YKMG","status":"completed","policySnapshotRef":"snap_8badad496d3323b5ae7319e0bed618e9","createdAt":"2026-11-14T16:38:47.952Z"}
+R3_EXISTING_STATUS=200 R3_EXISTING={"items":[{"runId":"rn_01M7DCNYRER4X67B1TY5S73A56","seq":1,"eventType":"message","payload":{"delta":"收到","event":"message.delta","run_id":"run_04f309ecfb644ba782dcbf521d18fae7","seq":0,"timestamp":1794672099.3135219,"upstreamEvent":"message.delta","upstreamSeq":0},"occurredAt":"2026-11-14T16:01:39.313Z","pulledAt":"2026-11-14T16:02:02.818Z"},{"runId":"rn_01M7DCNYRER4X67B1TY5S73A56","seq":2,"eventType":"completed","payload":{"completed":true,"event":"run.completed","interrupted":false,"output":"收到","partial":false,"reasonCode":"run.upstream_completed","run_id":"run_04f309ecfb644ba782dcbf521d18fae7","runtime":{"model":"","provider":"","route_source":"global"},"seq":1,"timestamp":1794672099.627507,"upstreamEvent":"run.completed","upstreamSeq":1,"usage":{"input_tokens":12295,"output_tokens":1,"total_tokens":12296}},"occurredAt":"2026-11-14T16:01:39.627Z","pulledAt":"2026-11-14T16:02:02.818Z"
+RUN12_DONE
