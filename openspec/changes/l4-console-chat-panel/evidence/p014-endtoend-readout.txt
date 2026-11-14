@@ -15,4 +15,3 @@ P014_HEALTH="运行健康\n\n服务指标暂不可用 · agent.http.404"
 P014_TODAY=null
 P014_CONTAINER="运行指标\n运行健康\n\n服务指标暂不可用 · agent.http.404\n\n模型与工具用量\n近 7 天\n近 30 天\n\n查询失败，请重试 · agent.http.404\n\n活动热力（平台对照）\n平台 7×24（近 4 周）\n周日\n周一\n周二\n周三\n周四\n周五\n周六\nHermes 当日计数\n\n暂不可用\n\n口径差异：平台侧为 R7 近 4 周 7×24 周矩阵；Hermes 侧仅为进程当日聚合计数（重启归零、不回填历史），无 7×24 粒度。"
 SHOT_METRICS
-
