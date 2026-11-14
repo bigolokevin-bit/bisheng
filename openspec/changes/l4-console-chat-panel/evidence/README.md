@@ -267,3 +267,21 @@ Network proof: /agent-api/api/hermes-summary = 200,
 /agent-api/api/hermes-usage?days=7 = 200 (page.fetch direct).
 Raw stdout: reverify1-panels-readout.txt; screenshot reverify1-panels.png
 (184675B).
+
+### B: P0-13 no-send dry-run, same session — PASS
+detail entry: row BUTTON 详情 (y=385) → chatpanel rendered (panel=true,
+textarea+send found). SENT_AT_UTC=2026-11-14T19:25:35.162Z, text
+「P0-13 复跑：请回复本句」.
+- R1 POST /agent-api/api/employee-chat = 201 (d=5240ms; BFF log line
+  "[bff] chat req=034a01b5817d employee=emp_86A81CE8FF6F42E187BCF2B540
+  result=ok status=201").
+- runId = rn_01M7DRBJ3MYENKP532MDNCE0VW (new run this round, not reused).
+- run events: poll sinceSeq=0&limit=50 = 200 (d=1618ms); R3 recheck = 200,
+  6 events {message:5, completed:1}, completed output = the sent sentence
+  (live Hermes echo instance), interrupted=false,
+  run_id=run_d041a9c1ec9f423aa12c795b487d1ccc.
+- reply rendered in UI: panel final text shows 已发送 rn_… / 员工 … / 已完成
+  rn_… run.upstream_completed (not a placeholder).
+- R5 GET /agent-api/api/runs?employeeId=…&limit=10 = 200, items=10.
+No denied_by_budget. Raw stdout: reverify2-nosend-readout.txt; screenshot
+reverify2-chat.png (89847B).

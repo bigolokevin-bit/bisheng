@@ -1,0 +1,21 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+URL0=http://127.0.0.1:8182/agent
+DETAILCLICK y=385
+DOM panel=true tas=1 sends=1
+SENT_AT_UTC=2026-11-14T19:25:35.162Z
+RD0 run=false done=false perf=[]
+RD1 run=true done=true perf=[{"u":"p://127.0.0.1:8182/agent-api/api/employee-chat","s":201,"d":5240},{"u":"01M7DRBJ3MYENKP532MDNCE0VW&sinceSeq=0&limit=50","s":200,"d":1618}]
+FINAL=聊天~我~P0-13 复跑：请回复本句~已发送~rn_01M7DRBJ3MYENKP532MDNCE0VW~员工~P0-13 复跑：请回复本句~已完成~rn_01M7DRBJ3MYENKP532MDNCE0VW~run.upstream_completed~在 BiSheng 中打开~发送
+FINAL_PERF=[{"u":"p://127.0.0.1:8182/agent-api/api/employee-chat","s":201,"d":5240},{"u":"01M7DRBJ3MYENKP532MDNCE0VW&sinceSeq=0&limit=50","s":200,"d":1618}]
+RUNIDS=["rn_01M7DRBJ3MYENKP532MDNCE0VW","rn_01M7DRBJ3MYENKP532MDNCE0VW"]
+R5_STATUS=200
+R5_ITEMS=10
+RUN rn_01M7D7421P5PA27TEXMT9YVDZ8 status=running created=2026-11-14T14:24:28.752Z
+RUN rn_01M7DAJTBYB7BTNMK0AKEWYTGH status=completed created=2026-11-14T15:24:58.127Z
+RUN rn_01M7DCNYRER4X67B1TY5S73A56 status=completed created=2026-11-14T16:01:38.070Z
+RUN rn_01M7DET0C08T3CJVP95VT2YKMG status=completed created=2026-11-14T16:38:47.952Z
+R3_STATUS=200
+R3_COUNT=6
+R3_TYPES={"message":5,"completed":1}
+R3_LAST=completed out={"completed":true,"event":"run.completed","interrupted":false,"output":"P0-13 复跑：请回复本句","partial":false,"reasonCode":"run.upstream_completed","run_id":"run_d041a9c1ec9f423aa12c795b487d1ccc","runtime":{"model":"","provide
+REVB_COMPLETE
