@@ -1,0 +1,20 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+CAPTCHA_LEN=4
+LOGIN_URL=http://127.0.0.1:8182/agent
+OPEN=CLICKED_ROW rows=3
+DETAIL_PANEL="聊天\n\n还没有消息，发送一条开始对话\n\n在 BiSheng 中打开\n发送"
+TA=TEXTAREA_OK
+PANEL_AFTER="聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+R5_STATUS=200 R5_BODY1000="{\"items\":[{\"runId\":\"rn_01M7D7421P5PA27TEXMT9YVDZ8\",\"tenantId\":\"t_seakoi_pilot\",\"employeeId\":\"emp_86A81CE8FF6F42E187BCF2B540\",\"employeeVersionNo\":1,\"policySnapshotRef\":\"pol_dev_pilot\",\"upstreamRunId\":\"run_daf90d2fc9ef44b999f24f5040378df9\",\"channelEventId\":null,\"taskId\":null,\"previousRunId\":null,\"attemptNo\":1,\"status\":\"running\",\"reasonCode\":null,\"budgetCapUsd\":10.0,\"costStatus\":\"unknown\",\"startedAt\":\"2026-11-14T14:24:28.752Z\",\"endedAt\":null,\"lastEventSeq\":0,\"createdAt\":\"2026-11-14T14:24:28.752Z\",\"updatedAt\":\"2026-11-14T14:24:28.752Z\"}],\"nextCursor\":null}"
+R5_ITEMS_LEN=1 RUNID=rn_01M7D7421P5PA27TEXMT9YVDZ8
+R3_STATUS=500 R3_BODY1000="Internal Server Error"
+PANEL_T=25s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+PANEL_T=30s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+PANEL_T=35s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+PANEL_T=40s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+PANEL_T=45s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+PANEL_T=50s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+PANEL_T=55s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+PANEL_T=60s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
+E2E_DONE
+

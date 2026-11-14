@@ -82,3 +82,16 @@ P0-14 三面板真实读数（rail『运行指标』aria-label 点击进入，�
 - 截图：p014-metrics.png、p014-agent-list.png、p014-detail.png。
 
 原始输出：p014-login-ok.txt（首轮 LOGIN_OK）、p014-endtoend-readout.txt（发送+三面板全读数）。viewer01 403 负例：本轮未复验（缺 viewer01 会话），维持 76968e8 记录的 N1-N4 未鉴权负例口径。
+
+## fix409 复验轮（@1422@ 卡，总控 3fc4ed2 修 runtime 员工注册后）
+
+- 真登 8182 成功（ego-browser，/admin-login，#email/#pwd，验证码取 docker logs --since 60s grep captcha_char 最后一条，CAPTCHA_LEN=4，零回显）。run1 因 loc=text=产品助理 匹配 2 元素失败（列表同名两行）；run2 用 evaluate 遍历 tr 点行成功。
+- ChatTab 真发『P0-13 修复后复验：请回复本句』→ 面板稳定显示（60s 复读一致）：`我 / P0-13 修复后复验：请回复本句 / 失败 / run.policy_snapshot_missing / 重试`。
+- 四件证据：
+  1. POST /agent-api/api/employee-chat：409 `employee_not_active` **已消失**（修复生效）；新断点错误码=`run.policy_snapshot_missing`（BFF E5/P5 链通过后，R1/8103 拒 snapshotRef）。
+  2. 面板无 runId chip（本次发送未产生 run）。
+  3. Hermes 回复=无（无 run）；emptyReply 未当作成功。
+  4. GET runs?employeeId=emp_86A81CE8FF6F42E187BCF2B540 → 200 items=1，runId=`rn_01M7D7421P5PA27TEXMT9YVDZ8`（=总控直连 8103 对照组，status=running，policySnapshotRef=pol_dev_pilot，tenant=t_seakoi_pilot）——非本发送产物。
+- 新缺陷：GET /api/run-events?runId=rn_01M7D7421P5PA27TEXMT9YVDZ8 → **500 Internal Server Error**（8103 对真实 run 的 R3 端点 500）。
+- 断链定位（非面板代码）：8103 只注册 pol_dev_pilot；BFF P5 走 domain 8101 生成新 snapshotRef，两侧不通=policy provider 断层。修复归 L7/runtime+policy 侧。
+- 证据文件：fix409-readout.txt（run2 全输出）、fix409-chat-send.png（面板失败态截图）。原始日志 $T/fix409-run1.out、$T/fix409-run2.out。
