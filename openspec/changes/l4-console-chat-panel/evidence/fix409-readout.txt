@@ -17,4 +17,3 @@ PANEL_T=50s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.p
 PANEL_T=55s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
 PANEL_T=60s "聊天\n我\nP0-13 修复后复验：请回复本句\n失败\nrun.policy_snapshot_missing\n重试\n在 BiSheng 中打开\n发送"
 E2E_DONE
-
