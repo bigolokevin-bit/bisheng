@@ -147,6 +147,43 @@ export interface WorkstationListBody {
   items: WorkstationRow[];
 }
 
+// EMP-03 (E2): /api/employee answers a FLAT record (verified against the live
+// BFF 2026-11-16), no `data` envelope. Unknown or cross-tenant ids return the
+// SAME 404 body (employee.not_found) so existence is never disclosed; the
+// machine code must never reach the screen (G15 rule).
+export interface EmployeeDetailBody {
+  id: string;
+  tenantId?: string;
+  name?: string;
+  title?: string;
+  lifecycleState?: string;
+  currentVersionId?: string;
+  ownerUserId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  revision?: number;
+}
+
+// EMP-03 (E5): /api/effective-config?id=&at= resolved permission snapshot
+// (verified live: grants is an array of scope objects, not ids).
+export interface EffectiveGrant {
+  id: string;
+  employeeId?: string;
+  scopeType?: string;
+  resourceSelector?: { types?: string[]; [key: string]: unknown };
+  actions?: string[];
+  source?: string;
+  expiresAt?: string | null;
+}
+
+export interface EffectiveConfigBody {
+  employee?: EmployeeDetailBody;
+  version?: EmployeeVersion;
+  grants?: EffectiveGrant[];
+  resolvedAt?: string;
+  snapshotRef?: string;
+}
+
 // ---------- fetcher factory ----------
 
 export function makeFetcher(base = '/agent-api', getToken?: () => string | null): Fetcher {
@@ -275,6 +312,30 @@ export function fetchLatestVersion(fetch: Fetcher, employeeId: string): Promise<
 
 export function fetchWorkstations(fetch: Fetcher, employeeId: string): Promise<ApiRes<WorkstationListBody>> {
   return fetch<WorkstationListBody>('/api/workstations', { id: employeeId, limit: 100 });
+}
+
+// EMP-03 fetchers — request shapes verified against the live BFF 2026-11-16.
+export function fetchEmployeeDetail(
+  fetch: Fetcher,
+  employeeId: string
+): Promise<ApiRes<EmployeeDetailBody>> {
+  return fetch<EmployeeDetailBody>('/api/employee', { id: employeeId });
+}
+
+export function fetchEffectiveConfig(
+  fetch: Fetcher,
+  employeeId: string,
+  at: string
+): Promise<ApiRes<EffectiveConfigBody>> {
+  return fetch<EffectiveConfigBody>('/api/effective-config', { id: employeeId, at });
+}
+
+export function fetchEmployeeVersions(
+  fetch: Fetcher,
+  employeeId: string,
+  limit = 20
+): Promise<ApiRes<VersionListBody>> {
+  return fetch<VersionListBody>('/api/employee-versions', { id: employeeId, limit });
 }
 
 // ---------- utilities ----------
