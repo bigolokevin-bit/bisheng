@@ -64,3 +64,16 @@ Post-fix DOM: P1440 {thPad "8px 12px", thWS nowrap, thH 37, topbarBg rgb(20,20,2
 Screenshots (sips-verified true viewport, CDP device metrics): w2-employees-1440x900.png 1440x900, w2-employees-1440-table.png 1440x900, w2-employees-375x812.png 375x812, w2-employees-375-table.png 375x812; raw DOM/probe text in readout.txt.
 Gates: lint 0; targeted 9 files / 110 tests passed (no regression from class change; no existing test asserted a2-body); build:platform V2=1 exit 0; git diff --check clean. Prior full-suite baseline still applies: 43 failed / 18 files frozen (0 new), 1745 passed.
 Known residuals (not force-fixed this round): heat cell contrast readable but still subtle; ⌘K badge clipped at narrow topbar; cost KPI intermittently shows agent.http.500 when the managed 8101 dev-domain process reloads (service side, L7 lane). 1280/768 and light-theme four-tier screenshots still NOT MEASURED (per ACCEPTANCE C1). W2 remains in-progress pending L0 review of these images; served-entry alignment belongs to L7.
+
+## Four-tier evidence completion (L0 card, 2026-11-15)
+
+Screenshots (CDP device metrics, sips-verified): `w2-employees-1280x800.png` (1280x800, dark, 87963B), `w2-employees-768x1024.png` (768x1024, dark, 91841B), `w2-employees-1440x900-light.png` (1440x900, light, 104148B). Light theme verified: localStorage `agentConsole.v2.theme`="light", `data-theme`="light", `.a2-kpi` computed background `rgb(255, 255, 255)`.
+
+DOM read-back at all three sizes: nav=8, thCount=10, rows=2, leakUndef/leakMustache/leakLedger/leakEmpList all false.
+
+Horizontal overflow, both口径:
+- Desktop emulation (classic scrollbar): D1280 {sw1280 cw1265 iw1280}, D768 {sw768 cw753 iw768}, D1440LIGHT {sw1440 cw1425 iw1440}. The constant 15px sw-cw gap is the scrollbar width; `wide` lists only width:100% outer containers (agent-app/a2s-frame/a2s-main), same artifact proven at 375 earlier.
+- mobile:true overlay口径: M768 {sw=cw=768}, M1440 {sw=cw=1440, wide=[]} exact; M1280 {sw1296 cw1280, iw1296} — emulation quirk adds 16px to innerWidth at this size and a platform fixed overlay (pointer-events-none inset-x-0, not console code) follows it; console containers show no overflow.
+- 375 earlier: mobile:true sw=cw=375 (recorded above).
+
+Status: four viewport tiers + light theme now evidenced. W2 remains in-progress (C0-B open, online 403 C4, served entry L7).

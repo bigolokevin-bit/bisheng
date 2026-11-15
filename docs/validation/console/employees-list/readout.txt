@@ -56,3 +56,19 @@ DONE_SHOT1
 ===== observer round verdicts =====
 Round 1 (fixed images then): styled cards OK; internal keys gone (cost ledger / not-open wording); no 375 overflow; residuals = 375 bottom-left stray S logo (class mismatch .a2s-rail-logo vs DOM .a2s-rail-head/.a2s-logo), white UA form controls, KPI number crowded label line, weak heat contrast, tables not visible in viewport.
 Round 2 (after first fix batch): S fragment gone, dark inputs/selects, KPI number own line, heat visible; residuals = 1440 table header run-together (wrong class a2-body, no .a2-table rules), 375 table crushed with per-character wrapping (no scroll container), semi-transparent topbar ghosting (var(--panel)). These three drove the l4w2h-tablefix.py patch; DOM proof after patch: P1440 thPad 8px 12px / thWS nowrap / thH 37 / topbarBg rgb(20,20,23); P375 scroll{w313 sw880} horizontal-scroll container active, sw=cw=375, leaks all false.
+
+===== l4w2i-shot1.out (1280/768 dark + 1440 light, desktop emulation) =====
+URL0=http://127.0.0.1:5399/agent/employees
+ROWS=2
+D1280={"nav":8,"thCount":10,"rows":2,"sw":1280,"cw":1265,"iw":1280,"wide":["DIV","flex h-full flex-col","agent-app","a2s-frame","a2s-main"],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"dark","lsTheme":"dark","kpiBg":"rgb(20, 20, 23)"}
+D768={"nav":8,"thCount":10,"rows":2,"sw":768,"cw":753,"iw":768,"wide":["DIV","flex h-full flex-col","agent-app","a2s-frame","a2s-main"],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"dark","lsTheme":"dark","kpiBg":"rgb(20, 20, 23)"}
+ROWS_LIGHT=2
+D1440LIGHT={"nav":8,"thCount":10,"rows":2,"sw":1440,"cw":1425,"iw":1440,"wide":["DIV","flex h-full flex-col","agent-app","a2s-frame","a2s-main"],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"light","lsTheme":"light","kpiBg":"rgb(255, 255, 255)"}
+DONE_SHOTS_I
+
+
+===== l4w2i-mobile.out (mobile:true re-probe) =====
+M1280={"nav":8,"thCount":10,"rows":2,"sw":1296,"cw":1280,"iw":1296,"wide":["pointer-events-none fixed inset-x-0 top-"],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"light","lsTheme":"light","kpiBg":"rgb(255, 255, 255)"}
+M768={"nav":8,"thCount":10,"rows":2,"sw":768,"cw":768,"iw":768,"wide":["a2-table","THEAD","TR","TH","TH"],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"light","lsTheme":"light","kpiBg":"rgb(255, 255, 255)"}
+M1440={"nav":8,"thCount":10,"rows":2,"sw":1440,"cw":1440,"iw":1440,"wide":[],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"light","lsTheme":"light","kpiBg":"rgb(255, 255, 255)"}
+DONE_MOBILE
