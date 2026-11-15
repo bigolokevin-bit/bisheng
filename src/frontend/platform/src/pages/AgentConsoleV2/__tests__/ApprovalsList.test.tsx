@@ -1,0 +1,274 @@
+/* eslint-disable no-restricted-syntax -- assertions intentionally use the localized copy under test */
+/**
+ * APR-01 approvals pending list tests.
+ *
+ * Strategy: stub the global fetch that makeFetcher() uses, routed by URL,
+ * returning the live-verified AP4/AP8 shapes (l4wae-probe 2026-11-16:
+ * AP4 REQUIRES assignee and rejects status=history; AP8 returns
+ * {pending,dueSoon}). react-i18next is mocked against the REAL zh-Hans
+ * resources (OverviewErrors pattern) so the G15 guard below is meaningful:
+ * machine codes must never appear in visible error copy, only the HTTP
+ * status as interpolation param.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+
+vi.mock('@/components/bs-ui/message', () => ({
+  default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
+}));
+
+vi.mock('react-i18next', async () => {
+  const mod = (await import('../../../../public/locales/zh-Hans/bs.json')) as {
+    default: Record<string, unknown>;
+  };
+  const dict = mod.default;
+  const t = (key: unknown, defOrOpts?: unknown): string => {
+    const value = String(key)
+      .split('.')
+      .reduce<unknown>(
+        (acc, part) =>
+          acc && typeof acc === 'object'
+            ? (acc as Record<string, unknown>)[part]
+            : undefined,
+        dict,
+      );
+    if (typeof defOrOpts === 'string') {
+      return typeof value === 'string' ? value : defOrOpts;
+    }
+    if (typeof value !== 'string') return String(key);
+    const options = (defOrOpts ?? {}) as Record<string, unknown>;
+    // mirror i18next: {{var}} interpolation only
+    return value.replace(/\{\{(\w+)\}\}/g, (m, name: string) =>
+      name in options ? String(options[name]) : m
+    );
+  };
+  return { useTranslation: () => ({ t }) };
+});
+
+import { ApprovalsListPage } from '../ApprovalsListPage';
+import { userContext } from '@/contexts/userContext';
+
+const A1 = 'appr_1111222233334444AAAABBBBCCCC0001';
+const A2 = 'appr_1111222233334444AAAABBBBCCCC0002';
+const AC = 'appr_CONFIRM000000000000000000000003';
+
+function futureIso(seconds = 3600): string {
+  return new Date(Date.now() + seconds * 1000).toISOString();
+}
+
+function approval(id: string, type = 'business_action', extra: Record<string, unknown> = {}) {
+  return {
+    approvalId: id,
+    tenantId: 't1',
+    type,
+    status: 'pending',
+    requestedBy: { type: 'human', id: 'human:9' },
+    onBehalfOf: { type: 'human', id: 'human:7' },
+    action: 'grant_escalation',
+    resource: { kind: 'grant' },
+    argsDigest: 'sha256:abc',
+    binding: { subjectType: 'employee', subjectId: 'emp_1', changeKind: 'permission', targetHash: 'h' },
+    riskLevel: 'high',
+    reasonText: '',
+    approvers: [{ userId: 'human:1' }],
+    requiredApprovals: 1,
+    decisions: [],
+    ttlSeconds: 86400,
+    expiresAt: futureIso(),
+    remainingSeconds: 3600,
+    createdAt: '2026-11-15T10:00:00Z',
+    ...extra,
+  };
+}
+
+// ----- switchable stub outcomes -----
+let approvalsStatus = 200;
+let approvalsBody: unknown = { items: [approval(A1), approval(A2), approval(AC, 'confirm')] };
+let statsStatus = 200;
+let statsBody: unknown = { pending: 3, dueSoon: 1 };
+let urls: string[] = [];
+
+function jsonResponse(status: number, body: unknown) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: new Headers({ 'X-Console-Request-Id': 'req_apr01' }),
+    json: async () => body,
+  };
+}
+
+beforeEach(() => {
+  urls = [];
+  approvalsStatus = 200;
+  approvalsBody = { items: [approval(A1), approval(A2), approval(AC, 'confirm')] };
+  statsStatus = 200;
+  statsBody = { pending: 3, dueSoon: 1 };
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.includes('/api/approval-stats')) {
+        return jsonResponse(statsStatus, statsStatus === 200 ? statsBody : { code: 'upstream.blip' });
+      }
+      if (url.includes('/api/approvals')) {
+        if (approvalsStatus === 500) {
+          // injected machine code must NEVER reach the screen (G15)
+          return jsonResponse(500, { code: 'request.missing_filter', message: 'stub' });
+        }
+        if (approvalsStatus === 403) {
+          return jsonResponse(403, { code: 'console.forbidden', message: 'stub' });
+        }
+        return jsonResponse(200, approvalsBody);
+      }
+      return jsonResponse(200, {});
+    })
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function renderPage(entry = '/agent/approvals') {
+  return render(
+    <userContext.Provider value={{ user: { user_id: 1 } } as never}>
+      <MemoryRouter initialEntries={[entry]}>
+        <ApprovalsListPage />
+      </MemoryRouter>
+    </userContext.Provider>
+  );
+}
+
+describe('APR-01 approvals pending list', () => {
+  it('queries AP4 with own canonical assignee and pending status', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const ap4 = urls.find((u) => u.includes('/api/approvals'));
+    expect(ap4).toContain('assignee=human%3A1');
+    expect(ap4).toContain('status=pending');
+    expect(ap4).toContain('limit=20');
+    expect(urls.some((u) => u.includes('/api/approval-stats') && u.includes('assignee=human%3A1'))).toBe(true);
+  });
+
+  it('renders queue rows from the AP4 fixture and excludes confirm type', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const rows = screen.getAllByTestId('agent-v2-approval-row');
+    expect(rows).toHaveLength(2);
+    expect(document.querySelector(`[data-approval-id="${AC}"]`)).toBeNull();
+    // truncated identifiable id + title carries the full id
+    expect(screen.getByTitle(A1).textContent).toContain('…');
+    // action/changeKind, employee (onBehalfOf preferred), localized risk and status
+    expect(rows[0].textContent).toContain('grant_escalation');
+    expect(rows[0].textContent).toContain('human:7');
+    expect(rows[0].textContent).toContain('高风险');
+    expect(rows[0].textContent).toContain('待处理');
+    // real countdown from expiresAt, localized via approvals.remaining
+    expect(rows[0].textContent).toMatch(/剩余 \d+ 秒/);
+  });
+
+  it('shows the AP8 badge on the pending tab', async () => {
+    renderPage();
+    const badge = await screen.findByTestId('agent-v2-approvals-count');
+    expect(badge.textContent).toBe('3');
+    expect(screen.getByTestId('agent-v2-approvals-due-soon').textContent).toContain('1');
+  });
+
+  it('hides the badge when AP8 fails — never a fake zero', async () => {
+    statsStatus = 500;
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    expect(screen.queryByTestId('agent-v2-approvals-count')).toBeNull();
+    // the pending tab carries no count text at all when AP8 is down
+    expect(screen.getByTestId('agent-v2-approvals-tab-pending').textContent).toBe('待办');
+  });
+
+  it('renders a localized block-level error with retry and no machine code (G15)', async () => {
+    approvalsStatus = 500;
+    renderPage();
+    const err = await screen.findByTestId('agent-v2-approvals-queue-error');
+    expect(err.textContent).toContain('审批队列');
+    expect(err.textContent).toContain('HTTP 500');
+    const codeish = /[a-z]+\.[a-z_]+/;
+    expect(err.textContent ?? '').not.toMatch(codeish);
+    document
+      .querySelectorAll('[data-testid$="-error"]')
+      .forEach((el) => expect(el.textContent ?? '').not.toMatch(codeish));
+    expect(document.body.textContent).not.toContain('request.missing_filter');
+
+    // retry recovers real rows once the endpoint is healthy
+    approvalsStatus = 200;
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-retry-queue'));
+    await waitFor(() => expect(screen.getAllByTestId('agent-v2-approval-row')).toHaveLength(2));
+    expect(screen.queryByTestId('agent-v2-approvals-error')).toBeNull();
+  });
+
+  it('shows an explicit 403 state for non-admin deep links', async () => {
+    approvalsStatus = 403;
+    renderPage('/agent/approvals?focus=whatever');
+    const card = await screen.findByTestId('agent-v2-approvals-403');
+    expect(card.textContent).toContain('无权查看审批队列');
+  });
+
+  it('shows the empty state when the queue has no rows', async () => {
+    approvalsBody = { items: [] };
+    renderPage();
+    const empty = await screen.findByTestId('agent-v2-approvals-empty');
+    expect(empty.textContent).toContain('暂无待办审批');
+  });
+
+  it('batch checkboxes and select-current-page drive the selected count; decide buttons stay disabled with reason', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const decide = screen.getByTestId('agent-v2-approvals-decide-approve');
+    expect((decide as HTMLButtonElement).disabled).toBe(true);
+    const reject = screen.getByTestId('agent-v2-approvals-decide-reject');
+    expect((reject as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('agent-v2-approvals-batch-note').textContent).toContain(
+      '批量决策本波未开放'
+    );
+    expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 0 项');
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 2 项');
+    fireEvent.click(screen.getAllByTestId('agent-v2-approval-check')[0]);
+    expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 1 项');
+  });
+
+  it('highlights the ?focus row and syncs back/refresh through the URL', async () => {
+    renderPage(`/agent/approvals?focus=${A2}`);
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const row = document.querySelector(`[data-approval-id="${A2}"]`);
+    expect(row?.getAttribute('data-focus')).toBe('true');
+    expect(document.querySelector(`[data-approval-id="${A1}"]`)?.getAttribute('data-focus')).toBeNull();
+  });
+
+  it('history tab is disabled with an honest reason and never fetches status=history', async () => {
+    renderPage('/agent/approvals?status=history');
+    const panel = await screen.findByTestId('agent-v2-approvals-history');
+    expect(panel.textContent).toContain('已决列表本波未提供');
+    const tabs = screen.getByTestId('agent-v2-approvals-tab-history');
+    expect((tabs as HTMLButtonElement).disabled).toBe(true);
+    expect(tabs.getAttribute('title')).toContain('已决列表本波未提供');
+    expect(urls.some((u) => u.includes('status=history'))).toBe(false);
+    // back to 待办 restores the live queue
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-back-pending'));
+    await waitFor(() => expect(screen.getAllByTestId('agent-v2-approval-row')).toHaveLength(2));
+  });
+
+  it('renders the no-identity state instead of an unfiltered query', async () => {
+    cleanup();
+    render(
+      <userContext.Provider value={{ user: undefined } as never}>
+        <MemoryRouter initialEntries={['/agent/approvals']}>
+          <ApprovalsListPage />
+        </MemoryRouter>
+      </userContext.Provider>
+    );
+    const card = await screen.findByTestId('agent-v2-approvals-no-identity');
+    expect(card.textContent).toContain('无法获取当前用户身份');
+    expect(urls.some((u) => u.includes('/api/approvals'))).toBe(false);
+  });
+});
