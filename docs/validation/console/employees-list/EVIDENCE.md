@@ -89,3 +89,13 @@ Status: four viewport tiers + light theme now evidenced. W2 remains in-progress 
 - Verdict: BLOCKED — table columns 岗位版本/工位/知识/待办 remain '—' on 8182. Fix = restart 8092 under L7/ops management (memory precedent: managed process older than merge = stale code, restart resolves). No fabrication, no restart attempted from this lane.
 - Re-shoot artifacts (kept side-by-side, old images NOT replaced to avoid implying confirmation): w2-employees-1440x900-20261115-2115.png (175340 B, 1440x900), w2-employees-1440-table-20261115-2115.png (105512 B, 1440x900), w2-employees-375x812-20261115-2115.png (48034 B, 375x812), all sips-verified; columns still show '—' in these images.
 - W2 status remains in-progress. After 8092 restart, only the enrichment re-shoot needs repeating (no code change in this lane).
+
+## Enrichment live re-shoot (2026-11-15, BFF restart closed the gap)
+
+- Root cause confirmed and fixed upstream: stale 8092 (pid 10486, predating B3) stripped `expand`; L0 restarted BFF (new pid 67576, 21:21:15).
+- Verified on 8182 with opsadmin session, page /agent/employees: E11 `?limit=2&expand=version,workstations,knowledge,pending` => 200 with enrichment on both rows (emp_86A8… currentVersionNo=3 / effectiveFrom 2026-11-15T03:27:58Z / knowledgeCount=1 / workstationCount=1 / effectiveBudget monthlyCostUsd=10; emp_0166… currentVersionNo=2).
+- DOM row cells now render real values: job-version `v3 · 11-15 11:27` / `v2 · 11-13 14:30` (Asia/Shanghai), workstations `0 · 0 · 0` / `0 · 1 · 0`, dashes=0, leaks (rawKey/undefined/mustache/cost_ledger/employees-list) all false, nav=8, th=10, no horizontal overflow (sw=cw=375 mobile emulation).
+- Note on the `—` in 待办 column: enrichment has no `pendingApprovalCount` for either row (API omits it), and row-level AP8 is not wired; per spec this stays an honest `—`, tracked as a known gap, not a fake zero.
+- Screenshots overwritten: w2-employees-1440x900.png, w2-employees-375x812.png, w2-employees-1440-table.png. Previous 2115 BLOCKED screenshots kept alongside as history.
+- W2 remains in-progress (C0-B open; not judged PASS here).
+- Caveat: the 1440x900 above-fold screenshot is byte-identical to the previous one because the employees table sits below the fold and enrichment does not alter KPI/heatmap/filters; row-level enrichment is proven by the table screenshots (1440 + 375) and the DOM cell text (v3 11-15 11:27 / v2 11-13 14:30) captured in the same reload sessions.
