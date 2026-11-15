@@ -179,3 +179,35 @@ Readouts (full text in readout.txt, `l4w2r C1/C2 rework readout` section):
 - full platform test: Tests 43 failed | 1747 passed (1790) -> frozen baseline 43 failed / 18 files, new failures 0, passed strictly increased
 - build:platform exit 0; VITE_AGENT_CONSOLE_V2=1 build:platform exit 0 (entry assets/js/index-_oTHR00v.js); git diff --check exit 0
 - C0-B still open -> page stays in-progress, no PASS judgement here.
+
+## L6 round-3 evidence re-shoot (2026-11-16 00:1x, dev 5399 preview)
+
+Corrections to prior rounds:
+- Previous C2 interaction shots captured the viewport top (KPI/heatmap area),
+  not the table rows. All five C2 shots are RE-TAKEN at 1440x900 with the
+  table scrolled into frame (scrollIntoView block:end, table bottom rect
+  885 <= vh 900) before each screenshot.
+- 1280 band previously collapsed the rail to a 72px icon strip. Fixed by
+  moving the icon-rail media query from max-width:1439px to max-width:1023px
+  (parity spec 2: 1024-1439 keeps the expanded 240px sidebar). No rename or
+  reuse of old files; every listed blob replaces its predecessor.
+
+Capture method: opsadmin real login through BFF session (cookies cleared
+first), dev preview server :5399 (proxy /agent-api -> 8092 real BFF, real
+data), CDP Emulation.setDeviceMetricsOverride for exact viewports,
+sips-verified pixels below.
+
+| file | blob | bytes | px | in-frame proof (readout) |
+|---|---|---|---|---|
+| w2-c2-url.png | 1d120dea6db6fb3e84d153c418b64342e53d6f92 | 106022 | 1440x900 | URL ?keyword=AgentOS&lifecycleState=active survives reload; inputVal=AgentOS; rows=2; costs USD 0.12 / USD 0.01 |
+| w2-c2-search.png | 676c3db166b65f61591fd427268673749bc79439 | 106277 | 1440x900 | typed AgentOS -> URL ?keyword=AgentOS; rows=2 in frame |
+| w2-c2-sort.png | 52017e7eafbe147b5f94e347adf371b09649927c | 106376 | 1440x900 | cost asc: URL ?sort=cost:asc, aria-sort=ascending, row order changed USD 0.12->0.01 becomes 0.01->0.12 (before-readout C2_SORTBEFORE vs C2_SORTASC); second click -> descending restores |
+| w2-c2-viewchat.png | 9ed895fc32aa171ed45be7ed68ca17fa664d2990 | 88614 | 1440x900 | ?view=chat honest state text '对话位聚合视图未接入' |
+| w2-c2-nextpage.png | b17642f7caee02fd52063c26803159155b934b9c | 100185 | 1440x900 | ?limit=1 -> click next -> server keyset cursor appended to URL (eyJjcmVhdGVkQXQiOi...) row changes cost 0.12 -> 0.01 |
+| w2-employees-375x812-dark-table.png | 96eb595086dde217a88f49541bb112e9d691fe2e | 57729 | 375x812 | rail rect top=796 bottom=812 position=fixed vh=812 AND employee row top=582 bottom=697 -> rail + table same frame |
+| w2-employees-1280x800-light.png | ae25b7b1853795f22f8adb39d8f019a3681ccece | 95489 | 1280x800 | rail width=240, nav labels displayed (labelShown=true), navCount=8, table top=558 in vh=800 |
+
+Scope note: per-page client-side sort only (E11 has no server sort param);
+pagination cursor is server-issued keyset. No fake values: missing cells
+render '—'; sort readouts above are real BFF data through the preview proxy.
+EMP-01 stays in-progress; C0-B items remain open.

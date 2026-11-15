@@ -246,8 +246,10 @@
   }
 }
 
-/* 1024-1439: icon rail (72px) even when not manually collapsed. */
-@media (max-width: 1439px) {
+/* 768-1023: icon rail (72px) even when not manually collapsed. Per parity spec
+ * §2 the 1024-1439 band keeps the expanded 240px sidebar, so the label-hiding
+ * breakpoint must not swallow 1280 (L6 round 3). */
+@media (max-width: 1023px) {
   .agent-app .a2s-frame {
     grid-template-columns: 72px minmax(0, 1fr);
   }
