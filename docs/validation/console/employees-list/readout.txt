@@ -1,0 +1,33 @@
+=== l4w2b-shots.out (round 1, pre-fix) ===
+URL0=http://127.0.0.1:5399/agent/employees
+ROWS_AFTER=0
+ROWS=2
+DOM={"route":"/agent/employees","navCount":8,"navLabels":["总览","数字员工","审批","任务","运行","运行指标","审计","设置"],"activeNav":"数字员工","rows":2,"kpiOnduty":"2","kpiPending":"0","kpiCost":"USD 0.13","kpiAnomaly":"0","heat":"7×24 活动热力（近 4 周） 平台 员工 AgentOS 产品助理 AgentOS 产品助理 周一 周二 周三 周四 周五 周六 周日 峰值 {{count}} 次·时 4 · 夜间批量 {{count}} 11 · 本周合计 {{count}} 14 · 时区 Asia/Shanghai · 仅数量，不表示金额","heatFoot":"峰值 {{count}} 次·时 4 · 夜间批量 {{count}} 11 · 本周合计 {{count}} 14 · 时区 Asia/Shanghai · 仅数量，不表示金额","filters":"全部 2在岗 2入职中 0已暂停 0离职中 0草稿 0已归档 0 查询 部门 负责人 工位类型 知识范围 部门、负责人、工位类型、知识范围筛选尚无服务端参数 表格对话位","pageInfo":"第 1 页 · 本页 2 条","firstRowCells":["AAgentOS 产品助理 · 产品助理（数字员工 · Pilot）","—版本信息不可用","在岗","1","0 · 0 · 0","—","1311-14 08:00","92.3%","USD 0.12","复制 ID详情"],"rawKeyLeak":false,"undefinedLeak":false,"fakeZeroLeak":false,"badPendingCopy":false,"sw":1380,"cw":1380,"overflowEls":[]}
+SHOTS_DONE
+API={"expand_real":{"s":200,"b":"{\"items\":[{\"employeeId\":\"emp_86A81CE8FF6F42E187BCF2B540\",\"name\":\"AgentOS 产品助理\",\"title\":\"产品助理（数字员工 · Pilot）\",\"lifecycleState\":\"active\",\"ownerUserId\":\"1\",\"updatedAt\":\"2026-11-15T04:21:52.962Z\"},{\"employeeId\":\"emp_0166858D562149938FBDA22649\",\"name\":\"AgentOS 产品助理\""},"expand_cardwording":{"s":200,"b":"{\"items\":[{\"employeeId\":\"emp_86A81CE8FF6F42E187BCF2B540\",\"name\":\"AgentOS 产品助理\",\"title\":\"产品助理（数字员工 · Pilot）\",\"lifecycleState\":\"active\",\"ownerUserId\":\"1\",\"updatedAt\":\"2026-11-15T04:21:52.962Z\"},{\"employeeId\":\"emp_0166858D562149938FBDA22649\",\"name\":\"AgentOS 产品助理\""},"employee_stats":{"s":200,"b":"{\"total\":2,\"byLifecycle\":{\"draft\":0,\"onboarding\":0,\"active\":2,\"paused\":0,\"offboarding\":0,\"archived\":0}}"},"run_stats":{"s":200,"b":"{\"from\":\"2026-11-08T12:12:57.438Z\",\"to\":\"2026-11-15T12:12:57.438Z\",\"bucket\":\"day\",\"buckets\":[{\"bucketStart\":\"2026-11-12T00:00:00.000Z\",\"runs\":1,\"succeeded\":1,\"failed\":0,\"costUsd\":0.009875,\"upstreamRuns\":1,\"estimatedRuns\":0,\"unknownRuns\":0},{\"bucketStart\":\"2026"},"budget_usage":{"s":200,"b":"{\"items\":[{\"employeeId\":\"emp_86A81CE8FF6F42E187BCF2B540\",\"period\":\"2026-11\",\"periodKind\":\"month\",\"tokensUsed\":0,\"costUsd\":0.12119800000000001,\"reserved\":0.0,\"updatedAt\":\"2026-11-14T19:25:51.543Z\"}],\"missingEmployeeIds\":[]}"},"run_activity":{"s":200,"b":"{\"from\":\"2026-11-08T12:12:57.623Z\",\"to\":\"2026-11-15T12:12:57.623Z\",\"tz\":\"Asia/Shanghai\",\"max\":4,\"cells\":[{\"dow\":4,\"hour\":22,\"count\":1},{\"dow\":6,\"hour\":22,\"count\":1},{\"dow\":6,\"hour\":23,\"count\":1},{\"dow\":7,\"hour\":0,\"count\":4},{\"dow\":7,\"hour\":1,\"count\":4},{\"dow\":"},"approval_stats":{"s":200,"b":"{\"pending\":0,\"dueSoon\":0}"}}
+
+
+=== l4w2c-shots.out (final, post-fix) ===
+URL0=http://127.0.0.1:5399/agent/employees
+ROWS_AFTER=0
+ROWS=2
+DOM1440={"route":"/agent/employees","navCount":8,"navLabels":["总览","数字员工","审批","任务","运行","运行指标","审计","设置"],"activeNav":"数字员工","rows":2,"kpiOnduty":"2","kpiPending":"0","kpiCost":"USD 0.13","kpiAnomaly":"0","heat":"7×24 活动热力（近 4 周） 平台 员工 AgentOS 产品助理 AgentOS 产品助理 周一 周二 周三 周四 周五 周六 周日 峰值 4 次·时 · 夜间批量 11 · 本周合计 14 · 时区 Asia/Shanghai · 仅数量，不表示金额","heatFoot":"峰值 4 次·时 · 夜间批量 11 · 本周合计 14 · 时区 Asia/Shanghai · 仅数量，不表示金额","filters":"全部 2在岗 2入职中 0已暂停 0离职中 0草稿 0已归档 0 查询 部门 负责人 工位类型 知识范围 部门、负责人、工位类型、知识范围筛选尚无服务端参数 表格对话位","pageInfo":"第 1 页 · 本页 2 条","firstRowCells":["AAgentOS 产品助理 · 产品助理（数字员工 · Pilot）","—版本信息不可用","在岗","1","0 · 0 · 0","—","13 · 11-14 08:00","92.3%","USD 0.12","复制 ID详情"],"rawKeyLeak":false,"undefinedLeak":false,"fakeZeroLeak":false,"badPendingCopy":false,"sw":1440,"cw":1440,"overflowEls":[]}
+DOM375={"route":"/agent/employees","navCount":8,"navLabels":["总览","数字员工","审批","任务","运行","运行指标","审计","设置"],"activeNav":"数字员工","rows":2,"kpiOnduty":"2","kpiPending":"0","kpiCost":"USD 0.13","kpiAnomaly":"0","heat":"7×24 活动热力（近 4 周） 平台 员工 AgentOS 产品助理 AgentOS 产品助理 周一 周二 周三 周四 周五 周六 周日 峰值 4 次·时 · 夜间批量 11 · 本周合计 14 · 时区 Asia/Shanghai · 仅数量，不表示金额","heatFoot":"峰值 4 次·时 · 夜间批量 11 · 本周合计 14 · 时区 Asia/Shanghai · 仅数量，不表示金额","filters":"全部 2在岗 2入职中 0已暂停 0离职中 0草稿 0已归档 0 查询 部门 负责人 工位类型 知识范围 部门、负责人、工位类型、知识范围筛选尚无服务端参数 表格对话位","pageInfo":"第 1 页 · 本页 2 条","firstRowCells":["AAgentOS 产品助理 · 产品助理（数字员工 · Pilot）","—版本信息不可用","在岗","1","0 · 0 · 0","—","13 · 11-14 08:00","92.3%","USD 0.12","复制 ID详情"],"rawKeyLeak":false,"undefinedLeak":false,"fakeZeroLeak":false,"badPendingCopy":false,"sw":375,"cw":360,"overflowEls":[]}
+SHOTS_DONE
+
+
+=== l4w2d-ovf.out (375 desktop-emulation probe) ===
+OVF={"sw":375,"cw":360,"iw":375,"bw":375,"wide":[{"tag":"DIV","cls":"","right":375,"w":375},{"tag":"DIV","cls":"flex h-full flex-col","right":375,"w":375},{"tag":"DIV","cls":"agent-app","right":375,"w":375},{"tag":"DIV","cls":"a2-ambient","right":375,"w":375},{"tag":"DIV","cls":"a2s-frame","right":375,"w":375},{"tag":"NAV","cls":"a2s-rail","right":375,"w":375},{"tag":"DIV","cls":"a2s-main","right":375,"w":375},{"tag":"HEADER","cls":"a2s-topbar","right":375,"w":375},{"tag":"LABEL","cls":"a2s-search","right":361,"w":160},{"tag":"DIV","cls":"a2s-page","right":375,"w":375}]}
+OVF_DONE
+
+
+=== l4w2d-ovf2.out (375 mobile-emulation probe) ===
+OVF_MOBILE={"sw":375,"cw":375,"iw":375,"bw":375,"wide":[]}
+OVF2_DONE
+
+
+===== l4w2e-counts.out (20:24) =====
+URL0=http://127.0.0.1:5399/agent/employees
+ROWS_AFTER=0s
+COUNTS={"route":"/agent/employees","thCount":10,"headers":["名称","岗位版本","状态","负责人","工位","待办","最近运行","7 天成功率","本月成本","动作"],"kpiCount":5,"kpiIds":["agent-v2-kpi-onduty","agent-v2-kpi-pending","agent-v2-kpi-cost","agent-v2-kpi-cost-caliber","agent-v2-kpi-anomaly"],"navCount":8,"legacyAgentPage":0,"legacyV2Shell":0,"rowCount":2,"dashCells":3}
+SHOT_DONE
