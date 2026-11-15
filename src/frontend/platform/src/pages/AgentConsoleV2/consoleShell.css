@@ -1,0 +1,338 @@
+/* Console v2 W1 shell chrome. Tokens come from agentConsoleV2.css (.agent-app
+ * scope), so dark/light switching only repaints variables — zero layout shift. */
+
+.agent-app .a2s-frame {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+  gap: 0;
+}
+
+.agent-app .a2s-frame.is-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.agent-app .a2s-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 12px;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.agent-app .a2s-rail-logo {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: hsl(var(--accent));
+  color: #fff;
+  font-weight: 700;
+  margin: 0 auto 12px;
+  flex: none;
+}
+
+.agent-app .a2s-collapse {
+  align-self: center;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-2);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  margin-bottom: 10px;
+  flex: none;
+}
+
+.agent-app .a2s-group {
+  font-size: 11px;
+  color: var(--text-3, var(--text-2));
+  padding: 12px 10px 4px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.agent-app .a2s-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--text-2);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.agent-app .a2s-nav .a2s-nav-glyph {
+  width: 18px;
+  text-align: center;
+  flex: none;
+  font-size: 14px;
+}
+
+.agent-app .a2s-nav .a2s-nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.agent-app .a2s-nav:hover {
+  background: var(--hover);
+  color: var(--text-1);
+}
+
+.agent-app .a2s-nav.is-active {
+  border-left-color: hsl(var(--accent));
+  background: var(--accent-soft);
+  color: hsl(var(--accent));
+  font-weight: 600;
+}
+
+.agent-app .is-collapsed .a2s-nav {
+  justify-content: center;
+  padding: 9px 0;
+  border-left-width: 0;
+  border-bottom: 2px solid transparent;
+}
+
+.agent-app .is-collapsed .a2s-nav.is-active {
+  border-bottom-color: hsl(var(--accent));
+}
+
+.agent-app .is-collapsed .a2s-nav-label,
+.agent-app .is-collapsed .a2s-group {
+  display: none;
+}
+
+.agent-app .a2s-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.agent-app .a2s-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.agent-app .a2s-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-2);
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+
+.agent-app .a2s-crumb-current {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.agent-app .a2s-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--bg-1);
+  min-width: 0;
+  flex: 0 1 260px;
+}
+
+.agent-app .a2s-search input {
+  border: 0;
+  background: transparent;
+  color: var(--text-1);
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.agent-app .a2s-search kbd {
+  font-family: var(--a2-mono, ui-monospace, monospace);
+  font-size: 10px;
+  color: var(--text-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+  flex: none;
+}
+
+.agent-app .a2s-chip {
+  font-size: 11px;
+  color: var(--text-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex: none;
+}
+
+.agent-app .a2s-account {
+  font-size: 12px;
+  color: var(--text-1);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: none;
+}
+
+.agent-app .a2s-page {
+  padding: 20px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agent-app .a2s-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 20px;
+}
+
+.agent-app .a2s-sk-row {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-1) 25%, var(--hover) 50%, var(--bg-1) 75%);
+  background-size: 200% 100%;
+  animation: a2s-shimmer 1.4s ease-in-out infinite;
+}
+
+.agent-app .a2s-sk-row.is-short {
+  width: 40%;
+}
+
+@keyframes a2s-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* 1024-1439: icon rail (72px) even when not manually collapsed. */
+@media (max-width: 1439px) {
+  .agent-app .a2s-frame {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav {
+    justify-content: center;
+    padding: 9px 0;
+    border-left-width: 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav.is-active {
+    border-bottom-color: hsl(var(--accent));
+  }
+
+  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav-label,
+  .agent-app .a2s-frame:not(.is-collapsed) .a2s-group {
+    display: none;
+  }
+}
+
+/* 768-1023 keeps the icon rail; ≤767 collapses the rail to a bottom bar. */
+@media (max-width: 767px) {
+  .agent-app .a2s-frame,
+  .agent-app .a2s-frame.is-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agent-app .a2s-rail {
+    order: 2;
+    position: sticky;
+    bottom: 0;
+    top: auto;
+    height: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    padding: 8px;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+
+  .agent-app .a2s-rail-logo,
+  .agent-app .a2s-collapse,
+  .agent-app .a2s-group {
+    display: none;
+  }
+
+  .agent-app .a2s-nav,
+  .agent-app .is-collapsed .a2s-nav {
+    flex-direction: column;
+    gap: 2px;
+    width: 56px;
+    padding: 6px 2px;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .agent-app .a2s-nav .a2s-nav-label,
+  .agent-app .is-collapsed .a2s-nav .a2s-nav-label,
+  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav .a2s-nav-label {
+    display: block;
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 52px;
+  }
+
+  .agent-app .a2s-nav.is-active,
+  .agent-app .is-collapsed .a2s-nav.is-active {
+    border-left: 0;
+    border-bottom-color: hsl(var(--accent));
+  }
+
+  .agent-app .a2s-page {
+    padding: 14px;
+  }
+
+  .agent-app .a2s-topbar {
+    padding: 10px 14px;
+  }
+
+  .agent-app .a2s-search {
+    flex-basis: 160px;
+  }
+}

@@ -2524,9 +2524,6 @@
   "src/routes/index.tsx": {
     "@typescript-eslint/ban-ts-comment": {
       "count": 2
-    },
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
     }
   },
   "src/store/dashboardStore.tsx": {

@@ -8,7 +8,6 @@ import { ResetPwdPage } from "../pages/LoginPage/resetPwd";
 import Page403 from "../pages/Page403";
 import Page404 from "../pages/Page404";
 import MenuPermissionPlaceholder from "../pages/MenuPermissionPlaceholder";
-import { AppNumType } from "../types/app";
 import RouteErrorBoundary from "./RouteErrorBoundary";
 import EditorPage from "@/pages/Dashboard/editor";
 import SharePage from "@/pages/Dashboard/share";
@@ -37,7 +36,17 @@ const TaskApps = lazy(() => import("@/pages/LabelPage/taskApps"));
 const LogPage = lazy(() => import("@/pages/LogPage").then(module => ({ default: module.LogPage })));
 const AgentConsolePage = lazy(() => import("@/pages/AgentPage").then(module => ({ default: module.AgentPage })));
 const AgentApprovalsPage = lazy(() => import("@/pages/AgentApprovalsPage").then(module => ({ default: module.AgentApprovalsPage })));
-const AgentConsoleV2Page = lazy(() => import("@/pages/AgentConsoleV2/AgentConsoleV2Page").then(module => ({ default: module.AgentConsoleV2Page })));
+// P0-15 W1 shell: 8 L1 routes + 404 live under one rail/topbar shell (parity spec §2).
+const AgentConsoleShell = lazy(() => import("@/pages/AgentConsoleV2/Shell").then(module => ({ default: module.AgentConsoleShell })));
+const ShellOverviewPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.OverviewPage })));
+const ShellEmployeesPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.EmployeesPage })));
+const ShellApprovalsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.ApprovalsPage })));
+const ShellTasksPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.TasksPage })));
+const ShellRunsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.RunsPage })));
+const ShellMetricsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.MetricsPage })));
+const ShellAuditPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.AuditPage })));
+const ShellSettingsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.SettingsPage })));
+const ShellNotFoundPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.NotFoundPage })));
 const AppChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/appChatDetail"));
 const DailyChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/dailyChatDetail"));
 const Doc = lazy(() => import("@/pages/ModelPage/doc"));
@@ -138,11 +147,21 @@ const privateRouter = [
   },
   ...(agentConsoleV2Enabled()
     ? [
-        { path: "agent", element: <AgentConsoleV2Page />, permission: "agent" },
         {
-          path: "agent/approvals",
-          element: <AgentConsoleV2Page initialSection="appr" />,
+          path: "agent",
+          element: <AgentConsoleShell />,
           permission: "agent",
+          children: [
+            { index: true, element: <ShellOverviewPage /> },
+            { path: "employees", element: <ShellEmployeesPage /> },
+            { path: "approvals", element: <ShellApprovalsPage /> },
+            { path: "tasks", element: <ShellTasksPage /> },
+            { path: "runs", element: <ShellRunsPage /> },
+            { path: "metrics", element: <ShellMetricsPage /> },
+            { path: "audit", element: <ShellAuditPage /> },
+            { path: "settings", element: <ShellSettingsPage /> },
+            { path: "*", element: <ShellNotFoundPage /> },
+          ],
         },
       ]
     : []),
