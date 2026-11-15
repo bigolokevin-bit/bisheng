@@ -104,7 +104,10 @@ export function CostBudgetBlock({
           <p className="a2-meta" data-testid="agent-v2-ov-cost-error">
             {cost.code === 'agent-console.no-employees'
               ? t('agentConsole.v2.ov.noEmployeesNote')
-              : (cost.code ?? `http-${cost.status}`)}
+              : t('agentConsole.v2.ov.blockUnavailable', {
+                  block: t('agentConsole.v2.ov.costBudgetTitle'),
+                  code: cost.status,
+                })}
           </p>
           {/* fix B (G10): block-level retry entry */}
           <button

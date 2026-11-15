@@ -4522,6 +4522,7 @@
         "heatTierLess": "少",
         "heatTierMore": "多",
         "heatCellHour": "每格＝1 小时，颜色只表数量",
+        "kpiNoSpark": "无趋势源",
         "retry": "重试",
         "blockUnavailable": "{{block}}暂时取不到（HTTP {{code}}）",
         "heatEmpty": "近 {{count}} 周暂无活动记录",

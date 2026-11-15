@@ -116,7 +116,15 @@ describe('OV-01 fix B (G10) block-level error states', () => {
     expect(trendError.textContent).toContain('运行趋势');
 
     expect(screen.getByTestId('agent-v2-ov-retry-kpi-runs')).toBeInTheDocument();
-    expect(screen.getByTestId('agent-v2-ov-kpi-runs-error')).toBeInTheDocument();
+    const runsError = screen.getByTestId('agent-v2-ov-kpi-runs-error');
+    // fix B (G15): localized copy only — the injected machine code
+    // (agent.http.500) must never reach the visible text, only the HTTP status.
+    expect(runsError.textContent).toContain('HTTP 500');
+    const codeish = /[a-z]+\.[a-z_]+/;
+    expect(runsError.textContent ?? '').not.toMatch(codeish);
+    document
+      .querySelectorAll('[data-testid$="-error"]')
+      .forEach((el) => expect(el.textContent ?? '').not.toMatch(codeish));
 
     // other blocks are untouched by the failure
     expect(screen.getByTestId('agent-v2-ov-block-anomaly')).toBeInTheDocument();
@@ -134,6 +142,10 @@ describe('OV-01 fix B (G10) block-level error states', () => {
 
     await waitFor(() =>
       expect(screen.getByTestId('agent-v2-ov-trend-bars')).toBeInTheDocument()
+    );
+    // fix B (G15): after retry the runs KPI shows the recovered real value.
+    await waitFor(() =>
+      expect(screen.getByTestId('agent-v2-ov-kpi-runs').textContent).toContain('3')
     );
     expect(screen.queryByTestId('agent-v2-ov-trend-error')).toBeNull();
     expect(screen.queryByTestId('agent-v2-ov-retry-trend')).toBeNull();

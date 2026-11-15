@@ -4522,6 +4522,7 @@
         "heatTierLess": "少",
         "heatTierMore": "多",
         "heatCellHour": "各マス＝1時間、色は件数のみ",
+        "kpiNoSpark": "トレンド元なし",
         "retry": "再試行",
         "blockUnavailable": "{{block}}を一時的に取得できません（HTTP {{code}}）",
         "heatEmpty": "直近{{count}}週間の活動はありません",

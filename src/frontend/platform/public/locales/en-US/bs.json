@@ -4577,6 +4577,7 @@
         "heatTierLess": "Few",
         "heatTierMore": "Many",
         "heatCellHour": "each cell = 1 hour; colour shows volume only",
+        "kpiNoSpark": "No trend source",
         "retry": "Retry",
         "blockUnavailable": "{{block}} is temporarily unavailable (HTTP {{code}})",
         "heatEmpty": "No activity in the last {{count}} weeks",

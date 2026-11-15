@@ -428,11 +428,19 @@ export function OverviewPage() {
                   count: stats.data?.total ?? 0,
                 })}
               </span>
+              {/* fix B (N1): no trusted trend series exists for this card */}
+              <span className="a2-micro" data-testid="agent-v2-ov-kpi-onduty-nospark">
+                {t('agentConsole.v2.ov.kpiNoSpark')}
+              </span>
             </>
           ) : (
             <>
+              {/* fix B (G15): never surface raw BFF codes; localize with HTTP status */}
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-onduty-error">
-                {stats.code ?? `http-${stats.status}`}
+                {t('agentConsole.v2.ov.blockUnavailable', {
+                  block: t('agentConsole.v2.ov.kpiOnDuty'),
+                  code: stats.status,
+                })}
               </span>
               {/* fix B (G10): block-level retry; refresh re-runs the full silent load */}
               <button
@@ -461,13 +469,20 @@ export function OverviewPage() {
                   })}
                 </span>
               ) : null}
+              {/* fix B (N1): no trusted trend series exists for this card */}
+              <span className="a2-micro" data-testid="agent-v2-ov-kpi-pending-nospark">
+                {t('agentConsole.v2.ov.kpiNoSpark')}
+              </span>
             </>
           ) : (
             <>
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-pending-error">
                 {approvals.code === 'agent-console.no-uid'
                   ? t('agentConsole.v2.ov.noteNoUid')
-                  : (approvals.code ?? `http-${approvals.status}`)}
+                  : t('agentConsole.v2.ov.blockUnavailable', {
+                      block: t('agentConsole.v2.ov.kpiPending'),
+                      code: approvals.status,
+                    })}
               </span>
               <button
                 type="button"
@@ -501,7 +516,10 @@ export function OverviewPage() {
           ) : (
             <>
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-runs-error">
-                {runs.code ?? `http-${runs.status}`}
+                {t('agentConsole.v2.ov.blockUnavailable', {
+                  block: t('agentConsole.v2.ov.kpiWeekRuns', { window: windowLabel }),
+                  code: runs.status,
+                })}
               </span>
               <button
                 type="button"
@@ -539,7 +557,10 @@ export function OverviewPage() {
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-cost-error">
                 {cost.code === 'agent-console.no-employees'
                   ? t('agentConsole.v2.ov.noteNoEmployees')
-                  : (cost.code ?? `http-${cost.status}`)}
+                  : t('agentConsole.v2.ov.blockUnavailable', {
+                      block: t('agentConsole.v2.ov.kpiMonthCost'),
+                      code: cost.status,
+                    })}
               </span>
               <button
                 type="button"
