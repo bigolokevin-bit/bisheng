@@ -7,6 +7,7 @@ import { NavLink } from 'react-router-dom';
 
 import { EmployeesListPage } from './EmployeesListPage';
 import { HermesMetricsSection } from './HermesMetricsSection';
+import { OverviewPage as OverviewScreen } from './OverviewPage';
 import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
 
@@ -33,13 +34,9 @@ function L1Page({ titleKey, descKey, testid }: L1PageProps) {
 }
 
 export function OverviewPage() {
-  return (
-    <L1Page
-      titleKey="agentConsole.v2.shell.overviewTitle"
-      descKey="agentConsole.v2.shell.overviewDesc"
-      testid="agent-v2-page-overview"
-    />
-  );
+  /* OV-01 slice 1: header + 4 real-BFF KPIs; remaining blocks are honest
+   * placeholders inside OverviewPage until their waves. */
+  return <OverviewScreen />;
 }
 
 /* W2: the real employee list screen (parity spec §4 / EMP-01). */
