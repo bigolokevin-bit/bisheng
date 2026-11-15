@@ -1,15 +1,30 @@
-/* OV-01 slice 3: cost / quota / activity blocks for the overview page.
- * Cost total is the sum over P9 ledger rows returned by the service; a
- * missing row is never displayed as 0 and an all-missing batch shows an
- * explicit reason. Quota bars need BOTH the ledger cost and the version
- * budget denominator (E11 expand=version → effectiveBudget.monthlyCostUsd);
- * rows without either are omitted, never drawn with fabricated values.
- * The activity feed merges /api/runs?since=... and /api/audit?from=&to=...
- * newest-first; absent fields render as an em-dash. */
+/* OV-01 slice 3 + fix A: cost/budget (merged into ONE block per ACCEPTANCE
+ * §7 G11), anomalies (G1), queue sections (moved from OverviewPage) and the
+ * activity feed. Cost total is the sum over P9 ledger rows returned by the
+ * service; a missing row is never displayed as 0 and an all-missing batch
+ * shows an explicit reason. Quota bars need BOTH the ledger cost and the
+ * version budget denominator (E11 expand=version → effectiveBudget
+ * .monthlyCostUsd); rows without either are omitted, never fabricated.
+ * The anomaly block derives ONLY from real aggregates already fetched for
+ * the KPIs (R6 failed sum over the window + AP8 dueSoon); when both are 0
+ * it states the scanned scope instead of hiding itself. Queue rows render
+ * whatever safe string fields the real API returns; absent fields fall back
+ * to an em-dash. The activity feed merges /api/runs?since=... and
+ * /api/audit?from=&to=... newest-first. */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { NavLink } from 'react-router-dom';
 
-import { fmtRatio, fmtTime, fmtUsd, type BudgetBody, type EmployeeRow } from './v2Data';
+import {
+  bucketSum,
+  fmtRatio,
+  fmtTime,
+  fmtUsd,
+  type ApprovalStats,
+  type BudgetBody,
+  type EmployeeRow,
+  type RunStatsBody,
+} from './v2Data';
 
 type UnknownRecord = { [key: string]: unknown };
 
@@ -37,38 +52,18 @@ function sumCost(items: BudgetBody['items'] | undefined): number | null {
   return sum;
 }
 
-export function CostBlock({ state }: { state: BlockState<BudgetBody> }) {
+export function CostBudgetBlock({
+  cost,
+  rows,
+}: {
+  cost: BlockState<BudgetBody>;
+  rows: EmployeeRow[];
+}) {
   const { t } = useTranslation();
-  const total = state.ok ? sumCost(state.data?.items) : null;
-  const missing = state.data?.missingEmployeeIds?.length ?? 0;
-  return (
-    <div className="a2-card" data-testid="agent-v2-ov-block-cost">
-      <h2 className="a2-h2">{t('agentConsole.v2.ov.costTitle')}</h2>
-      {state.loading ? (
-        <p className="a2-meta">…</p>
-      ) : !state.ok ? (
-        <p className="a2-meta" data-testid="agent-v2-ov-cost-error">
-          {state.code === 'agent-console.no-employees'
-            ? t('agentConsole.v2.ov.noEmployeesNote')
-            : (state.code ?? `http-${state.status}`)}
-        </p>
-      ) : (
-        <>
-          <p className="a2-kpi-num">{fmtUsd(total)}</p>
-          {missing > 0 ? (
-            <p className="a2-meta" data-testid="agent-v2-ov-cost-missing">
-              {t('agentConsole.v2.ov.costMissing', { count: missing })}
-            </p>
-          ) : null}
-          <p className="a2-micro">{t('agentConsole.v2.ov.noteLedger')}</p>
-        </>
-      )}
-    </div>
-  );
-}
-
-export function QuotaBlock({ cost, rows }: { cost: BlockState<BudgetBody>; rows: EmployeeRow[] }) {
-  const { t } = useTranslation();
+  const total = cost.ok ? sumCost(cost.data?.items) : null;
+  const missing = cost.data?.missingEmployeeIds?.length ?? 0;
+  // fix A (G11): the quota bars moved INSIDE this merged block; a bar still
+  // needs BOTH the real ledger cost and the real budget denominator.
   const bars = useMemo(() => {
     const costOf = new Map<string, number | null | undefined>();
     for (const item of cost.data?.items ?? []) {
@@ -90,44 +85,233 @@ export function QuotaBlock({ cost, rows }: { cost: BlockState<BudgetBody>; rows:
     return out;
   }, [cost, rows]);
   return (
-    <div className="a2-card" data-testid="agent-v2-ov-block-quota">
-      <h2 className="a2-h2">{t('agentConsole.v2.ov.quotaTitle')}</h2>
+    <div className="a2-card" data-testid="agent-v2-ov-block-cost">
+      <h2 className="a2-h2">{t('agentConsole.v2.ov.costBudgetTitle')}</h2>
       {cost.loading ? (
         <p className="a2-meta">…</p>
-      ) : bars.length === 0 ? (
-        <p className="a2-meta" data-testid="agent-v2-ov-quota-empty">
-          {t('agentConsole.v2.ov.quotaNoDenominator')}
+      ) : !cost.ok ? (
+        <p className="a2-meta" data-testid="agent-v2-ov-cost-error">
+          {cost.code === 'agent-console.no-employees'
+            ? t('agentConsole.v2.ov.noEmployeesNote')
+            : (cost.code ?? `http-${cost.status}`)}
         </p>
       ) : (
-        bars.map((bar) => {
-          const ratio = bar.value / bar.denominator;
-          const tone = ratio >= 0.85 ? ' a2-danger' : ratio >= 0.6 ? ' a2-warn' : '';
-          return (
-            <div
-              className="a2-card-item"
-              key={bar.employeeId}
-              data-testid="agent-v2-ov-quota-row"
-            >
-              <div className="a2-card-head">
-                <span className="a2-meta">{bar.label}</span>
-                <span className={`a2-micro${tone}`}>{fmtRatio(ratio)}</span>
-              </div>
-              <div style={{ height: 6, borderRadius: 3, background: 'rgba(128, 128, 128, 0.15)' }}>
+        <>
+          <p className="a2-kpi-num">{fmtUsd(total)}</p>
+          {missing > 0 ? (
+            <p className="a2-meta" data-testid="agent-v2-ov-cost-missing">
+              {t('agentConsole.v2.ov.costMissing', { count: missing })}
+            </p>
+          ) : null}
+          <p className="a2-micro">{t('agentConsole.v2.ov.noteLedger')}</p>
+          <p className="a2-meta" data-testid="agent-v2-ov-quota-subtitle" style={{ marginTop: 12 }}>
+            {t('agentConsole.v2.ov.quotaTitle')}
+          </p>
+          {bars.length === 0 ? (
+            <p className="a2-meta" data-testid="agent-v2-ov-quota-empty">
+              {t('agentConsole.v2.ov.quotaNoDenominator')}
+            </p>
+          ) : (
+            bars.map((bar) => {
+              const ratio = bar.value / bar.denominator;
+              const tone = ratio >= 0.85 ? ' a2-danger' : ratio >= 0.6 ? ' a2-warn' : '';
+              return (
                 <div
-                  style={{
-                    width: `${Math.min(ratio, 1) * 100}%`,
-                    height: '100%',
-                    borderRadius: 3,
-                    background: 'hsl(var(--accent))',
-                  }}
-                />
-              </div>
-              <p className="a2-micro">
-                {fmtUsd(bar.value)} / {fmtUsd(bar.denominator)}
-              </p>
-            </div>
-          );
-        })
+                  className="a2-card-item"
+                  key={bar.employeeId}
+                  data-testid="agent-v2-ov-quota-row"
+                >
+                  <div className="a2-card-head">
+                    <span className="a2-meta">{bar.label}</span>
+                    <span className={`a2-micro${tone}`}>{fmtRatio(ratio)}</span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: 'rgba(128, 128, 128, 0.15)' }}>
+                    <div
+                      style={{
+                        width: `${Math.min(ratio, 1) * 100}%`,
+                        height: '100%',
+                        borderRadius: 3,
+                        background: 'hsl(var(--accent))',
+                      }}
+                    />
+                  </div>
+                  <p className="a2-micro">
+                    {fmtUsd(bar.value)} / {fmtUsd(bar.denominator)}
+                  </p>
+                </div>
+              );
+            })
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* fix A (G1): the eighth block, derived strictly from the two REAL aggregates
+ * already fetched for the KPI row — R6 run-stats failed sum over the current
+ * window and AP8 approval-stats dueSoon. When both are zero it shows the
+ * honest empty state plus the scanned scope; the block is never omitted. */
+export function AnomalyBlock({
+  runs,
+  approvals,
+  days,
+}: {
+  runs: BlockState<RunStatsBody>;
+  approvals: BlockState<ApprovalStats>;
+  days: number;
+}) {
+  const { t } = useTranslation();
+  const failed = runs.ok ? bucketSum(runs.data?.buckets).failed : null;
+  const dueSoon = approvals.ok ? (approvals.data?.dueSoon ?? null) : null;
+  const scan = (
+    <p className="a2-micro" data-testid="agent-v2-ov-anomaly-scan">
+      {t('agentConsole.v2.ov.anomalyScan', { days })}
+    </p>
+  );
+  return (
+    <div className="a2-card" data-testid="agent-v2-ov-block-anomaly">
+      <h2 className="a2-h2">{t('agentConsole.v2.ov.anomalyTitle')}</h2>
+      {runs.loading || approvals.loading ? (
+        <p className="a2-meta">…</p>
+      ) : failed === 0 && dueSoon === 0 ? (
+        <>
+          <p className="a2-meta" data-testid="agent-v2-ov-anomaly-empty">
+            {t('agentConsole.v2.ov.anomalyEmpty')}
+          </p>
+          {scan}
+        </>
+      ) : (
+        <>
+          {failed === null ? (
+            <p className="a2-meta" data-testid="agent-v2-ov-anomaly-runs-state">
+              {runs.code === 'agent-console.no-uid'
+                ? t('agentConsole.v2.ov.noteNoUid')
+                : t('agentConsole.v2.ov.anomalyUnavailable')}
+            </p>
+          ) : failed > 0 ? (
+            <p className="a2-card-sub" data-testid="agent-v2-ov-anomaly-runs">
+              <span>{t('agentConsole.v2.ov.anomalyRuns', { count: failed })}</span>
+              {' · '}
+              <NavLink className="a2-micro" to="/agent/runs">
+                {t('agentConsole.v2.ov.viewAll')}
+              </NavLink>
+            </p>
+          ) : null}
+          {dueSoon === null ? (
+            <p className="a2-meta" data-testid="agent-v2-ov-anomaly-approvals-state">
+              {approvals.code === 'agent-console.no-uid'
+                ? t('agentConsole.v2.ov.noteNoUid')
+                : t('agentConsole.v2.ov.anomalyUnavailable')}
+            </p>
+          ) : dueSoon > 0 ? (
+            <p className="a2-card-sub" data-testid="agent-v2-ov-anomaly-approvals">
+              <span>{t('agentConsole.v2.ov.anomalyApprovals', { count: dueSoon })}</span>
+              {' · '}
+              <NavLink className="a2-micro" to="/agent/approvals">
+                {t('agentConsole.v2.ov.viewAll')}
+              </NavLink>
+            </p>
+          ) : null}
+          {scan}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* fix A (G2): tiny sparkline for KPI cards, drawn strictly from the run-stats
+ * day buckets the page already fetched; a null series draws nothing. */
+export function KpiSpark({ points, testId }: { points: number[]; testId: string }) {
+  const width = 72;
+  const height = 20;
+  const max = Math.max(...points, 1);
+  const step = points.length > 1 ? width / (points.length - 1) : width;
+  const coords = points
+    .map(
+      (value, index) =>
+        `${(index * step).toFixed(1)},${(height - (value / max) * (height - 2) - 1).toFixed(1)}`
+    )
+    .join(' ');
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      aria-hidden="true"
+      data-testid={testId}
+      style={{ display: 'block' }}
+    >
+      <polyline points={coords} fill="none" stroke="hsl(var(--accent))" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+// fix A: queue sections moved here from OverviewPage (slice 2) unchanged in
+// behaviour; rows render whatever safe string fields the real API returns.
+export interface OverviewQueueBody {
+  items: UnknownRecord[];
+  nextCursor?: string;
+}
+
+function queueLabel(item: UnknownRecord): string {
+  return (
+    firstString(item, [
+      'title',
+      'name',
+      'action',
+      'resource',
+      'approvalId',
+      'taskId',
+      'runId',
+      'employeeId',
+    ]) ?? '—'
+  );
+}
+
+function queueStatus(item: UnknownRecord): string {
+  return firstString(item, ['status', 'lifecycleState', 'outcome']) ?? '—';
+}
+
+export function QueueSection({
+  titleKey,
+  state,
+  to,
+}: {
+  titleKey: string;
+  state: BlockState<OverviewQueueBody>;
+  to: string;
+}) {
+  const { t } = useTranslation();
+  const items = state.ok ? (state.data?.items ?? []) : [];
+  return (
+    <div className="a2-card-item" data-testid={`agent-v2-ov-queue-${titleKey}`}>
+      <div className="a2-card-head">
+        <span className="a2-meta">{t(`agentConsole.v2.ov.${titleKey}`)}</span>
+        <NavLink className="a2-micro" to={to}>
+          {t('agentConsole.v2.ov.viewAll')}
+        </NavLink>
+      </div>
+      {state.loading ? (
+        <p className="a2-meta">…</p>
+      ) : !state.ok ? (
+        <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
+          {state.code === 'agent-console.no-uid'
+            ? t('agentConsole.v2.ov.queueNoUid')
+            : t('agentConsole.v2.ov.queueUnavailable')}
+        </p>
+      ) : items.length === 0 ? (
+        <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
+          {t('agentConsole.v2.ov.queueEmpty')}
+        </p>
+      ) : (
+        items.map((item, index) => (
+          <p className="a2-card-sub" key={`${titleKey}-${index}`}>
+            <span>{queueLabel(item)}</span>
+            {' · '}
+            <span className="a2-mono">{queueStatus(item)}</span>
+          </p>
+        ))
       )}
     </div>
   );

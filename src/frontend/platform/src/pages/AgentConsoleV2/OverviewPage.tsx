@@ -1,13 +1,16 @@
-/* OV-01 slice 1: overview header + 4 KPI cards, real BFF aggregates only.
- * Every number comes from a service endpoint (E14 / AP8 / R6 / P9 batch);
- * nothing is aggregated over paginated rows in the client. The remaining
- * cost / quota / activity blocks render from real endpoints (slice 3) —
- * no fake charts, no fixtures in bundle, no placeholder copy on screen.
- * When an endpoint 4xx/5xx or has no data the KPI shows an explicit reason
- * instead of a fabricated value ("no trend data" rather than "+2%"). */
+/* OV-01 slice 1-3 + fix A: overview header, 4 KPI cards, pending queue,
+ * trend, heat, cost/budget (merged), anomalies and activity — real BFF
+ * aggregates only. Every number comes from a service endpoint
+ * (E14 / AP8 / R6 / P9 batch); nothing is aggregated over paginated rows in
+ * the client. No fake charts, no fixtures in bundle, no placeholder copy on
+ * screen. KPI sparklines and the trend block share the SAME R6 buckets.
+ * Page state survives refresh/share/back via the URL:
+ * ?range=7d|28d|90d&weeks=1..12&focus=<block>.
+ * When an endpoint 4xx/5xx or has no data the UI shows an explicit reason
+ * instead of a fabricated value. */
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 import { userContext } from '@/contexts/userContext';
 
@@ -26,16 +29,24 @@ import {
   isoDay,
   makeFetcher,
   monthPeriod,
+  sparkPoints,
   type ActivityBody,
   type ApiRes,
   type ApprovalStats,
   type BudgetBody,
   type EmployeeRow,
   type EmployeeStats,
+  type RunBucket,
   type RunStatsBody,
 } from './v2Data';
 
-import { ActivityBlock, CostBlock, QuotaBlock } from './OverviewBlocks';
+import {
+  ActivityBlock,
+  AnomalyBlock,
+  CostBudgetBlock,
+  KpiSpark,
+  QueueSection,
+} from './OverviewBlocks';
 
 const COST_ID_LIMIT = 100;
 
@@ -49,26 +60,64 @@ interface KpiState<T> {
 
 const pendingKpi = { loading: true, ok: false, status: 0 };
 
+// fix A (G2): "no trend data" appears ONLY when the buckets are empty or
+// all-zero; with real buckets the comparison line is shown when a non-zero
+// previous window exists, and omitted (never faked) otherwise.
 function trendText(
-  t: (k: string) => string,
+  t: (k: string, o?: Record<string, unknown>) => string,
   current: RunStatsBody | undefined,
   previous: RunStatsBody | undefined,
-  ok: boolean
-): string {
-  // Honest trend: only when both rolling 7-day windows are present and the
-  // previous window has a non-zero baseline. Otherwise state it explicitly.
-  if (!ok || !current || !previous) return t('agentConsole.v2.ov.noTrend');
-  const cur = bucketSum(current.buckets);
-  const prev = bucketSum(previous.buckets);
-  if (prev.runs <= 0) return t('agentConsole.v2.ov.noTrend');
-  return `${t('agentConsole.v2.ov.trendVsPrev')} ${fmtRatio(
+  ok: boolean,
+  days: number
+): string | null {
+  const buckets = current?.buckets ?? [];
+  if (!ok || !current || buckets.length === 0 || bucketSum(buckets).runs <= 0) {
+    return t('agentConsole.v2.ov.noTrend');
+  }
+  const prev = bucketSum(previous?.buckets);
+  if (prev.runs <= 0) return null;
+  const cur = bucketSum(buckets);
+  return `${t('agentConsole.v2.ov.trendVsPrev', { days })} ${fmtRatio(
     (cur.runs - prev.runs) / prev.runs
   )}`;
 }
 
-// OV-01 slice 2: pending queue rows render whatever safe string fields the
-// real API returns (shapes were read live, never fabricated). Missing fields
-// fall back to the em dash, never to a guessed value.
+// fix A (G2): cost spark mirrors sparkPoints but reads costUsd; a window
+// without any monetary bucket yields null and the card draws nothing.
+function costSparkPoints(buckets: RunBucket[] | null | undefined, days: number): number[] | null {
+  if (!buckets || buckets.length === 0) return null;
+  const byDay = new Map<string, number>();
+  for (const b of buckets) {
+    if (typeof b.costUsd === 'number' && Number.isFinite(b.costUsd)) {
+      const day = isoDay(b.bucketStart);
+      byDay.set(day, (byDay.get(day) ?? 0) + b.costUsd);
+    }
+  }
+  const out: number[] = [];
+  const now = Date.now();
+  for (let i = days - 1; i >= 0; i -= 1) {
+    out.push(byDay.get(isoDay(new Date(now - i * 86400000).toISOString())) ?? 0);
+  }
+  return out.some((v) => v > 0) ? out : null;
+}
+
+// fix A (G9): page state that must survive refresh / share / back lives in
+// the URL: ?range=7d|28d|90d&weeks=1..12&focus=<block>.
+const RANGE_KEYS = ['7d', '28d', '90d'];
+const RANGE_DAYS: Record<string, number> = { '7d': 7, '28d': 28, '90d': 90 };
+const FOCUS_TESTID: Record<string, string> = {
+  header: 'agent-v2-ov-block-header',
+  kpis: 'agent-v2-ov-block-kpis',
+  queue: 'agent-v2-ov-queue',
+  trend: 'agent-v2-ov-trend',
+  heat: 'agent-v2-ov-heat',
+  cost: 'agent-v2-ov-block-cost',
+  anomaly: 'agent-v2-ov-block-anomaly',
+  activity: 'agent-v2-ov-block-activity',
+};
+
+// OV-01 slice 2: queue row shapes were read live, never fabricated; the
+// rendering component now lives in OverviewBlocks (fix A size budget).
 interface QueueItem {
   [key: string]: unknown;
 }
@@ -82,82 +131,11 @@ interface AuditBody {
   events: QueueItem[];
 }
 
-function firstString(item: QueueItem, keys: string[]): string | null {
-  for (const key of keys) {
-    const value = item[key];
-    if (typeof value === 'string' && value !== '') return value;
-  }
-  return null;
-}
-
-function queueLabel(item: QueueItem): string {
-  return (
-    firstString(item, [
-      'title',
-      'name',
-      'action',
-      'resource',
-      'approvalId',
-      'taskId',
-      'runId',
-      'employeeId',
-    ]) ?? '—'
-  );
-}
-
-function queueStatus(item: QueueItem): string {
-  return firstString(item, ['status', 'lifecycleState', 'outcome']) ?? '—';
-}
-
 function listKpi(res: ApiRes<QueueBody> | null): KpiState<QueueBody> {
   if (res === null) {
     return { loading: false, ok: false, status: 0, code: 'agent-console.no-uid' };
   }
   return { loading: false, ok: res.ok, status: res.status, code: res.code, data: res.data };
-}
-
-function QueueSection({
-  titleKey,
-  state,
-  to,
-}: {
-  titleKey: string;
-  state: KpiState<QueueBody>;
-  to: string;
-}) {
-  const { t } = useTranslation();
-  const items = state.ok ? (state.data?.items ?? []) : [];
-  return (
-    <div className="a2-card-item" data-testid={`agent-v2-ov-queue-${titleKey}`}>
-      <div className="a2-card-head">
-        <span className="a2-meta">{t(`agentConsole.v2.ov.${titleKey}`)}</span>
-        <NavLink className="a2-micro" to={to}>
-          {t('agentConsole.v2.ov.viewAll')}
-        </NavLink>
-      </div>
-      {state.loading ? (
-        <p className="a2-meta">…</p>
-      ) : !state.ok ? (
-        <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
-          {state.code === 'agent-console.no-uid'
-            ? t('agentConsole.v2.ov.queueNoUid')
-            : t('agentConsole.v2.ov.queueUnavailable')}
-        </p>
-      ) : items.length === 0 ? (
-        <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
-          {t('agentConsole.v2.ov.queueEmpty')}
-        </p>
-      ) : (
-        items.map((item, index) => (
-          <p className="a2-card-sub" key={`${titleKey}-${index}`}>
-            <span>{queueLabel(item)}</span>
-            {' · '}
-            <span className="a2-mono">{queueStatus(item)}</span>
-          </p>
-        ))
-      )}
-    </div>
-  );
 }
 
 export function OverviewPage() {
@@ -183,6 +161,32 @@ export function OverviewPage() {
 
   const refresh = useCallback(() => setToken((x) => x + 1), []);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rangeKey = RANGE_KEYS.find((k) => k === searchParams.get('range')) ?? '7d';
+  const rangeDays = RANGE_DAYS[rangeKey];
+  const weeksRaw = Number.parseInt(searchParams.get('weeks') ?? '', 10);
+  const heatWeeks = Number.isFinite(weeksRaw) ? Math.min(12, Math.max(1, weeksRaw)) : 4;
+  const focus = searchParams.get('focus');
+  const updateParam = useCallback(
+    (key: string, value: string | null) => {
+      const next = new URLSearchParams(searchParams);
+      if (value === null) next.delete(key);
+      else next.set(key, value);
+      setSearchParams(next);
+    },
+    [searchParams, setSearchParams]
+  );
+
+  // fix A (G9): ?focus=<block> scrolls the matching block into view; re-run
+  // when fresh data lands so a shared link works before first paint too.
+  useEffect(() => {
+    if (!focus) return;
+    const testId = FOCUS_TESTID[focus];
+    if (!testId) return;
+    const el = document.querySelector(`[data-testid="${testId}"]`);
+    if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [focus, updatedAt]);
+
   useEffect(() => {
     let alive = true;
     setStats(pendingKpi);
@@ -197,10 +201,10 @@ export function OverviewPage() {
     setActivityRuns(pendingKpi);
     setActivityAudit(pendingKpi);
     void (async () => {
-      const window7 = dayWindow(7);
+      const windowCur = dayWindow(rangeDays);
       const windowPrev = {
-        from: dayWindow(14).from,
-        to: window7.from,
+        from: dayWindow(rangeDays * 2).from,
+        to: windowCur.from,
       };
       const window24 = {
         from: new Date(Date.now() - 86400000).toISOString(),
@@ -209,7 +213,7 @@ export function OverviewPage() {
       const [s, a, r, rp, ids, qa, qt, qr, h, ar, au] = await Promise.all([
         fetchEmployeeStats(fetch),
         uid ? fetchApprovalStats(fetch, `human:${uid}`) : Promise.resolve(null),
-        fetchRunStats(fetch, { ...window7, bucket: 'day' }),
+        fetchRunStats(fetch, { ...windowCur, bucket: 'day' }),
         fetchRunStats(fetch, { ...windowPrev, bucket: 'day' }),
         fetchEmployeesPage(fetch, { limit: COST_ID_LIMIT, expand: 'version' }),
         uid
@@ -219,13 +223,20 @@ export function OverviewPage() {
               limit: 5,
             })
           : Promise.resolve(null),
+        // fix A (G3): the queue shows ONLY actionable items — overdue tasks
+        // (dueBefore=now). If the BFF rejects the filter the leg shows the
+        // reason instead of an unfiltered list.
         uid
-          ? fetch<QueueBody>('/api/tasks', { assignee: `human:${uid}`, limit: 5 })
+          ? fetch<QueueBody>('/api/tasks', {
+              assignee: `human:${uid}`,
+              dueBefore: window24.to,
+              limit: 5,
+            })
           : Promise.resolve(null),
-        // Runs list requires a server-side filter (request.missing_filter);
-        // reuse the 24h window so the queue shows recent activity honestly.
-        fetch<QueueBody>('/api/runs', { since: window24.from, limit: 5 }),
-        fetchActivity(fetch, { weeks: 4, tz: 'Asia/Shanghai' }),
+        // fix A (G3): abnormal runs only — status=failed inside the rolling
+        // 24h window (server-side filter, never client-side pseudo-filtering).
+        fetch<QueueBody>('/api/runs', { status: 'failed', since: window24.from, limit: 5 }),
+        fetchActivity(fetch, { weeks: heatWeeks, tz: 'Asia/Shanghai' }),
         fetch<QueueBody>('/api/runs', { since: window24.from, limit: 8 }),
         fetch<AuditBody>('/api/audit', {
           from: window24.from,
@@ -267,12 +278,16 @@ export function OverviewPage() {
     return () => {
       alive = false;
     };
-  }, [fetch, token, uid]);
+  }, [fetch, token, uid, rangeDays, heatWeeks]);
 
   const authExpired = [stats, approvals, runs, cost].some(
     (k) => k.status === 401 || k.code === 'console.unauthenticated'
   );
   const runSums = bucketSum(runs.data?.buckets);
+  const runsSpark = sparkPoints(runs.data?.buckets, rangeDays);
+  const costSpark = costSparkPoints(runs.data?.buckets, rangeDays);
+  const windowLabel = t(`agentConsole.v2.ov.range${rangeKey}`);
+  const trendLine = trendText(t, runs.data, runsPrev, runsPrevOk, rangeDays);
   const trendBars = useMemo(() => {
     if (!runs.ok || !runs.data) return null;
     const byDay = new Map<string, number>();
@@ -281,12 +296,12 @@ export function OverviewPage() {
     }
     const days: { day: string; runs: number }[] = [];
     const now = Date.now();
-    for (let i = 6; i >= 0; i -= 1) {
+    for (let i = rangeDays - 1; i >= 0; i -= 1) {
       const day = isoDay(new Date(now - i * 86400000).toISOString());
       days.push({ day, runs: byDay.get(day) ?? 0 });
     }
     return days;
-  }, [runs]);
+  }, [runs, rangeDays]);
   const trendMax = trendBars ? Math.max(...trendBars.map((b) => b.runs), 1) : 1;
   const heatGrid = useMemo(() => {
     if (!heat.ok || !heat.data) return null;
@@ -321,8 +336,27 @@ export function OverviewPage() {
             {t('agentConsole.v2.ov.refresh')}
           </button>
         </div>
+        <div
+          role="group"
+          aria-label={t('agentConsole.v2.ov.rangeTitle')}
+          data-testid="agent-v2-ov-range"
+          style={{ display: 'flex', gap: 6, marginTop: 8 }}
+        >
+          {RANGE_KEYS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              className="a2-btn"
+              data-testid={`agent-v2-ov-range-${k}`}
+              aria-pressed={k === rangeKey}
+              onClick={() => updateParam('range', k === rangeKey ? null : k)}
+            >
+              {t(`agentConsole.v2.ov.range${k}`)}
+            </button>
+          ))}
+        </div>
         <p className="a2-meta">
-          {t('agentConsole.v2.ov.periodNote')}
+          {t('agentConsole.v2.ov.periodNote', { window: windowLabel })}
           {updatedAt ? (
             <>
               {' · '}
@@ -387,13 +421,18 @@ export function OverviewPage() {
         </div>
 
         <div className="a2-kpi" data-testid="agent-v2-ov-kpi-runs">
-          <span className="a2-meta">{t('agentConsole.v2.ov.kpiWeekRuns')}</span>
+          <span className="a2-meta">
+            {t('agentConsole.v2.ov.kpiWeekRuns', { window: windowLabel })}
+          </span>
           {runs.loading ? (
             <span className="a2-kpi-num">…</span>
           ) : runs.ok ? (
             <>
               <span className="a2-kpi-num">{runSums.runs}</span>
-              <span className="a2-meta">{trendText(t, runs.data, runsPrev, runsPrevOk)}</span>
+              {runsSpark ? (
+                <KpiSpark points={runsSpark} testId="agent-v2-ov-kpi-runs-spark" />
+              ) : null}
+              {trendLine ? <span className="a2-meta">{trendLine}</span> : null}
               <span className="a2-meta">
                 {t('agentConsole.v2.ov.noteFailedRuns', { count: runSums.failed })}
               </span>
@@ -419,6 +458,9 @@ export function OverviewPage() {
                   )
                 )}
               </span>
+              {costSpark ? (
+                <KpiSpark points={costSpark} testId="agent-v2-ov-kpi-cost-spark" />
+              ) : null}
               <span className="a2-meta">{t('agentConsole.v2.ov.noteLedger')}</span>
             </>
           ) : (
@@ -478,9 +520,7 @@ export function OverviewPage() {
                         borderRadius: 2,
                       }}
                     />
-                    <span className="a2-micro">
-                      {b.runs > 0 ? b.runs : t('agentConsole.v2.ov.noRuns')}
-                    </span>
+                    {b.runs > 0 ? <span className="a2-micro">{b.runs}</span> : null}
                   </div>
                 ))}
               </div>
@@ -495,10 +535,27 @@ export function OverviewPage() {
         </div>
 
         <div className="a2-card" data-testid="agent-v2-ov-heat">
-          <h2 className="a2-h2">{t('agentConsole.v2.ov.heatTitle')}</h2>
+          <div className="a2-card-head">
+            <h2 className="a2-h2">{t('agentConsole.v2.ov.heatTitle')}</h2>
+            <select
+              className="a2-btn"
+              data-testid="agent-v2-ov-weeks"
+              aria-label={t('agentConsole.v2.ov.weeksLabel')}
+              value={String(heatWeeks)}
+              onChange={(e) =>
+                updateParam('weeks', e.target.value === '4' ? null : e.target.value)
+              }
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((w) => (
+                <option key={w} value={String(w)}>
+                  {t('agentConsole.v2.ov.weeksOption', { count: w })}
+                </option>
+              ))}
+            </select>
+          </div>
           {heatGrid === null ? (
             <p className="a2-meta" data-testid="agent-v2-ov-heat-empty">
-              {t('agentConsole.v2.ov.heatEmpty')}
+              {t('agentConsole.v2.ov.heatEmpty', { count: heatWeeks })}
             </p>
           ) : (
             <>
@@ -525,7 +582,7 @@ export function OverviewPage() {
               </div>
               {heatGrid.total === 0 ? (
                 <p className="a2-meta" data-testid="agent-v2-ov-heat-empty">
-                  {t('agentConsole.v2.ov.heatEmpty')}
+                  {t('agentConsole.v2.ov.heatEmpty', { count: heatWeeks })}
                 </p>
               ) : null}
               <p className="a2-micro" data-testid="agent-v2-ov-heat-foot">
@@ -535,8 +592,8 @@ export function OverviewPage() {
           )}
         </div>
 
-        <CostBlock state={cost} />
-        <QuotaBlock cost={cost} rows={quotaRows} />
+        <CostBudgetBlock cost={cost} rows={quotaRows} />
+        <AnomalyBlock runs={runs} approvals={approvals} days={rangeDays} />
         <ActivityBlock runs={activityRuns} audit={activityAudit} />
       </div>
     </div>
