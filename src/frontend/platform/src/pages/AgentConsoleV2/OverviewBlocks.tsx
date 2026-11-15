@@ -55,9 +55,11 @@ function sumCost(items: BudgetBody['items'] | undefined): number | null {
 export function CostBudgetBlock({
   cost,
   rows,
+  onRetry,
 }: {
   cost: BlockState<BudgetBody>;
   rows: EmployeeRow[];
+  onRetry: () => void;
 }) {
   const { t } = useTranslation();
   const total = cost.ok ? sumCost(cost.data?.items) : null;
@@ -90,11 +92,22 @@ export function CostBudgetBlock({
       {cost.loading ? (
         <p className="a2-meta">…</p>
       ) : !cost.ok ? (
-        <p className="a2-meta" data-testid="agent-v2-ov-cost-error">
-          {cost.code === 'agent-console.no-employees'
-            ? t('agentConsole.v2.ov.noEmployeesNote')
-            : (cost.code ?? `http-${cost.status}`)}
-        </p>
+        <>
+          <p className="a2-meta" data-testid="agent-v2-ov-cost-error">
+            {cost.code === 'agent-console.no-employees'
+              ? t('agentConsole.v2.ov.noEmployeesNote')
+              : (cost.code ?? `http-${cost.status}`)}
+          </p>
+          {/* fix B (G10): block-level retry entry */}
+          <button
+            type="button"
+            className="a2-btn"
+            data-testid="agent-v2-ov-retry-cost"
+            onClick={onRetry}
+          >
+            {t('agentConsole.v2.ov.retry')}
+          </button>
+        </>
       ) : (
         <>
           <p className="a2-kpi-num">{fmtUsd(total)}</p>
@@ -156,10 +169,12 @@ export function AnomalyBlock({
   runs,
   approvals,
   days,
+  onRetry,
 }: {
   runs: BlockState<RunStatsBody>;
   approvals: BlockState<ApprovalStats>;
   days: number;
+  onRetry: () => void;
 }) {
   const { t } = useTranslation();
   const failed = runs.ok ? bucketSum(runs.data?.buckets).failed : null;
@@ -212,6 +227,17 @@ export function AnomalyBlock({
                 {t('agentConsole.v2.ov.viewAll')}
               </NavLink>
             </p>
+          ) : null}
+          {/* fix B (G10): retry entry when either source is unavailable */}
+          {failed === null || dueSoon === null ? (
+            <button
+              type="button"
+              className="a2-btn"
+              data-testid="agent-v2-ov-retry-anomaly"
+              onClick={onRetry}
+            >
+              {t('agentConsole.v2.ov.retry')}
+            </button>
           ) : null}
           {scan}
         </>
@@ -277,10 +303,12 @@ export function QueueSection({
   titleKey,
   state,
   to,
+  onRetry,
 }: {
   titleKey: string;
   state: BlockState<OverviewQueueBody>;
   to: string;
+  onRetry: () => void;
 }) {
   const { t } = useTranslation();
   const items = state.ok ? (state.data?.items ?? []) : [];
@@ -295,11 +323,22 @@ export function QueueSection({
       {state.loading ? (
         <p className="a2-meta">…</p>
       ) : !state.ok ? (
-        <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
-          {state.code === 'agent-console.no-uid'
-            ? t('agentConsole.v2.ov.queueNoUid')
-            : t('agentConsole.v2.ov.queueUnavailable')}
-        </p>
+        <>
+          <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
+            {state.code === 'agent-console.no-uid'
+              ? t('agentConsole.v2.ov.queueNoUid')
+              : t('agentConsole.v2.ov.queueUnavailable')}
+          </p>
+          {/* fix B (G10): per-section retry entry */}
+          <button
+            type="button"
+            className="a2-btn"
+            data-testid={`agent-v2-ov-retry-queue-${titleKey}`}
+            onClick={onRetry}
+          >
+            {t('agentConsole.v2.ov.retry')}
+          </button>
+        </>
       ) : items.length === 0 ? (
         <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
           {t('agentConsole.v2.ov.queueEmpty')}
@@ -320,9 +359,11 @@ export function QueueSection({
 export function ActivityBlock({
   runs,
   audit,
+  onRetry,
 }: {
   runs: BlockState<{ items: UnknownRecord[] }>;
   audit: BlockState<{ events: UnknownRecord[] }>;
+  onRetry: () => void;
 }) {
   const { t } = useTranslation();
   const rows = useMemo(() => {
@@ -356,11 +397,24 @@ export function ActivityBlock({
       {runs.loading || audit.loading ? (
         <p className="a2-meta">…</p>
       ) : rows.length === 0 ? (
-        <p className="a2-meta" data-testid="agent-v2-ov-activity-empty">
-          {!runs.ok && !audit.ok
-            ? t('agentConsole.v2.ov.activityUnavailable')
-            : t('agentConsole.v2.ov.activityEmpty')}
-        </p>
+        <>
+          <p className="a2-meta" data-testid="agent-v2-ov-activity-empty">
+            {!runs.ok && !audit.ok
+              ? t('agentConsole.v2.ov.activityUnavailable')
+              : t('agentConsole.v2.ov.activityEmpty')}
+          </p>
+          {/* fix B (G10): retry only when both sources failed (not a real empty) */}
+          {!runs.ok && !audit.ok ? (
+            <button
+              type="button"
+              className="a2-btn"
+              data-testid="agent-v2-ov-retry-activity"
+              onClick={onRetry}
+            >
+              {t('agentConsole.v2.ov.retry')}
+            </button>
+          ) : null}
+        </>
       ) : (
         <>
           <p className="a2-meta" data-testid="agent-v2-ov-activity-head">

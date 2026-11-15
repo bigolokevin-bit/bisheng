@@ -430,9 +430,20 @@ export function OverviewPage() {
               </span>
             </>
           ) : (
-            <span className="a2-meta" data-testid="agent-v2-ov-kpi-onduty-error">
-              {stats.code ?? `http-${stats.status}`}
-            </span>
+            <>
+              <span className="a2-meta" data-testid="agent-v2-ov-kpi-onduty-error">
+                {stats.code ?? `http-${stats.status}`}
+              </span>
+              {/* fix B (G10): block-level retry; refresh re-runs the full silent load */}
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-ov-retry-kpi-onduty"
+                onClick={refresh}
+              >
+                {t('agentConsole.v2.ov.retry')}
+              </button>
+            </>
           )}
         </div>
 
@@ -452,11 +463,21 @@ export function OverviewPage() {
               ) : null}
             </>
           ) : (
-            <span className="a2-meta" data-testid="agent-v2-ov-kpi-pending-error">
-              {approvals.code === 'agent-console.no-uid'
-                ? t('agentConsole.v2.ov.noteNoUid')
-                : (approvals.code ?? `http-${approvals.status}`)}
-            </span>
+            <>
+              <span className="a2-meta" data-testid="agent-v2-ov-kpi-pending-error">
+                {approvals.code === 'agent-console.no-uid'
+                  ? t('agentConsole.v2.ov.noteNoUid')
+                  : (approvals.code ?? `http-${approvals.status}`)}
+              </span>
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-ov-retry-kpi-pending"
+                onClick={refresh}
+              >
+                {t('agentConsole.v2.ov.retry')}
+              </button>
+            </>
           )}
         </div>
 
@@ -478,9 +499,19 @@ export function OverviewPage() {
               </span>
             </>
           ) : (
-            <span className="a2-meta" data-testid="agent-v2-ov-kpi-runs-error">
-              {runs.code ?? `http-${runs.status}`}
-            </span>
+            <>
+              <span className="a2-meta" data-testid="agent-v2-ov-kpi-runs-error">
+                {runs.code ?? `http-${runs.status}`}
+              </span>
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-ov-retry-kpi-runs"
+                onClick={refresh}
+              >
+                {t('agentConsole.v2.ov.retry')}
+              </button>
+            </>
           )}
         </div>
 
@@ -504,11 +535,21 @@ export function OverviewPage() {
               <span className="a2-meta">{t('agentConsole.v2.ov.noteLedger')}</span>
             </>
           ) : (
-            <span className="a2-meta" data-testid="agent-v2-ov-kpi-cost-error">
-              {cost.code === 'agent-console.no-employees'
-                ? t('agentConsole.v2.ov.noteNoEmployees')
-                : (cost.code ?? `http-${cost.status}`)}
-            </span>
+            <>
+              <span className="a2-meta" data-testid="agent-v2-ov-kpi-cost-error">
+                {cost.code === 'agent-console.no-employees'
+                  ? t('agentConsole.v2.ov.noteNoEmployees')
+                  : (cost.code ?? `http-${cost.status}`)}
+              </span>
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-ov-retry-kpi-cost"
+                onClick={refresh}
+              >
+                {t('agentConsole.v2.ov.retry')}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -520,14 +561,45 @@ export function OverviewPage() {
             titleKey="queueApprovals"
             state={queueApprovals}
             to="/agent/approvals"
+            onRetry={refresh}
           />
-          <QueueSection titleKey="queueTasks" state={queueTasks} to="/agent/tasks" />
-          <QueueSection titleKey="queueRuns" state={queueRuns} to="/agent/runs" />
+          <QueueSection
+            titleKey="queueTasks"
+            state={queueTasks}
+            to="/agent/tasks"
+            onRetry={refresh}
+          />
+          <QueueSection
+            titleKey="queueRuns"
+            state={queueRuns}
+            to="/agent/runs"
+            onRetry={refresh}
+          />
         </div>
 
         <div className="a2-card" data-testid="agent-v2-ov-trend">
           <h2 className="a2-h2">{t('agentConsole.v2.ov.trendTitle')}</h2>
-          {trendBars === null ? (
+          {runs.loading ? (
+            <p className="a2-meta">…</p>
+          ) : !runs.ok ? (
+            /* fix B (G10): error state distinct from empty, with retry entry */
+            <>
+              <p className="a2-meta" data-testid="agent-v2-ov-trend-error">
+                {t('agentConsole.v2.ov.blockUnavailable', {
+                  block: t('agentConsole.v2.ov.trendTitle'),
+                  code: runs.status,
+                })}
+              </p>
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-ov-retry-trend"
+                onClick={refresh}
+              >
+                {t('agentConsole.v2.ov.retry')}
+              </button>
+            </>
+          ) : trendBars === null ? (
             <p className="a2-meta" data-testid="agent-v2-ov-trend-empty">
               {t('agentConsole.v2.ov.noTrend')}
             </p>
@@ -761,7 +833,27 @@ export function OverviewPage() {
               ))}
             </select>
           </div>
-          {heatGrid === null ? (
+          {heat.loading ? (
+            <p className="a2-meta">…</p>
+          ) : !heat.ok ? (
+            /* fix B (G10): error state distinct from empty, with retry entry */
+            <>
+              <p className="a2-meta" data-testid="agent-v2-ov-heat-error">
+                {t('agentConsole.v2.ov.blockUnavailable', {
+                  block: t('agentConsole.v2.ov.heatTitle'),
+                  code: heat.status,
+                })}
+              </p>
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-ov-retry-heat"
+                onClick={refresh}
+              >
+                {t('agentConsole.v2.ov.retry')}
+              </button>
+            </>
+          ) : heatGrid === null ? (
             <p className="a2-meta" data-testid="agent-v2-ov-heat-empty">
               {t('agentConsole.v2.ov.heatEmpty', { count: heatWeeks })}
             </p>
@@ -832,9 +924,14 @@ export function OverviewPage() {
           )}
         </div>
 
-        <CostBudgetBlock cost={cost} rows={quotaRows} />
-        <AnomalyBlock runs={runs} approvals={approvals} days={rangeDays} />
-        <ActivityBlock runs={activityRuns} audit={activityAudit} />
+        <CostBudgetBlock cost={cost} rows={quotaRows} onRetry={refresh} />
+        <AnomalyBlock
+          runs={runs}
+          approvals={approvals}
+          days={rangeDays}
+          onRetry={refresh}
+        />
+        <ActivityBlock runs={activityRuns} audit={activityAudit} onRetry={refresh} />
       </div>
     </div>
   );
