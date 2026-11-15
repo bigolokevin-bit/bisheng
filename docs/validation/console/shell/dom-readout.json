@@ -1,0 +1,193 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+{
+ "routes": {
+  "/agent": {
+   "path": "/agent",
+   "shell": true,
+   "nav": 8,
+   "active": "总览",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  },
+  "/agent/employees": {
+   "path": "/agent/employees",
+   "shell": true,
+   "nav": 8,
+   "active": "数字员工",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  },
+  "/agent/approvals": {
+   "path": "/agent/approvals",
+   "shell": true,
+   "nav": 8,
+   "active": "审批",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  },
+  "/agent/tasks": {
+   "path": "/agent/tasks",
+   "shell": true,
+   "nav": 8,
+   "active": "任务",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  },
+  "/agent/runs": {
+   "path": "/agent/runs",
+   "shell": true,
+   "nav": 8,
+   "active": "运行",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  },
+  "/agent/metrics": {
+   "path": "/agent/metrics",
+   "shell": true,
+   "nav": 8,
+   "active": "运行指标",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  },
+  "/agent/audit": {
+   "path": "/agent/audit",
+   "shell": true,
+   "nav": 8,
+   "active": "审计",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  },
+  "/agent/settings": {
+   "path": "/agent/settings",
+   "shell": true,
+   "nav": 8,
+   "active": "设置",
+   "groups": [
+    "概览",
+    "数字员工",
+    "运行",
+    "治理"
+   ],
+   "v1agentPage": 0,
+   "legacyShell": false,
+   "envChip": true,
+   "account": true,
+   "theme": "dark",
+   "sw": 1440,
+   "cw": 1440
+  }
+ },
+ "theme": {
+  "before": "dark",
+  "clicked": true,
+  "afterClick": {
+   "attr": "light",
+   "ls": "light"
+  },
+  "afterReload": "light"
+ },
+ "notFound": {
+  "shell": true,
+  "notFound404": true
+ },
+ "shot1440Dark": "/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/w1-shell-1440-dark.png",
+ "shot1440Light": "/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/w1-shell-1440-light.png",
+ "shot375Dark": "/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/w1-shell-375-dark.png",
+ "probe375": {
+  "path": "/agent/employees",
+  "shell": true,
+  "nav": 8,
+  "active": "数字员工",
+  "groups": [
+   "概览",
+   "数字员工",
+   "运行",
+   "治理"
+  ],
+  "v1agentPage": 0,
+  "legacyShell": false,
+  "envChip": true,
+  "account": true,
+  "theme": "dark",
+  "sw": 375,
+  "cw": 375
+ }
+}
+
