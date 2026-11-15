@@ -164,6 +164,16 @@ export function AgentConsoleShell() {
     }
   }, [collapsed]);
 
+  // fix B (G8): on narrow screens the rail scrolls horizontally; bring the
+  // active entry into view on mount and on every route change so it is never
+  // off-screen. jsdom lacks scrollIntoView, hence the typeof guard.
+  useEffect(() => {
+    const el = document.querySelector('.a2s-nav.is-active');
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ inline: 'center', block: 'nearest' });
+    }
+  }, [location.pathname]);
+
   const seg = location.pathname.split('/').filter(Boolean);
   const child = seg[1] ?? '';
   const activeKey = L1_ENTRIES.find((e) => e.path === child)?.key ?? 'navOverview';

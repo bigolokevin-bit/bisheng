@@ -71,7 +71,14 @@ export function CostBudgetBlock({
     for (const item of cost.data?.items ?? []) {
       costOf.set(item.employeeId, item.costUsd);
     }
-    const out: { employeeId: string; label: string; value: number; denominator: number }[] = [];
+    const out: {
+      employeeId: string;
+      label: string;
+      // fix B (G12): short id suffix so same-named employees stay distinguishable.
+      idTail: string;
+      value: number;
+      denominator: number;
+    }[] = [];
     for (const row of rows) {
       const value = costOf.get(row.employeeId);
       const denominator = row.enrichment?.effectiveBudget?.monthlyCostUsd;
@@ -79,6 +86,7 @@ export function CostBudgetBlock({
         out.push({
           employeeId: row.employeeId,
           label: row.name || row.employeeId,
+          idTail: row.employeeId.slice(-6).toLowerCase(),
           value,
           denominator,
         });
@@ -136,6 +144,13 @@ export function CostBudgetBlock({
                 >
                   <div className="a2-card-head">
                     <span className="a2-meta">{bar.label}</span>
+                    {/* fix B (G12): last 6 chars of the employee id, real data. */}
+                    <span
+                      className="a2-mono a2-micro"
+                      data-testid="agent-v2-ov-quota-id"
+                    >
+                      {bar.idTail}
+                    </span>
                     <span className={`a2-micro${tone}`}>{fmtRatio(ratio)}</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 3, background: 'rgba(128, 128, 128, 0.15)' }}>

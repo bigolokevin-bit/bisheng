@@ -293,6 +293,21 @@
     height: auto;
     flex-direction: row;
     overflow-x: auto;
+    /* fix B (G8): edge fade signals that the rail scrolls sideways. */
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 12px,
+      black calc(100% - 12px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      black 12px,
+      black calc(100% - 12px),
+      transparent 100%
+    );
     border-right: 0;
     border-top: 1px solid var(--line);
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
