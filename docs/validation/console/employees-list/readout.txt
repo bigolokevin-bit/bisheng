@@ -109,3 +109,24 @@ VIEWER_SHOT_DONE
 ===== composition result =====
 w2-compare-1440-light.png 2892x900 313572B (mockup light list | implementation light)
 w2-compare-1440-dark.png 2892x900 391898B (mockup dark list | implementation dark)
+
+===== l4w2r C1/C2 rework readout (2026-11-15) =====
+l4w2r-shots.out:C1 w2-employees-1440x900-light.png rows=2 theme=light rect={"top":608,"h":95,"vh":900,"docH":1239}
+l4w2r-shots.out:C1 w2-employees-1280x800-light.png rows=2 theme=light rect={"top":507,"h":95,"vh":800,"docH":1242}
+l4w2r-shots.out:C1 w2-employees-768x1024-light.png rows=2 theme=light rect={"top":677,"h":115,"vh":1024,"docH":1321}
+l4w2r-shots.out:C1 w2-employees-375x812-light.png rows=2 theme=light rect={"top":427,"h":115,"vh":812,"docH":1640}
+l4w2r-shots.out:C2_SEARCH={"rows":0,"search":"?keyword=Inspector"}
+l4w2r-shots.out:C2_VIEWCHAT="NOCHATVIEW" search=?keyword=Inspector&view=chat
+l4w2r-shots.out:C2_SORT={"search":"?sort=name%3Adesc","first":"A\nAgentOS 产品助理 · 产品助理（数字员工 · Pilot）","ariaSort":"descending"}
+l4w2r-shots.out:C2_PAGE1={"search":"?limit=1","rows":1,"first":"A\nAgentOS 产品助理 · 产品助理（数字员工 · Pilot）"}
+l4w2r-shots.out:C2_PAGE2={"search":"?limit=1&cursor=eyJjcmVhdGVkQXQiOiIyMDI2LTExLTEzVDIyOjE1OjExLjY0MVoiLCJpZCI6ImVtcF84NkE4MUNFOEZGNkY0MkUxODdCQ0YyQjU0MCJ9","rows":1,"first":"A\nAgentOS 产品助理 · 产品助理（数字员工 · Pilot）"}
+l4w2r-shots.out:C1_375DARK rows=2 theme=dark rail={"top":796,"bottom":812,"vh":812,"pos":"fixed"}
+l4w2r-c2b.out:C2_URL={"search":"?keyword=AgentOS&lifecycleState=active","rows":2,"inputVal":"AgentOS","costs":["USD 0.121.2%","USD 0.010.1%"],"empty":false,"chatview":null,"ariaName":"none"}
+l4w2r-c2b.out:C2_SEARCH0={"search":"?keyword=zzz%E4%B8%8D%E5%AD%98%E5%9C%A8&lifecycleState=active","rows":0,"inputVal":"zzz不存在","costs":[],"empty":true,"chatview":null,"ariaName":null}
+l4w2r-c2b.out:C2_SEARCHBACK={"search":"?keyword=AgentOS&lifecycleState=active","rows":2,"inputVal":"AgentOS","costs":["USD 0.121.2%","USD 0.010.1%"],"empty":false,"chatview":null,"ariaName":"none"}
+l4w2r-c2b.out:C2_VIEWCHAT={"search":"?view=chat","rows":0,"inputVal":"","costs":[],"empty":false,"chatview":"对话位聚合视图未接入","ariaName":null}
+l4w2r-c2b.out:C2_VIEWBACK={"search":"","rows":2,"inputVal":"","costs":["USD 0.121.2%","USD 0.010.1%"],"empty":false,"chatview":null,"ariaName":"none"}
+l4w2r-c2b.out:C2_SORTASC={"search":"?sort=cost%3Aasc","rows":2,"inputVal":"","costs":["USD 0.010.1%","USD 0.121.2%"],"empty":false,"chatview":null,"ariaName":"none"}
+l4w2r-c2b.out:C2_SORTDESC={"search":"?sort=cost%3Adesc","rows":2,"inputVal":"","costs":["USD 0.121.2%","USD 0.010.1%"],"empty":false,"chatview":null,"ariaName":"none"}
+l4w2r-c2b.out:C2_PAGE1={"search":"?limit=1","rows":1,"inputVal":"","costs":["USD 0.121.2%"],"empty":false,"chatview":null,"ariaName":"none"}
+l4w2r-c2b.out:C2_PAGE2={"search":"?limit=1&cursor=eyJjcmVhdGVkQXQiOiIyMDI2LTExLTEzVDIyOjE1OjExLjY0MVoiLCJpZCI6ImVtcF84NkE4MUNFOEZGNkY0MkUxODdCQ0YyQjU0MCJ9","rows":1,"inputVal":"","costs":["USD 0.010.1%"],"empty":false,"chatview":null,"ariaName":"none"}

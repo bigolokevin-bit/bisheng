@@ -133,3 +133,49 @@ Scope: light-theme tiers, mockup side-by-sides, real viewer01 403, detail scope 
 ### Coverage note
 - Dark tiers: 1440/375 (enrichment re-shoot round) + 1280/768 (four-tier round). Light tiers: all four this round. Mockup side-by-sides: light + dark list screens this round.
 - W2 status remains in-progress; this section only closes the fixed-evidence gaps named in L0 card 2211.
+
+## EMP-01 rework (L6 round 2, card 2260, 2026-11-15)
+
+### C1 light screenshots re-taken WITH table rows visible
+All shots: dev preview http://127.0.0.1:5399/agent/employees (V2 flag build, proxy
+/agent-api -> BFF 8092), real opsadmin cookie login, first employee row scrolled into
+center before capture. `rect` = first-row bounding box after scrollIntoView (top within
+viewport height proves table rows are in frame). sips verified pixel sizes.
+
+| file | sips px | rows | theme attr | rect |
+|---|---|---|---|---|
+| w2-employees-1440x900-light.png | 1440x900 | 2 | light | top=608 vh=900 |
+| w2-employees-1280x800-light.png | 1280x800 | 2 | light | top=507 vh=800 |
+| w2-employees-768x1024-light.png | 768x1024 | 2 | light | top=677 vh=1024 |
+| w2-employees-375x812-light.png | 375x812 (mobile emulation) | 2 | light | top=427 vh=812 |
+| w2-employees-375x812-dark-table.png | 375x812 (mobile emulation) | 2 | dark | fixed rail rect top=796 bottom=812 vh=812 -> bottom nav affordance visible while table also on screen |
+
+Mobile rail fix shipped in this rework: consoleShell.css <=767 rail switched from
+`position: sticky; bottom: 0` (order:2 at document end, invisible during scroll) to
+`position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; background: hsl(var(--card))`
+plus page bottom padding 88px so content clears the rail. Verified above with computed
+position=fixed and rail inside viewport on a mid-document scroll.
+
+### C2 sort implemented + interaction evidence (1440x900 light, real BFF data)
+Scope note (per card): sorting is client-side over the CURRENT page only; E11 has no
+server-side sort parameter, so full-dataset ordering is a known gap, not claimed.
+Sort state is recorded in URL `?sort=<col>:asc|desc`, cycled asc -> desc -> cleared.
+Column headers are real buttons (`a2-th-btn`, focus ring, aria-sort on th).
+
+Readouts (full text in readout.txt, `l4w2r C1/C2 rework readout` section):
+- URL persistence: `?keyword=AgentOS&lifecycleState=active` reloaded -> inputVal=AgentOS, rows=2 -> w2-c2-url.png
+- Search interaction: typed `zzz不存在` -> `?keyword=zzz%E4%B8%8D%E5%AD%98%E5%9C%A8`, rows=0, empty state shown -> w2-c2-search.png; restored to AgentOS rows=2
+- View switch: `对话位` -> `?view=chat`, chatview text `对话位聚合视图未接入` (honest, no fake aggregation) -> w2-c2-viewchat.png; back to table clears param
+- Sort by cost: asc -> costs [USD 0.01, USD 0.12] `?sort=cost%3Aasc`; desc -> [USD 0.12, USD 0.01] `?sort=cost%3Adesc` -> w2-c2-sort.png (name sort exists but pilot rows share display name, cost chosen for visible order change)
+- Keyset pagination: `?limit=1` rows=1 (cost 0.12), next-page click -> URL gains server-issued `cursor=eyJjcmVhdGVkQXQ...` (base64 created/id, real keyset), rows=1 (cost 0.01) -> w2-c2-nextpage.png
+
+### Secondary cell fixes (card item 4)
+- version cell: `v{N} · {MM-DD HH:mm}` separator added (was `v311-15`)
+- status cell: `a2-cell-nowrap` added (no per-character wrapping)
+- owner cell: shows full `ownerUserId` (was truncated handle `pilot_…lder`); `1` / `pilot_owner_placeholder`
+
+### Gates on the rework tree
+- platform lint exit 0; targeted `src/pages/AgentConsoleV2` exit 0 (Test Files 9, Tests 112 incl. +2 new sort/pagination tests)
+- full platform test: Tests 43 failed | 1747 passed (1790) -> frozen baseline 43 failed / 18 files, new failures 0, passed strictly increased
+- build:platform exit 0; VITE_AGENT_CONSOLE_V2=1 build:platform exit 0 (entry assets/js/index-_oTHR00v.js); git diff --check exit 0
+- C0-B still open -> page stays in-progress, no PASS judgement here.

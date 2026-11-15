@@ -13,9 +13,9 @@
 
 - [ ] **C0 需求覆盖**：本卡逐条对应 PRD §4.2；每个按钮/空态/错误态有需求；PRD v2 评审通过前该项保持未过
 - [ ] **C1 视觉还原**：1440×900 / 1280 / 768 / 375 四档、深/浅各一套，与 mockup 同屏并排；发丝线/圆角/`tabular-nums`/KPI 字阶/单一强调色/状态软药丸/按钮三级；无 `undefined`/`[object Object]`/内部术语/假 0/“待接入”
-  - 证据（2026-11-15 L4 更新，L0 卡 2211）：浅色四档已补齐（w2-employees-{1280x800,768x1024,375x812,1440x900}-light.png，sips 实测像素、data-theme=light+localStorage 验证，rows=2 真实数据），并排图 w2-compare-1440-{light,dark}.png（2892×900，左 mockup 右实现）；逐元素差异清单见 EVIDENCE.md『EMP-01 fixed evidence』节。深色仍为 1440/375/1280/768 既有套图。
+  - 证据（2026-11-15 rework, card 2260）：light 四档截图已重拍并全部包含表格数据行（scrollIntoView 后 rect 顶部在视口内，sips 实测 1440x900/1280x800/768x1024/375x812），375 dark+light 底部导航 fixed rail 可见；见 EVIDENCE.md『EMP-01 rework』节。
 - [ ] **C2 功能闭环**：搜索、状态/部门/负责人/工位/知识筛选、视图切换、URL 保存、排序、分页、行操作（详情/复制 ID/Bisheng 打开/暂停按权限）、创建入口均可达且有结果；返回保留筛选
-  - 证据（2026-11-15 L4）：`EVIDENCE.md` DOM/API 读回——搜索+状态筛选真实（E11 keyword/lifecycleState）、视图切换、URL 保存（?keyword=&lifecycleState=&cursor=&view=）、keyset 分页、复制 ID/详情入口在位。仍差：部门/负责人/工位/知识筛选（无服务端参数，诚实禁用）、排序、Bisheng 打开/暂停、行级详情路由（W3）、创建入口后端（无 BFF 写代理，禁用+原因）。
+  - 证据（2026-11-15 rework, card 2260）：列排序已实现（当前页客户端排序+URL ?sort=col:dir+aria-sort，全量排序为已知缺口），搜索/视图切换/URL 持久化/翻页点击各附操作后截图 w2-c2-{url,search,viewchat,sort,nextpage}.png 与 readout。
   - 范围归属（L0 卡 2211）：归本页=keyword+lifecycleState 筛选、URL 保存、keyset 分页、复制 ID、enrichment 四列（岗位版本实测 v3·11-15 11:27 / v2·11-13 14:30）；归 W3=详情路由与行点击进详情、创建入口后端（E1 无 BFF 写代理，按钮 disabled+原因注记）；数据口缺=部门/负责人/工位类型/知识范围筛选无 E11 服务端参数（诚实禁用）、最紧急待办无批量口（enrichment 无 pendingApprovalCount 时显示 —）、排序未做、totals/asOf 未接（B4）。
 - [ ] **C3 数据真实**：真实登录/租户/数据；每个数字可追溯到接口；缺失显示 `—` 或明确空态；served entry == 验收分支 build
   - 证据（2026-11-15 L4）：`EVIDENCE.md` API 读回——真实 BFF 五请求全 200（employees expand=version,workstations,knowledge,pending / employee-stats / run-stats / budget-usage / run-activity），每数字有来源，缺失列显 —（8101 domain 旧进程不返 enrichment，根因与修复归属已记）。仍差：served entry == 验收分支 build 的对账归 L7（8182 尚未部署本分支）。
