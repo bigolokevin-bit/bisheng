@@ -92,8 +92,11 @@ export function EmployeesHeatPanel({
         </div>
       )}
       <p className="a2-meta" data-testid="agent-v2-heat-foot">
-        {t('agentConsole.v2.emp.heatPeak')} {peak} · {t('agentConsole.v2.emp.heatNight')} {night} ·{' '}
-        {t('agentConsole.v2.emp.heatWeekTotal')} {total} · {t('agentConsole.v2.emp.heatTzNote')} ·{' '}
+        {/* Interpolate counts via options (same pattern as pageInfo); manual
+            appending left raw {{count}} placeholders on screen. */}
+        {t('agentConsole.v2.emp.heatPeak', { count: peak })} ·{' '}
+        {t('agentConsole.v2.emp.heatNight', { count: night })} ·{' '}
+        {t('agentConsole.v2.emp.heatWeekTotal', { count: total })} · {t('agentConsole.v2.emp.heatTzNote')} ·{' '}
         {t('agentConsole.v2.emp.heatCaliber')}
       </p>
     </div>

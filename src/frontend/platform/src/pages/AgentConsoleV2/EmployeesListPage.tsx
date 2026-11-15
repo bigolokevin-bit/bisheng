@@ -591,7 +591,9 @@ export function EmployeesListPage() {
                     <td data-testid="agent-v2-col-lastrun">
                       {runs7 && runs7.runs > 0 ? (
                         <>
+                          {/* Separator keeps count and timestamp readable as two values. */}
                           {runs7.runs}
+                          {' · '}
                           <span className="a2-meta">{fmtTime(lastBucket?.bucketStart)}</span>
                         </>
                       ) : en
