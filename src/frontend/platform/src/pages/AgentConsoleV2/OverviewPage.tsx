@@ -120,6 +120,17 @@ const FOCUS_TESTID: Record<string, string> = {
   anomaly: 'agent-v2-ov-block-anomaly',
   activity: 'agent-v2-ov-block-activity',
 };
+// fix B (G5): dow 1 = Monday in the R7 payload; row labels reuse the
+// established weekday keys (same pattern as TrendsCostsSection DAY_ORDER).
+const HEAT_DAY_KEYS = [
+  'agentConsole.v2.dayMon',
+  'agentConsole.v2.dayTue',
+  'agentConsole.v2.dayWed',
+  'agentConsole.v2.dayThu',
+  'agentConsole.v2.dayFri',
+  'agentConsole.v2.daySat',
+  'agentConsole.v2.daySun',
+] as const;
 
 // OV-01 slice 2: queue row shapes were read live, never fabricated; the
 // rendering component now lives in OverviewBlocks (fix A size budget).
@@ -302,19 +313,36 @@ export function OverviewPage() {
   const trendLine = trendText(t, runs.data, runsPrev, runsPrevOk, rangeDays);
   const trendBars = useMemo(() => {
     if (!runs.ok || !runs.data) return null;
-    const byDay = new Map<string, number>();
+    const byDay = new Map<string, RunBucket>();
     for (const bucket of runs.data.buckets ?? []) {
-      byDay.set(isoDay(bucket.bucketStart), bucket.runs);
+      byDay.set(isoDay(bucket.bucketStart), bucket);
     }
-    const days: { day: string; runs: number }[] = [];
+    const days: {
+      day: string;
+      runs: number;
+      succeeded: number;
+      failed: number;
+      p95: number | null;
+    }[] = [];
     const now = Date.now();
     for (let i = rangeDays - 1; i >= 0; i -= 1) {
       const day = isoDay(new Date(now - i * 86400000).toISOString());
-      days.push({ day, runs: byDay.get(day) ?? 0 });
+      const b = byDay.get(day);
+      days.push({
+        day,
+        runs: b?.runs ?? 0,
+        succeeded: b?.succeeded ?? 0,
+        failed: b?.failed ?? 0,
+        // fix B (G4): missing key = sample <20 = break in the line, never 0.
+        p95: typeof b?.p95DurationMs === 'number' ? b.p95DurationMs : null,
+      });
     }
     return days;
   }, [runs, rangeDays]);
-  const trendMax = trendBars ? Math.max(...trendBars.map((b) => b.runs), 1) : 1;
+  const trendMax = trendBars
+    ? Math.max(...trendBars.map((b) => b.succeeded + b.failed), 1)
+    : 1;
+  const trendP95Ok = trendBars ? trendBars.some((b) => b.p95 !== null) : false;
   const heatGrid = useMemo(() => {
     if (!heat.ok || !heat.data) return null;
     const counts = new Map<string, number>();
@@ -505,42 +533,210 @@ export function OverviewPage() {
             </p>
           ) : (
             <>
+              {/* fix B (G4): legend per deep OV-23 — P95 item is greyed with
+                  the reason when no bucket returned a sample; no fake line. */}
+              <div
+                className="a2-trend-legend"
+                data-testid="agent-v2-ov-trend-legend"
+                style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}
+              >
+                <span
+                  className="a2-micro"
+                  data-testid="agent-v2-ov-trend-legend-success"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  <i
+                    aria-hidden
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 2,
+                      background: 'hsl(var(--accent))',
+                      display: 'inline-block',
+                    }}
+                  />
+                  {t('agentConsole.v2.trendSucceeded')}
+                </span>
+                <span
+                  className="a2-micro"
+                  data-testid="agent-v2-ov-trend-legend-failed"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  <i
+                    aria-hidden
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 2,
+                      background: 'hsl(var(--danger))',
+                      display: 'inline-block',
+                    }}
+                  />
+                  {t('agentConsole.v2.trendFailed')}
+                </span>
+                <span
+                  className="a2-micro"
+                  data-testid="agent-v2-ov-trend-legend-p95"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    opacity: trendP95Ok ? 1 : 0.45,
+                  }}
+                >
+                  <i
+                    aria-hidden
+                    style={{
+                      width: 10,
+                      height: 2,
+                      background: 'hsl(var(--warning))',
+                      display: 'inline-block',
+                    }}
+                  />
+                  {t('agentConsole.v2.trendP95')}
+                  {trendP95Ok ? null : ` · ${t('agentConsole.v2.ov.p95Insufficient')}`}
+                </span>
+              </div>
+              {trendP95Ok
+                ? (() => {
+                    // P95 polyline (deep OV-22): only buckets that returned a
+                    // sample draw points; a missing key breaks the line.
+                    const p95Vals = trendBars
+                      .filter((b) => b.p95 !== null)
+                      .map((b) => b.p95 as number);
+                    const maxP = Math.max(...p95Vals, 1);
+                    const n = trendBars.length;
+                    const segs: string[][] = [];
+                    let cur: string[] = [];
+                    trendBars.forEach((b, i) => {
+                      if (b.p95 === null) {
+                        if (cur.length) segs.push(cur);
+                        cur = [];
+                        return;
+                      }
+                      const x = n > 1 ? (i / (n - 1)) * 100 : 50;
+                      const y = 18 - (b.p95 / maxP) * 16;
+                      cur.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+                    });
+                    if (cur.length) segs.push(cur);
+                    return (
+                      <svg
+                        data-testid="agent-v2-ov-trend-p95"
+                        viewBox="0 0 100 20"
+                        preserveAspectRatio="none"
+                        style={{ width: '100%', height: 20, display: 'block', marginTop: 6 }}
+                        aria-hidden
+                      >
+                        {segs.map((s, si) => (
+                          <polyline
+                            key={si}
+                            points={s.join(' ')}
+                            fill="none"
+                            stroke="hsl(var(--warning))"
+                            strokeWidth={0.8}
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        ))}
+                      </svg>
+                    );
+                  })()
+                : null}
               <div
                 className="a2-trend-bars"
                 data-testid="agent-v2-ov-trend-bars"
-                style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 88 }}
+                style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100, marginTop: 6 }}
               >
-                {trendBars.map((b) => (
-                  <div
-                    key={b.day}
-                    data-testid="agent-v2-ov-trend-bar"
-                    title={`${b.day} · ${b.runs}`}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'flex-end',
-                      alignItems: 'center',
-                      gap: 4,
-                    }}
-                  >
+                {trendBars.map((b, i) => {
+                  const total = b.succeeded + b.failed;
+                  const hPct = trendMax > 0 ? (total / trendMax) * 100 : 0;
+                  const okPct = total > 0 ? (b.succeeded / total) * 100 : 0;
+                  const tick =
+                    i === 0 ||
+                    i === trendBars.length - 1 ||
+                    i === Math.floor((trendBars.length - 1) / 2);
+                  const p95Str =
+                    b.p95 === null
+                      ? t('agentConsole.v2.ov.p95Insufficient')
+                      : `${(b.p95 / 1000).toFixed(1)}s`;
+                  return (
                     <div
+                      key={b.day}
+                      data-testid="agent-v2-ov-trend-bar"
+                      title={t('agentConsole.v2.ov.trendTooltip', {
+                        day: b.day,
+                        succeeded: b.succeeded,
+                        failed: b.failed,
+                        p95: p95Str,
+                      })}
                       style={{
-                        width: '100%',
-                        height: b.runs > 0 ? Math.round((b.runs / trendMax) * 56) : 0,
-                        background: 'hsl(var(--accent))',
-                        borderRadius: 2,
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        gap: 4,
                       }}
-                    />
-                    {b.runs > 0 ? <span className="a2-micro">{b.runs}</span> : null}
-                  </div>
-                ))}
+                    >
+                      {b.runs > 0 ? <span className="a2-micro">{b.runs}</span> : null}
+                      <div
+                        style={{
+                          width: '100%',
+                          height: 56,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'flex-end',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${hPct}%`,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'flex-end',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {b.failed > 0 ? (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: `${100 - okPct}%`,
+                                background: 'hsl(var(--danger))',
+                              }}
+                            />
+                          ) : null}
+                          {b.succeeded > 0 ? (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: `${okPct}%`,
+                                background: 'hsl(var(--accent))',
+                              }}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                      {/* fix B (G4): x-axis date ticks — first / middle / last
+                          visible, the rest keep layout height but stay hidden. */}
+                      <span
+                        className="a2-micro"
+                        data-testid="agent-v2-ov-trend-tick"
+                        style={{ visibility: tick ? 'visible' : 'hidden' }}
+                      >
+                        {b.day.slice(5)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
               <p className="a2-meta" data-testid="agent-v2-ov-trend-foot">
                 {t('agentConsole.v2.ov.trendFoot', {
                   succeeded: runSums.succeeded,
                   failed: runSums.failed,
                 })}
+                {` · ${t('agentConsole.v2.ov.utcBucketNote')}`}
               </p>
             </>
           )}
@@ -571,26 +767,55 @@ export function OverviewPage() {
             </p>
           ) : (
             <>
+              {/* fix B (G5): weekday row labels + human-readable tooltips +
+                  tier legend, same grid language as the EMP-01 heat panel. */}
+              <div className="a2-heat" data-testid="agent-v2-ov-heat-grid">
+                {HEAT_DAY_KEYS.map((dayKey, dayIdx) => (
+                  <div key={dayKey} className="a2-heat-row">
+                    <span className="a2-heat-day" data-testid="agent-v2-ov-heat-row-label">
+                      {t(dayKey)}
+                    </span>
+                    <div className="a2-heat-cells">
+                      {Array.from({ length: 24 }, (_, hour) => {
+                        const c = heatGrid.rows[dayIdx * 24 + hour];
+                        const level =
+                          c.count > 0
+                            ? Math.min(4, Math.max(1, Math.ceil((c.count / c.max) * 4)))
+                            : 0;
+                        return (
+                          <span
+                            key={`${dayIdx}-${hour}`}
+                            data-testid="agent-v2-ov-heat-cell"
+                            className={`a2-heat-cell is-l${level}`}
+                            title={`${t(dayKey)} ${String(hour).padStart(2, '0')}:00 · ${
+                              c.count > 0
+                                ? t('agentConsole.v2.ov.heatCellCount', { count: c.count })
+                                : t('agentConsole.v2.ov.heatCellNone')
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
               <div
-                className="a2-heat-cells"
-                data-testid="agent-v2-ov-heat-grid"
-                style={{ display: 'grid', gridTemplateColumns: 'repeat(24, 1fr)', gap: 2 }}
+                className="a2-trend-legend"
+                data-testid="agent-v2-ov-heat-legend"
+                style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 }}
               >
-                {heatGrid.rows.map((c) => (
-                  <div
-                    key={`${c.dow}-${c.hour}`}
-                    data-testid="agent-v2-ov-heat-cell"
-                    className="a2-heat-cell"
-                    title={`dow ${c.dow} · ${c.hour}:00 · ${c.count}`}
-                    style={{
-                      aspectRatio: '1',
-                      borderRadius: 2,
-                      background:
-                        c.count > 0 ? 'hsl(var(--accent))' : 'rgba(128, 128, 128, 0.15)',
-                      opacity: c.count > 0 ? 0.2 + 0.8 * (c.count / c.max) : 1,
-                    }}
+                <span className="a2-micro">{t('agentConsole.v2.ov.heatTierLess')}</span>
+                {[1, 2, 3, 4].map((lv) => (
+                  <i
+                    key={lv}
+                    aria-hidden
+                    data-testid={`agent-v2-ov-heat-tier-${lv}`}
+                    className={`a2-heat-cell is-l${lv}`}
+                    style={{ width: 8, height: 8, borderRadius: 2, display: 'inline-block' }}
                   />
                 ))}
+                <span className="a2-micro">{t('agentConsole.v2.ov.heatTierMore')}</span>
+                <span className="a2-micro">{t('agentConsole.v2.ov.heatCellHour')}</span>
               </div>
               {heatGrid.total === 0 ? (
                 <p className="a2-meta" data-testid="agent-v2-ov-heat-empty">
@@ -599,6 +824,9 @@ export function OverviewPage() {
               ) : null}
               <p className="a2-micro" data-testid="agent-v2-ov-heat-foot">
                 {t('agentConsole.v2.ov.heatCaliber')}
+                {heat.data?.from && heat.data?.to
+                  ? ` · ${fmtTime(heat.data.from)} → ${fmtTime(heat.data.to)}`
+                  : null}
               </p>
             </>
           )}

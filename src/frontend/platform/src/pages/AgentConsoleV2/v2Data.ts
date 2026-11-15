@@ -67,6 +67,9 @@ export interface RunBucket {
   upstreamRuns?: number;
   estimatedRuns?: number;
   unknownRuns?: number;
+  // fix B (G4): deep 01-overview OV-22 — the service omits this key when the
+  // bucket sample is <20; absence is a break in the P95 line, never a 0.
+  p95DurationMs?: number | null;
 }
 
 export interface RunStatsBody {
