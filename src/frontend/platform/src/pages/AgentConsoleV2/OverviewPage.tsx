@@ -1,8 +1,8 @@
 /* OV-01 slice 1: overview header + 4 KPI cards, real BFF aggregates only.
  * Every number comes from a service endpoint (E14 / AP8 / R6 / P9 batch);
  * nothing is aggregated over paginated rows in the client. The remaining
- * overview blocks (trend, quota, activity heatmap, table) stay honest text
- * placeholders until their waves — no fake charts, no fixtures in bundle.
+ * cost / quota / activity blocks render from real endpoints (slice 3) —
+ * no fake charts, no fixtures in bundle, no placeholder copy on screen.
  * When an endpoint 4xx/5xx or has no data the KPI shows an explicit reason
  * instead of a fabricated value ("no trend data" rather than "+2%"). */
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -30,9 +30,12 @@ import {
   type ApiRes,
   type ApprovalStats,
   type BudgetBody,
+  type EmployeeRow,
   type EmployeeStats,
   type RunStatsBody,
 } from './v2Data';
+
+import { ActivityBlock, CostBlock, QuotaBlock } from './OverviewBlocks';
 
 const COST_ID_LIMIT = 100;
 
@@ -73,6 +76,10 @@ interface QueueItem {
 interface QueueBody {
   items: QueueItem[];
   nextCursor?: string;
+}
+
+interface AuditBody {
+  events: QueueItem[];
 }
 
 function firstString(item: QueueItem, keys: string[]): string | null {
@@ -170,6 +177,9 @@ export function OverviewPage() {
   const [queueTasks, setQueueTasks] = useState<KpiState<QueueBody>>(pendingKpi);
   const [queueRuns, setQueueRuns] = useState<KpiState<QueueBody>>(pendingKpi);
   const [heat, setHeat] = useState<KpiState<ActivityBody>>(pendingKpi);
+  const [quotaRows, setQuotaRows] = useState<EmployeeRow[]>([]);
+  const [activityRuns, setActivityRuns] = useState<KpiState<QueueBody>>(pendingKpi);
+  const [activityAudit, setActivityAudit] = useState<KpiState<AuditBody>>(pendingKpi);
 
   const refresh = useCallback(() => setToken((x) => x + 1), []);
 
@@ -183,18 +193,25 @@ export function OverviewPage() {
     setQueueTasks(pendingKpi);
     setQueueRuns(pendingKpi);
     setHeat(pendingKpi);
+    setQuotaRows([]);
+    setActivityRuns(pendingKpi);
+    setActivityAudit(pendingKpi);
     void (async () => {
       const window7 = dayWindow(7);
       const windowPrev = {
         from: dayWindow(14).from,
         to: window7.from,
       };
-      const [s, a, r, rp, ids, qa, qt, qr, h] = await Promise.all([
+      const window24 = {
+        from: new Date(Date.now() - 86400000).toISOString(),
+        to: new Date().toISOString(),
+      };
+      const [s, a, r, rp, ids, qa, qt, qr, h, ar, au] = await Promise.all([
         fetchEmployeeStats(fetch),
         uid ? fetchApprovalStats(fetch, `human:${uid}`) : Promise.resolve(null),
         fetchRunStats(fetch, { ...window7, bucket: 'day' }),
         fetchRunStats(fetch, { ...windowPrev, bucket: 'day' }),
-        fetchEmployeesPage(fetch, { limit: COST_ID_LIMIT }),
+        fetchEmployeesPage(fetch, { limit: COST_ID_LIMIT, expand: 'version' }),
         uid
           ? fetch<QueueBody>('/api/approvals', {
               assignee: `human:${uid}`,
@@ -207,6 +224,12 @@ export function OverviewPage() {
           : Promise.resolve(null),
         fetch<QueueBody>('/api/runs', { limit: 5 }),
         fetchActivity(fetch, { weeks: 4, tz: 'Asia/Shanghai' }),
+        fetch<QueueBody>('/api/runs', { since: window24.from, limit: 8 }),
+        fetch<AuditBody>('/api/audit', {
+          from: window24.from,
+          to: window24.to,
+          limit: 8,
+        }),
       ]);
       if (!alive) return;
       setStats({ loading: false, ok: s.ok, status: s.status, code: s.code, data: s.data });
@@ -222,6 +245,9 @@ export function OverviewPage() {
       setQueueTasks(listKpi(qt));
       setQueueRuns(listKpi(qr));
       setHeat({ loading: false, ok: h.ok, status: h.status, code: h.code, data: h.data });
+      setQuotaRows(ids.data?.items ?? []);
+      setActivityRuns({ loading: false, ok: ar.ok, status: ar.status, code: ar.code, data: ar.data });
+      setActivityAudit({ loading: false, ok: au.ok, status: au.status, code: au.code, data: au.data });
       // P9 requires an explicit employeeId list (BFF contract): resolve ids
       // from E11 first, then one batched month query. No silent "0.00".
       const empIds = (ids.data?.items ?? []).map((e) => e.employeeId);
@@ -281,7 +307,7 @@ export function OverviewPage() {
 
   return (
     <div className="a2s-page" data-testid="agent-v2-ov-page">
-      <div className="a2-card" style={{ marginBottom: 12 }}>
+      <div className="a2-card" data-testid="agent-v2-ov-block-header" style={{ marginBottom: 12 }}>
         <div className="a2-card-head">
           <h1 className="a2-h1">{t('agentConsole.v2.ov.title')}</h1>
           <button
@@ -311,7 +337,7 @@ export function OverviewPage() {
         ) : null}
       </div>
 
-      <div className="a2-kpis" style={{ marginBottom: 12 }}>
+      <div className="a2-kpis" data-testid="agent-v2-ov-block-kpis" style={{ marginBottom: 12 }}>
         <div className="a2-kpi" data-testid="agent-v2-ov-kpi-onduty">
           <span className="a2-meta">{t('agentConsole.v2.ov.kpiOnDuty')}</span>
           {stats.loading ? (
@@ -507,14 +533,9 @@ export function OverviewPage() {
           )}
         </div>
 
-        {['quotaTitle', 'tableTitle'].map((key) => (
-          <div className="a2-card" key={key}>
-            <h2 className="a2-h2">{t(`agentConsole.v2.ov.${key}`)}</h2>
-            <p className="a2-card-sub" data-testid={`agent-v2-ov-${key}-placeholder`}>
-              {t('agentConsole.v2.ov.placeholderNote')}
-            </p>
-          </div>
-        ))}
+        <CostBlock state={cost} />
+        <QuotaBlock cost={cost} rows={quotaRows} />
+        <ActivityBlock runs={activityRuns} audit={activityAudit} />
       </div>
     </div>
   );

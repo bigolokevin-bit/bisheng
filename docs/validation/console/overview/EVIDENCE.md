@@ -60,3 +60,18 @@ opsadmin 真实登录 8182（CAPTCHA_LEN=4，口令零回显）；CDP `Emulation
 
 ### 状态
 - OV-01 片 2 三块交付完成；配额/员工概览两块与「运行队列可用过滤口径」为后续波缺口。不判 PASS（归 L6）。
+
+## OV-01 片3：本月成本 / 预算配额 / 最近活动（占位清零）
+
+- 交付：`OverviewPage.tsx` 拆出 `OverviewBlocks.tsx`（CostBlock / QuotaBlock / ActivityBlock，named exports，全 t('agentConsole.v2.ov.*') 三语）。原 `quotaTitle` / `tableTitle` 两个占位块已替换；页面占位扫描 `placeholderCount=0`（`placeholderNote` / `tableTitle` locale 键留存但不再被页面引用）。
+- 数据来源（真实 BFF，经 dev 5399 代理 /agent-api→8092）：
+  - `GET /api/employees?limit=100&expand=version` = 200；首行 enrichment `{currentVersionNo:3, effectiveFrom 2026-11-15T03:27:58.000Z, effectiveBudget:{dailyTokens:100000, monthlyCostUsd:10, perRunMaxUsd:0.5}}`（域侧校验：`stats/cost/owner` 维度非法，成本口径改由 P9+budget 组合承担）。
+  - `GET /api/budget-usage?employeeId=…&period=<YYYY-MM>&periodKind=month` = 200：emp_86A81CE8… costUsd 0.12119800000000001、emp_0166858D… costUsd 0.011498、missing=[] → 合计 USD 0.13（cost_ledger 口径注上屏）。
+  - `GET /api/runs?since=<now-24h>&limit=8` = 200，n=2（首条 rn_01M7DQ282W7C197TCRXHGVNG5B completed）。
+  - `GET /api/audit?from=<now-24h>&to=<now>&limit=8` = 200，n=8（首条 employee.version.created；from/to 过滤合法满足 A3 `require_any`）。
+- DOM 读回（opsadmin 真实登录态）：
+  - 1440×900：blockTotal=8、kpiCount=4；`本月成本 USD 0.13 口径：成本账本`；`预算配额 AgentOS 产品助理 1.2% USD 0.12 / USD 10.00 · AgentOS 产品助理 0.1% USD 0.01 / USD 10.00`；`最近活动` 表 10 行（审计×8 + 运行×2 按时间倒序合并，含 rn_01M7DRBJ3…/rn_01M7DQ282…）；activityRows=10；leaks（raw key / undefined / {{ / 待接入 / 0.00）全 false；sw=1440 cw=1425 overflow=[]（15px=桌面仿真滚动条伪差已知口径）。
+  - 375×812（mobile 仿真口径）：blockTotal=8、kpiCount=4、activityRows=10、placeholder 0、leaks 全 false、**sw=cw=375**；overflow 元素 6 项全部是底部横滚 rail 自身（a2s-groups/a2s-group/a2s-nav/a2s-glyph/a2s-nav-label）=W1 已知设计行为（rail 横向滚动，非页面级溢出）。
+- 截图（CDP Emulation.setDeviceMetricsOverride 真视口，sips 实测）：`ov01-final-1440x900.png` 157599B 1440×900；`ov01-final-375x812.png` 72791B 375×812；原始探针输出在 `readout.txt` 末段。
+- 门禁：platform lint exit 0；`test -- src/pages/AgentConsoleV2` Test Files 9 passed (9)、Tests 112 passed (112) 不回退。
+- 边界声明：本拍不动 8182/Caddy/BFF/受管服务；dev 5399 仅过程预览（起后已停）；served entry 对账归 L7；本节只交证据与实现，**不判 PASS**。
