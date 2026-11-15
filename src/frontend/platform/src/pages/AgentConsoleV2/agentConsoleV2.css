@@ -167,6 +167,7 @@
   padding: 12px 16px;
 }
 .agent-app .a2-kpi-num {
+  display: block;
   font-size: 40px;
   line-height: 44px;
   font-weight: 600;
@@ -690,3 +691,11 @@
   /* heat matrix keeps the wide column; the Hermes day-counter column is kv-only */
   .agent-app .a2-metrics-side { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 }
+
+/* W2 table layout fixes from L0 observer round 2: the employee table must
+   use the real .a2-table rules and never collapse ten columns into unreadable
+   narrow-viewport text; KPI explanatory lines get their own row. */
+.agent-app .a2-table-scroll { overflow-x: auto; }
+.agent-app .a2-table-scroll table { min-width: 880px; }
+.agent-app .a2-table th { white-space: nowrap; }
+.agent-app .a2-kpi .a2-meta { display: block; }

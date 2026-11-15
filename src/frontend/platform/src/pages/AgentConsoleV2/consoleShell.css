@@ -130,7 +130,8 @@
   gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  /* Opaque header: the sticky topbar sits above scrolling content; the translucent panel token caused ghost text on narrow viewports (L0 observer). */
+  background: hsl(var(--card));
   position: sticky;
   top: 0;
   z-index: 5;
@@ -290,8 +291,7 @@
     justify-content: flex-start;
   }
 
-  .agent-app .a2s-rail-logo,
-  .agent-app .a2s-collapse,
+  .agent-app .a2s-rail-head,
   .agent-app .a2s-group {
     display: none;
   }
@@ -335,4 +335,16 @@
   .agent-app .a2s-search {
     flex-basis: 160px;
   }
+}
+
+/* W2 page-level native controls inherit the console theme
+   instead of falling back to the UA white default. */
+.agent-app .a2s-page input,
+.agent-app .a2s-page select {
+  font-size: 12px;
+  color: var(--text-1);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
 }

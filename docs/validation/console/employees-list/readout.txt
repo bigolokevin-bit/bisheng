@@ -31,3 +31,28 @@ URL0=http://127.0.0.1:5399/agent/employees
 ROWS_AFTER=0s
 COUNTS={"route":"/agent/employees","thCount":10,"headers":["名称","岗位版本","状态","负责人","工位","待办","最近运行","7 天成功率","本月成本","动作"],"kpiCount":5,"kpiIds":["agent-v2-kpi-onduty","agent-v2-kpi-pending","agent-v2-kpi-cost","agent-v2-kpi-cost-caliber","agent-v2-kpi-anomaly"],"navCount":8,"legacyAgentPage":0,"legacyV2Shell":0,"rowCount":2,"dashCells":3}
 SHOT_DONE
+
+===== l4w2f-css3.out root-cause probe (pre-fix, 20:3x) =====
+ROWS=2
+CSSPROBE2={"styleSheetCount":8,"ruleCounts":[17,4,23,12,14,3032,20,30],"inlineStyleTags":8,"agentApp":true,"dataTheme":"dark","kpi":{"bg":"rgba(0, 0, 0, 0)","border":"0px solid rgb(228, 232, 238)","radius":"0px","pad":"0px","display":"block"},"kpisGrid":{"display":"block","cols":"none"},"th":{"color":"rgb(15, 23, 42)","borderBottom":"0px rgb(228, 232, 238)"},"tr":{"height":"26px","borderBottom":"0px"},"frameGrid":"72px 1308px","railW":"72","leaks":{"costLedger":0,"employeesList":0,"bffWord":0,"rawKey":0,"undefinedWord":0,"mustache":0},"sw":1380,"cw":1380,"wide":[]}
+
+===== l4w2f-verify1.out (post-fix computed) =====
+CSSPROBE_AFTER={"styleSheetCount":9,"ruleCounts":[17,4,23,12,14,3032,20,130,30],"inlineStyleTags":9,"agentApp":true,"dataTheme":"dark","kpi":{"bg":"rgb(20, 20, 23)","border":"1px solid rgba(255, 255, 255, 0.08)","radius":"8px","pad":"12px 16px","display":"block"},"kpisGrid":{"display":"grid","cols":"308px 308px 308px 308px 0px 0px 0px"},"th":{"color":"rgb(234, 236, 240)","borderBottom":"0px rgb(234, 236, 240)"},"tr":{"height":"38px","borderBottom":"0px"},"frameGrid":"72px 1308px","railW":"72","leaks":{"costLedger":0,"employeesList":0,"bffWord":0,"rawKey":0,"undefinedWord":0,"mustache":0},"sw":1380,"cw":1365,"wide":[]}
+
+===== l4w2g-shot2.out (final screenshots round) =====
+
+
+===== l4w2h-shot1.out (observer residual fixes: a2-table + scroll wrapper + opaque topbar + KPI meta blocks) =====
+[ego-browser:notice] Ego Lite update is available (current 0.6.2.9). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+ROWS=2
+SHOT w2-employees-1440x900.png
+SHOT w2-employees-1440-table.png
+P1440={"sw":1440,"cw":1425,"thPad":"8px 12px","thWS":"nowrap","thH":37,"scroll":{"w":1126,"sw":1126},"topbarBg":"rgb(20, 20, 23)","numDisplay":"block","metaDisplay":"block","hasUndefined":false,"hasMustache":false,"hasLedgerRaw":false,"hasEmployeesList":false}
+SHOT w2-employees-375x812.png
+SHOT w2-employees-375-table.png
+P375={"sw":375,"cw":375,"thPad":"8px 12px","thWS":"nowrap","thH":37,"scroll":{"w":313,"sw":880},"topbarBg":"rgb(20, 20, 23)","numDisplay":"block","metaDisplay":"block","hasUndefined":false,"hasMustache":false,"hasLedgerRaw":false,"hasEmployeesList":false}
+DONE_SHOT1
+
+===== observer round verdicts =====
+Round 1 (fixed images then): styled cards OK; internal keys gone (cost ledger / not-open wording); no 375 overflow; residuals = 375 bottom-left stray S logo (class mismatch .a2s-rail-logo vs DOM .a2s-rail-head/.a2s-logo), white UA form controls, KPI number crowded label line, weak heat contrast, tables not visible in viewport.
+Round 2 (after first fix batch): S fragment gone, dark inputs/selects, KPI number own line, heat visible; residuals = 1440 table header run-together (wrong class a2-body, no .a2-table rules), 375 table crushed with per-character wrapping (no scroll container), semi-transparent topbar ghosting (var(--panel)). These three drove the l4w2h-tablefix.py patch; DOM proof after patch: P1440 thPad 8px 12px / thWS nowrap / thH 37 / topbarBg rgb(20,20,23); P375 scroll{w313 sw880} horizontal-scroll container active, sw=cw=375, leaks all false.

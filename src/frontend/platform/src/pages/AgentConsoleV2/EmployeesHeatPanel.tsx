@@ -82,7 +82,7 @@ export function EmployeesHeatPanel({
                       key={h}
                       className="a2-heat-cell"
                       title={`${t(`agentConsole.v2.${d}`)} ${h}:00 · ${v}`}
-                      style={{ opacity: v === 0 ? 0.08 : 0.25 + (v / Math.max(1, max)) * 0.75 }}
+                      style={{ opacity: v === 0 ? 0.18 : 0.45 + (v / Math.max(1, max)) * 0.55 }}
                     />
                   );
                 })}

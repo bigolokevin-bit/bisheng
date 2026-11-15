@@ -36,6 +36,11 @@ import {
   type AgentConsoleTrendsApi,
 } from '@/controllers/API/agentConsoleTrends';
 
+// consoleShell.css only defines the shell chrome and explicitly relies on
+// agentConsoleV2.css for the .agent-app design tokens and every .a2-* card /
+// table / KPI rule; without this import the W1 shell pages rendered as
+// unstyled text (L0 visual re-review 2026-11-15).
+import './agentConsoleV2.css';
 import './consoleShell.css';
 
 const THEME_KEY = 'agentConsole.v2.theme';

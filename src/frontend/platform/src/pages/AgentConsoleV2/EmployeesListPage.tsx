@@ -517,7 +517,8 @@ export function EmployeesListPage() {
         </div>
       ) : (
         <div className="a2-card">
-          <table className="a2-body" data-testid="agent-v2-employees-table">
+          <div className="a2-table-scroll">
+          <table className="a2-table" data-testid="agent-v2-employees-table">
             <thead>
               <tr>
                 <th>{t('agentConsole.v2.colName')}</th>
@@ -640,6 +641,7 @@ export function EmployeesListPage() {
               })}
             </tbody>
           </table>
+          </div>
           <div className="a2-card-head">
             <button
               type="button"
