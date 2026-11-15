@@ -172,7 +172,7 @@ Readouts (full text in readout.txt, `l4w2r C1/C2 rework readout` section):
 ### Secondary cell fixes (card item 4)
 - version cell: `v{N} · {MM-DD HH:mm}` separator added (was `v311-15`)
 - status cell: `a2-cell-nowrap` added (no per-character wrapping)
-- owner cell: shows full `ownerUserId` (was truncated handle `pilot_…lder`); `1` / `pilot_owner_placeholder`
+- owner cell: display stays the truncated handle (`fmtId`: `pilot_…lder`, `1`), the raw full handle moved to a hover tooltip (`title={ownerUserId}`) - per card item 4 the visible text must be a truncated handle, not the raw handle
 
 ### Gates on the rework tree
 - platform lint exit 0; targeted `src/pages/AgentConsoleV2` exit 0 (Test Files 9, Tests 112 incl. +2 new sort/pagination tests)
