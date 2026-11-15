@@ -77,3 +77,15 @@ Horizontal overflow, both口径:
 - 375 earlier: mobile:true sw=cw=375 (recorded above).
 
 Status: four viewport tiers + light theme now evidenced. W2 remains in-progress (C0-B open, online 403 C4, served entry L7).
+
+## Enrichment re-shoot — BLOCKED (L0 card 2147, 2026-11-15 21:15)
+
+- Deploy check: 8182 serves entry index-CllU102b.js (matches worktree build of b85db49). 8101 restarted as pid 64473, started Sun Nov 15 21:07:01 2026 (+0800).
+- Browser real-login session (opsadmin, cookie persisted): /agent/employees renders 2 employee rows. API probe through Caddy/BFF:
+  `GET /agent-api/api/employees?expand=version,workstations,knowledge,pending&limit=20` -> 200, **enrichment key absent on both rows** (rows: emp_86A81CE8FF..., emp_0166858D56...). `items[0]` full body: six base fields only (employeeId/name/title/lifecycleState/ownerUserId/updatedAt). X-Console-Request-Id header: not present on this response (recorded as-is).
+- Differential probe locating the broken layer (read-only, no restarts):
+  - Direct `GET http://127.0.0.1:8101/v1/employees?expand=version,workstations,knowledge,pending&limit=1` (X-Tenant-Id: t_seakoi_pilot) -> **enrichment returned**: currentVersionNo=3, effectiveFrom=2026-11-15T03:27:58.000Z, effectiveBudget{dailyTokens=100000,monthlyCostUsd=10.0,perRunMaxUsd=0.5}, knowledgeCount=1, workstationCount=1 (pendingApprovalCount absent; recorded as-is).
+  - Main repo BFF `apps/console/server.py` line 272 already whitelists `expand` in passthrough (commit 138d2b1, 19:12:11 +0800), but the live 8092 process (pid 10486) started earlier -> **BFF runs pre-B3 code and drops expand**, so domain receives no expand and rows stay un-enriched.
+- Verdict: BLOCKED — table columns 岗位版本/工位/知识/待办 remain '—' on 8182. Fix = restart 8092 under L7/ops management (memory precedent: managed process older than merge = stale code, restart resolves). No fabrication, no restart attempted from this lane.
+- Re-shoot artifacts (kept side-by-side, old images NOT replaced to avoid implying confirmation): w2-employees-1440x900-20261115-2115.png (175340 B, 1440x900), w2-employees-1440-table-20261115-2115.png (105512 B, 1440x900), w2-employees-375x812-20261115-2115.png (48034 B, 375x812), all sips-verified; columns still show '—' in these images.
+- W2 status remains in-progress. After 8092 restart, only the enrichment re-shoot needs repeating (no code change in this lane).

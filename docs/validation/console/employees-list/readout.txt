@@ -72,3 +72,10 @@ M1280={"nav":8,"thCount":10,"rows":2,"sw":1296,"cw":1280,"iw":1296,"wide":["poin
 M768={"nav":8,"thCount":10,"rows":2,"sw":768,"cw":768,"iw":768,"wide":["a2-table","THEAD","TR","TH","TH"],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"light","lsTheme":"light","kpiBg":"rgb(255, 255, 255)"}
 M1440={"nav":8,"thCount":10,"rows":2,"sw":1440,"cw":1440,"iw":1440,"wide":[],"leakUndef":false,"leakMustache":false,"leakLedger":false,"leakEmpList":false,"theme":"light","lsTheme":"light","kpiBg":"rgb(255, 255, 255)"}
 DONE_MOBILE
+
+===== l4w2j-shot1.out (21:15) =====
+URL0=http://127.0.0.1:8182/agent/employees
+ROWS=2 AFTER_POLLS
+ENRICH={"s":200,"reqId":null,"n":2,"rows":[{"id":"emp_86A81CE8FF…","enrichment":null},{"id":"emp_0166858D56…","enrichment":null}]}
+===== l4w2k-body.out =====
+BODYPROBE={"s":200,"reqId":null,"first":{"employeeId":"emp_86A81CE8FF6F42E187BCF2B540","name":"AgentOS 产品助理","title":"产品助理（数字员工 · Pilot）","lifecycleState":"active","ownerUserId":"1","updatedAt":"2026-11-15T04:21:52.962Z"},"rawHead":"{\"items\":[{\"employeeId\":\"emp_86A81CE8FF6F42E187BCF2B540\",\"name\":\"AgentOS 产品助理\",\"title\":\"产品助理（数字员工 · Pilot）\",\"lifecycleState\":\"active\",\"ownerUserId\":\"1\",\"updatedAt\":\"2026-11-15T04:21:52.962Z\"}],\"nextCursor\":\"eyJjcmVhdGVkQXQiOiIyMDI2LTExLTEzVDIyOjE1OjExLjY0MVoiLCJpZCI6ImVtcF84NkE4MUNFOEZGNkY0MkUxODdCQ0YyQjU0MCJ9\"}"}
