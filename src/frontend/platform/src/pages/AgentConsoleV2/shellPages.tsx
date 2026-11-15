@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
+import { ApprovalsListPage } from './ApprovalsListPage';
 import { EmployeesListPage } from './EmployeesListPage';
 import { HermesMetricsSection } from './HermesMetricsSection';
 import { OverviewPage as OverviewScreen } from './OverviewPage';
@@ -44,14 +45,9 @@ export function EmployeesPage() {
   return <EmployeesListPage />;
 }
 
+/* APR-01: real approvals pending list (owned by the APR-01 page lane). */
 export function ApprovalsPage() {
-  return (
-    <L1Page
-      titleKey="agentConsole.v2.navApprovals"
-      descKey="agentConsole.v2.shell.approvalsDesc"
-      testid="agent-v2-page-approvals"
-    />
-  );
+  return <ApprovalsListPage />;
 }
 
 export function TasksPage() {
