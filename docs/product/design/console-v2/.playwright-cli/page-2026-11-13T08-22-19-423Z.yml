@@ -1,0 +1,249 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - generic [ref=f1e3]: 方向 A · 沉稳工作台
+    - button "① 员工列表" [ref=f1e4] [cursor=pointer]
+    - button "② 员工详情" [active] [ref=f1e5] [cursor=pointer]
+    - button "③ 审批详情" [ref=f1e6] [cursor=pointer]
+  - generic [ref=f1e305]:
+    - complementary [ref=f1e306]:
+      - generic [ref=f1e307]:
+        - generic [ref=f1e308]: OS
+        - generic [ref=f1e309]:
+          - generic [ref=f1e310]: AgentOS 控制台
+          - text: 数字员工管理
+      - generic [ref=f1e311]:
+        - generic [ref=f1e312]: 工作台
+        - generic [ref=f1e313]: 总览
+      - generic [ref=f1e316]:
+        - generic [ref=f1e317]: 数字员工
+        - generic [ref=f1e318]: 员工列表
+        - generic [ref=f1e324]: 岗位版本
+        - generic [ref=f1e327]:
+          - text: 审批中心
+          - generic [ref=f1e331]: "3"
+      - generic [ref=f1e332]:
+        - generic [ref=f1e333]: 运行与观测
+        - generic [ref=f1e334]: 运行记录
+        - generic [ref=f1e337]: 审计日志
+      - generic [ref=f1e341]:
+        - generic [ref=f1e342]: 资源与预算
+        - generic [ref=f1e343]: 知识范围
+        - generic [ref=f1e347]: 预算池
+      - generic [ref=f1e351]:
+        - generic [ref=f1e352]: 赵
+        - generic [ref=f1e353]:
+          - text: 赵倩
+          - generic [ref=f1e354]: 管理员
+    - main [ref=f1e355]:
+      - generic [ref=f1e356]:
+        - text: 员工列表
+        - generic [ref=f1e359]: /
+        - generic [ref=f1e360]: 小蓝
+      - generic [ref=f1e361]:
+        - generic [ref=f1e362]:
+          - heading "小蓝" [level=1] [ref=f1e363]
+          - generic [ref=f1e364]: 在岗
+        - generic [ref=f1e365]:
+          - button "编辑岗位" [ref=f1e366] [cursor=pointer]
+          - button "暂停员工" [ref=f1e369] [cursor=pointer]
+          - button "发布新版本" [ref=f1e372] [cursor=pointer]
+      - generic [ref=f1e375]:
+        - generic [ref=f1e376]:
+          - generic [ref=f1e377]:
+            - generic [ref=f1e378]:
+              - generic [ref=f1e379]: 蓝
+              - generic [ref=f1e380]:
+                - heading "小蓝" [level=2] [ref=f1e381]
+                - generic [ref=f1e382]: 售后客服专员
+            - generic [ref=f1e383]:
+              - generic [ref=f1e384]:
+                - term [ref=f1e385]: 当前版本
+                - definition [ref=f1e386]:
+                  - text: v2
+                  - generic [ref=f1e387]: 生效 11-08 09:30
+              - generic [ref=f1e388]:
+                - term [ref=f1e389]: 负责人
+                - definition [ref=f1e390]: 李文曦
+              - generic [ref=f1e391]:
+                - term [ref=f1e392]: 员工编号
+                - definition [ref=f1e393]:
+                  - generic [ref=f1e394]: emp_0012
+              - generic [ref=f1e398]:
+                - term [ref=f1e399]: 上岗时间
+                - definition [ref=f1e400]:
+                  - text: 08-10 09:12
+                  - generic [ref=f1e401]: 在职 95 天
+          - generic [ref=f1e402]:
+            - heading "预算 日 / 月 / 单次" [level=4] [ref=f1e403]:
+              - text: 预算
+              - generic [ref=f1e404]: 日 / 月 / 单次
+            - generic [ref=f1e405]:
+              - term [ref=f1e406]: 每日 token
+              - definition [ref=f1e407]: 200 万
+            - generic [ref=f1e408]:
+              - term [ref=f1e409]: 月度金额
+              - definition [ref=f1e410]: $180 USD
+            - generic [ref=f1e411]:
+              - term [ref=f1e412]: 单次上限
+              - definition [ref=f1e413]: $2.50 USD
+          - generic [ref=f1e414]:
+            - heading "知识范围 12 项" [level=4] [ref=f1e415]:
+              - text: 知识范围
+              - generic [ref=f1e416]: 12 项
+            - generic [ref=f1e417]:
+              - text: 售后政策包
+              - generic [ref=f1e420]: 4 篇
+            - generic [ref=f1e421]:
+              - text: 退换货流程
+              - generic [ref=f1e424]: 5 篇
+            - generic [ref=f1e425]:
+              - text: 华南门店目录
+              - generic [ref=f1e428]: 3 篇
+          - generic [ref=f1e429]:
+            - heading "工位 4 处绑定" [level=4] [ref=f1e430]:
+              - text: 工位
+              - generic [ref=f1e431]: 4 处绑定
+            - generic [ref=f1e432]:
+              - text: 华南门店服务群
+              - generic [ref=f1e437]: 群聊
+            - generic [ref=f1e438]:
+              - text: 售后升级群
+              - generic [ref=f1e443]: 群聊
+            - generic [ref=f1e444]:
+              - text: 客户一对一
+              - generic [ref=f1e447]: 私聊
+            - generic [ref=f1e448]:
+              - text: 工单系统
+              - generic [ref=f1e451]: 应用
+          - generic [ref=f1e452]:
+            - heading "职权 grant 3 条" [level=4] [ref=f1e453]:
+              - text: 职权 grant
+              - generic [ref=f1e454]: 3 条
+            - generic [ref=f1e455]:
+              - generic [ref=f1e456]: 客户订单库（order_db）
+              - generic [ref=f1e458]:
+                - generic [ref=f1e459]: 读取
+                - generic [ref=f1e460]: 导出
+              - generic [ref=f1e461]: 到期 11-30 23:59
+            - generic [ref=f1e465]:
+              - generic [ref=f1e466]: 工单系统（ticket-app）
+              - generic [ref=f1e468]:
+                - generic [ref=f1e469]: 新建
+                - generic [ref=f1e470]: 更新
+              - generic [ref=f1e471]: 到期 12-05 18:00
+            - generic [ref=f1e475]:
+              - generic [ref=f1e476]: 知识库 · 售后政策包
+              - generic [ref=f1e477]: 读取
+              - generic [ref=f1e480]: 到期 12-31 23:59
+        - generic [ref=f1e484]:
+          - generic [ref=f1e485]:
+            - button "概览" [ref=f1e486] [cursor=pointer]
+            - button "任务" [ref=f1e487] [cursor=pointer]
+            - button "运行" [ref=f1e488] [cursor=pointer]
+            - button "审计" [ref=f1e489] [cursor=pointer]
+          - generic [ref=f1e490]:
+            - generic [ref=f1e491]:
+              - generic [ref=f1e492]:
+                - button "近 7 天" [ref=f1e493] [cursor=pointer]
+                - button "近 30 天" [ref=f1e494] [cursor=pointer]
+              - generic [ref=f1e495]:
+                - text: 状态：
+                - generic [ref=f1e496]: 全部
+              - generic [ref=f1e499]: 近 7 天 38 次运行 · 失败 2 次 · 成本 $12.84 USD
+            - generic [ref=f1e500]:
+              - generic [ref=f1e501]:
+                - generic [ref=f1e504]:
+                  - generic [ref=f1e505]: 运行中
+                  - generic [ref=f1e506]: rn_8f3a2c91…d7e4
+                  - generic [ref=f1e510]: 华南门店服务群 · 客户改约配送时间
+                - generic [ref=f1e511]:
+                  - generic [ref=f1e512]: 开始 11-13 10:22
+                  - generic [ref=f1e513]: 已用 2m 14s
+                  - generic [ref=f1e514]: 成本 $0.29 USD 估算
+              - generic [ref=f1e515]:
+                - generic [ref=f1e516]:
+                  - generic [ref=f1e517]:
+                    - generic [ref=f1e520]: 理解请求 intent_understand
+                    - generic [ref=f1e521]:
+                      - generic [ref=f1e522]: 0.4s
+                      - generic [ref=f1e523]: $0.01 USD 实测
+                      - generic [ref=f1e524]: 完成
+                  - generic [ref=f1e525]:
+                    - generic [ref=f1e528]: 知识检索 · 售后政策包 knowledge_lookup
+                    - generic [ref=f1e529]:
+                      - generic [ref=f1e530]: 1.1s
+                      - generic [ref=f1e531]: $0.03 USD 实测
+                      - generic [ref=f1e532]: 完成
+                  - generic [ref=f1e533]:
+                    - generic [ref=f1e536]:
+                      - text: 创建工单 tool_call.work_order.create
+                      - generic [ref=f1e537]: 收起 2 个子步骤
+                      - generic [ref=f1e540]: "request { \"action\": \"create_order\", \"payload\": { \"channel\": \"wechat_group\", \"customer\": \"华南-陈先生\", \"type\": \"改约配送\" } } response { \"order_id\": \"WO-2231-0874\", \"status\": \"created\" } ✓ usage=upstream"
+                    - generic [ref=f1e541]:
+                      - generic [ref=f1e542]: 3.8s
+                      - generic [ref=f1e543]: $0.18 USD 实测
+                      - generic [ref=f1e544]: 完成
+                  - generic [ref=f1e545]:
+                    - generic [ref=f1e548]: 参数提取 param_extract
+                    - generic [ref=f1e549]:
+                      - generic [ref=f1e550]: 0.6s
+                      - generic [ref=f1e551]: $0.02 USD 实测
+                      - generic [ref=f1e552]: 完成
+                  - generic [ref=f1e553]:
+                    - generic [ref=f1e556]: 提交至工单系统 api_call.ticket_api
+                    - generic [ref=f1e557]:
+                      - generic [ref=f1e558]: 2.9s
+                      - generic [ref=f1e559]: —
+                      - generic [ref=f1e560]: 完成
+                  - generic [ref=f1e561]:
+                    - generic [ref=f1e564]: 生成回复草稿 llm_generate
+                    - generic [ref=f1e565]:
+                      - generic [ref=f1e566]: 进行中 56s
+                      - generic [ref=f1e567]: $0.06 USD 估算
+                      - generic [ref=f1e568]: 运行中
+                  - generic [ref=f1e569]:
+                    - generic [ref=f1e572]: 回复投递 notify_send
+                    - generic [ref=f1e573]:
+                      - generic [ref=f1e574]: —
+                      - generic [ref=f1e575]: —
+                      - generic [ref=f1e576]: 等待中
+                - generic [ref=f1e577]: 成本口径：「实测」= 上游实际计量（usage=upstream）；「估算」= 运行中按模型单价预估（estimated），结束后以实测为准。
+            - generic [ref=f1e579]:
+              - generic [ref=f1e582]:
+                - generic [ref=f1e583]: 已完成
+                - generic [ref=f1e584]: rn_4d1e77ab…90c2
+                - generic [ref=f1e588]: 客户一对一 · 查询退款进度
+              - generic [ref=f1e589]:
+                - generic [ref=f1e590]: 开始 11-13 09:47
+                - generic [ref=f1e591]: 耗时 1m 52s
+                - generic [ref=f1e592]: 成本 $0.42 USD 实测
+            - generic [ref=f1e594]:
+              - generic [ref=f1e597]:
+                - generic [ref=f1e598]: 失败
+                - generic [ref=f1e599]: rn_b60c2f9a…13dd
+                - generic [ref=f1e603]: 售后升级群 · 创建加急工单 工具调用超时（work_order.timeout）
+              - generic [ref=f1e604]:
+                - generic [ref=f1e605]: 开始 11-12 17:31
+                - generic [ref=f1e606]: 耗时 0m 46s
+                - generic [ref=f1e607]: 成本 $0.11 USD 实测
+          - generic [ref=f1e608]:
+            - generic [ref=f1e609]:
+              - heading "审计 · 最近 3 条" [level=3] [ref=f1e610]
+              - generic [ref=f1e611]: 完整记录见「审计日志」
+            - table [ref=f1e612]:
+              - rowgroup [ref=f1e613]:
+                - row [ref=f1e614]:
+                  - cell "发布岗位版本 v2（employee.version.publish）" [ref=f1e615]
+                  - cell "赵倩" [ref=f1e616]
+                  - cell "11-08 09:30" [ref=f1e617]
+                  - cell "通过" [ref=f1e618]
+                - row [ref=f1e619]:
+                  - cell "批准权限升级（grant.escalate.approve）" [ref=f1e620]
+                  - cell "李文曦" [ref=f1e621]
+                  - cell "11-06 15:12" [ref=f1e622]
+                  - cell "通过" [ref=f1e623]
+                - row [ref=f1e624]:
+                  - cell "停用员工（employee.pause）" [ref=f1e625]
+                  - cell "周可" [ref=f1e626]
+                  - cell "10-29 11:05" [ref=f1e627]
+                  - cell "通过" [ref=f1e628]

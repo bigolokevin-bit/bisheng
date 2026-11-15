@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>方向 B · 指挥中心 — seakoi-agent-os 数字员工控制台</title>
+<style>
+/* ============================================================
+   方向 B「指挥中心」
+   深色导航 + 高密度双栏（列表-详情同屏）+ 顶部 KPI 条；
+   运行用 Langfuse 式层级 trace 时间线；状态 = 左侧色条 + 文字徽标。
+   对标：Langfuse / OpenHands 控制面的工程仪表盘气质。
+   ============================================================ */
+:root{
+  --bg:#eef1f4;
+  --surface:#ffffff;
+  --surface-2:#f6f8fa;
+  --border:#dbe1e8;
+  --border-2:#c4ccd6;
+  --text:#141a22;
+  --muted:#57626f;            /* 白底 5.2:1 */
+  --chrome:#16202e;           /* 深色导航 */
+  --chrome-2:#1d2938;
+  --chrome-border:#2b3a4e;
+  --chrome-text:#ccd6e2;      /* 深底 10.9:1 */
+  --chrome-muted:#93a3b6;     /* 深底 5.6:1 */
+  --primary:#0c6f83;          /* 青色，白底 6.3:1，可承载白字 */
+  --primary-strong:#08586a;
+  --primary-soft:#e2eff1;
+  --danger:#b0342c;  --danger-soft:#f9eceb;  --danger-dim:#e07f79;
+  --warning:#8a5a0f; --warning-soft:#f9efd9; --warning-dim:#d9a441;
+  --success:#187a4c; --success-soft:#e3f2e9; --success-dim:#4fa87c;
+  --info:#1f6fb0;    --info-soft:#e7f0f8;    --info-dim:#6aa8d8;
+  --neutral:#4a5568; --neutral-soft:#eaeef2; --neutral-dim:#7c8b9d;
+  --mono:ui-monospace,SFMono-Regular,Menlo,"JetBrains Mono",monospace;
+  --radius:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:13px}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+  background:#d9dee5;color:var(--text);-webkit-font-smoothing:antialiased;
+  padding:64px 0 52px;min-width:1480px;
+  font-variant-numeric:tabular-nums;
+}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font:inherit}
+
+.switcher{
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:99;
+  display:flex;align-items:center;gap:4px;padding:4px 6px;
+  background:#20262e;color:#fff;border-radius:999px;box-shadow:0 6px 24px rgba(10,15,25,.35);
+}
+.switcher .tag{font-size:12px;padding:0 10px 0 6px;color:#9fb2c8;border-right:1px solid #39424d;margin-right:4px;white-space:nowrap}
+.sw-btn{font-size:12.5px;padding:5px 14px;border-radius:999px;color:#c8d2de;white-space:nowrap}
+.sw-btn.active{background:#fff;color:#20262e;font-weight:600}
+
+.screen{display:none}
+.screen.on{display:block}
+.app{
+  width:1440px;margin:0 auto;display:flex;overflow:hidden;background:var(--bg);
+  border:1px solid #c3cad3;box-shadow:0 16px 48px rgba(16,24,40,.22);min-height:1000px;
+}
+
+/* ---------- 深色导航 ---------- */
+.side{width:212px;flex:none;background:var(--chrome);display:flex;flex-direction:column;padding:14px 0 12px}
+.brand{display:flex;align-items:center;gap:9px;padding:0 16px 14px;border-bottom:1px solid var(--chrome-border)}
+.logo{width:26px;height:26px;border-radius:6px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.brand b{font-size:13.5px;color:#fff;font-weight:650;display:block;line-height:1.15}
+.brand small{font-size:10.5px;color:var(--chrome-muted)}
+.nav{padding:10px 10px 0;flex:1}
+.navcap{font-size:10px;color:var(--chrome-muted);letter-spacing:.14em;font-weight:600;padding:10px 8px 5px}
+.navitem{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:5px;font-size:13px;color:var(--chrome-text);margin-bottom:2px;position:relative}
+.navitem svg{width:14.5px;height:14.5px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.9;flex:none}
+.navitem:hover{background:var(--chrome-2)}
+.navitem.active{background:var(--chrome-2);color:#fff;font-weight:600}
+.navitem.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--primary)}
+.navitem .pill{margin-left:auto;font-size:10.5px;font-weight:700;background:var(--warning-dim);color:#16202e;border-radius:999px;padding:1px 6px;font-family:var(--mono)}
+.side-foot{padding:10px 14px 0;margin:6px 10px 0;border-top:1px solid var(--chrome-border);display:flex;align-items:center;gap:8px}
+.side-foot .ava{width:26px;height:26px;border-radius:999px;background:#2c3b50;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:650;color:#cdd9e8}
+.side-foot span{font-size:12.5px;color:#fff;font-weight:600;display:block;line-height:1.2}
+.side-foot small{font-size:10.5px;color:var(--chrome-muted)}
+
+/* ---------- 主区 ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:44px;flex:none;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 18px}
+.crumb{font-size:12.5px;color:var(--muted);display:flex;gap:7px;align-items:center}
+.crumb b{color:var(--text);font-weight:650}
+.env{font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--primary);background:var(--primary-soft);border:1px solid #bcd9dd;border-radius:4px;padding:2px 7px}
+.topbar .search{margin-left:auto;display:flex;align-items:center;gap:7px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:5px 10px;width:220px}
+.topbar .search svg{width:12.5px;height:12.5px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;flex:none}
+.topbar .search input{border:none;outline:none;background:none;width:100%;font-size:12px}
+.topbar .sync{font-size:11.5px;color:var(--muted);display:flex;gap:5px;align-items:center}
+.topbar .sync svg{width:12.5px;height:12.5px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round}
+
+.content{padding:14px 16px 18px;flex:1;min-width:0}
+
+/* KPI 条 */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 13px 11px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--kc,var(--primary))}
+.kpi .lbl{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.03em;display:flex;justify-content:space-between;align-items:center}
+.kpi .val{font-size:22px;font-weight:700;margin-top:3px;line-height:1.1;letter-spacing:-.01em}
+.kpi .val small{font-size:12px;color:var(--muted);font-weight:550;margin-left:4px}
+.kpi .delta{font-size:11px;color:var(--muted);margin-top:4px}
+.kpi .delta b{color:var(--success);font-weight:650}
+.kpi .delta b.dn{color:var(--danger)}
+
+/* 双栏 */
+.split{display:flex;gap:12px;align-items:stretch}
+.pane{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;min-height:640px;overflow:hidden}
+.pane-l{width:372px;flex:none}
+.pane-r{flex:1;min-width:0}
+.pane-bar{flex:none;display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.pane-bar .t{font-size:12.5px;font-weight:700}
+.pane-bar .n{font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:0 7px;line-height:17px}
+.pane-bar select{margin-left:auto;font-size:11.5px;color:var(--text-2,#3b4554);border:1px solid var(--border);border-radius:4px;background:var(--surface);padding:3px 6px;outline:none}
+.mini-search{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:4px 8px;width:170px}
+.mini-search svg{width:11.5px;height:11.5px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round}
+.mini-search input{border:none;outline:none;background:none;font-size:11.5px;width:100%}
+
+/* 列表行：左色条 + 徽标（不只靠颜色） */
+.rows{overflow:auto;flex:1}
+.lrow{display:flex;border-bottom:1px solid var(--border);cursor:default}
+.lrow .rail{width:3px;flex:none;background:var(--neutral-dim)}
+.lrow .rail.ok{background:var(--success-dim)}.rail.info{background:var(--info-dim)}.rail.warn{background:var(--warning-dim)}
+.lrow .rail.dgr{background:var(--danger-dim)}.rail.dash{background:repeating-linear-gradient(var(--neutral-dim) 0 3px,transparent 3px 6px)}
+.lrow .in{flex:1;min-width:0;padding:9px 12px;display:flex;gap:10px;align-items:center}
+.lrow:hover{background:var(--surface-2)}
+.lrow.sel{background:var(--primary-soft)}
+.lrow.sel .in{outline:1px solid #9cc4cb;outline-offset:-1px}
+.ava{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;flex:none}
+.ava.c1{background:#dfe9f5;color:#28518f}.ava.c2{background:#ddefe4;color:#186a41}.ava.c3{background:#f4ead6;color:#8a5a0f}
+.ava.c4{background:#e8e6f2;color:#4f4687}.ava.c5{background:#e6eaee;color:#4a5568}.ava.c6{background:#f6e2e0;color:#9d2e27}
+.lrow .nm{flex:1;min-width:0}
+.lrow .nm b{font-size:13px;font-weight:650;display:block;line-height:1.3}
+.lrow .nm small{font-size:11.5px;color:var(--muted)}
+.lrow .rt{text-align:right;flex:none}
+.lrow .rt .v{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--text-2,#3b4554)}
+.lrow .rt small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+.b{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:650;line-height:1.6;white-space:nowrap}
+.b::before{content:"";width:5.5px;height:5.5px;border-radius:50%;background:currentColor;flex:none}
+.b-ok{color:var(--success);background:var(--success-soft)}
+.b-warn{color:var(--warning);background:var(--warning-soft)}
+.b-danger{color:var(--danger);background:var(--danger-soft)}
+.b-info{color:var(--info);background:var(--info-soft)}
+.b-neutral{color:var(--neutral);background:var(--neutral-soft)}
+.b-none{border:1px dashed var(--border-2);color:var(--muted);background:var(--surface)}
+.b-none::before{background:none}
+.b-arc{background:var(--surface);border:1px solid var(--border);color:var(--muted)}
+.b-arc::before{border-radius:1px;width:5.5px;height:5.5px}
+
+/* 右详情 */
+.det-head{flex:none;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px}
+.det-head .ava{width:36px;height:36px;font-size:15px;border-radius:8px}
+.det-head h2{font-size:15.5px;font-weight:700;display:flex;align-items:center;gap:9px}
+.det-head .role{font-size:11.5px;color:var(--muted);margin-top:2px}
+.det-head .ops{margin-left:auto;display:flex;gap:7px}
+.btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:650;border-radius:5px;padding:6px 11px;border:1px solid transparent;white-space:nowrap}
+.btn svg{width:12.5px;height:12.5px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-plain{background:var(--surface);color:#3b4554;border-color:var(--border-2)}
+.btn-danger{background:var(--surface);color:var(--danger);border-color:#dcaaa5}
+.tabs{flex:none;display:flex;gap:0;padding:0 16px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.tabs button{font-size:12.5px;color:var(--muted);padding:8px 13px;border-bottom:2px solid transparent;font-weight:600}
+.tabs button.on{color:var(--primary);border-bottom-color:var(--primary);background:var(--surface)}
+.det-body{padding:12px 16px;overflow:auto}
+
+.idchip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;color:#33404f;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:1.5px 6px}
+.idchip .cp{width:10.5px;height:10.5px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.snake{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:3px;padding:1px 5px}
+
+/* Langfuse 式 trace */
+.tr-run{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.tr-run .rh{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface-2);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tr-run .rh .q{margin-left:auto;display:flex;gap:12px;font-size:11.5px;color:var(--muted);align-items:center}
+.tr-run .rh .q b{color:var(--text);font-weight:650}
+.tree{padding:8px 12px 10px}
+.tstep{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;position:relative}
+.tstep:hover{background:var(--surface-2)}
+.tstep .guide{width:18px;flex:none;position:relative;align-self:stretch}
+.tstep .guide::before{content:"";position:absolute;left:8px;top:-4px;bottom:50%;width:1.5px;background:var(--border-2)}
+.tstep.last .guide::before{bottom:auto;height:calc(50% + 4px)}
+.tstep .st{width:11px;height:11px;border-radius:3px;flex:none;display:flex;align-items:center;justify-content:center}
+.st.ok{background:var(--success)}.st.run{background:var(--info);border-radius:999px}
+.st.fail{background:var(--danger)}.st.wait{background:var(--neutral-dim)}
+.tstep .nm{font-size:12.5px;font-weight:650}
+.tstep .sub{font-size:10.5px;color:var(--muted)}
+.tstep .dur{flex:none;display:flex;align-items:center;gap:7px;width:150px}
+.dbar{flex:1;height:5px;border-radius:3px;background:#e3e8ed;overflow:hidden}
+.dbar i{display:block;height:100%;background:var(--primary);border-radius:3px}
+.dbar i.big{background:var(--warning-dim)}
+.dbar i.err{background:var(--danger-dim)}
+.dsec{font-size:11px;color:var(--muted);width:38px;text-align:right;flex:none}
+.badge-c{flex:none;font-size:11px;font-weight:700;font-family:var(--mono);border-radius:4px;padding:2px 7px;background:var(--surface);border:1px solid var(--border-2);color:#33404f}
+.badge-c.est{border-style:dashed;color:var(--muted)}
+.badge-c.up::after{content:"↑";margin-left:3px;color:var(--success);font-weight:700}
+.tstep.child{margin-left:30px}
+.tstep.child .guide::before{left:8px}
+.expander{font-size:11px;color:var(--primary);font-weight:650;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;gap:4px}
+.expander svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.jsonbox{margin:2px 6px 8px 62px;background:#101720;border-radius:5px;padding:9px 12px;font-family:var(--mono);font-size:10.5px;line-height:1.75;color:#c3d2e4;white-space:pre;overflow:auto}
+.jsonbox .k{color:#6cc3d6}.jsonbox .s{color:#a5d6a0}.jsonbox .e{color:#ef8e88}
+.failnote{margin:0 6px 8px 62px;background:var(--danger-soft);border:1px solid #e6b7b3;border-left:3px solid var(--danger);border-radius:4px;padding:8px 12px;font-size:11.5px;color:#8c2620;line-height:1.6}
+.legend{display:flex;gap:14px;align-items:center;font-size:10.5px;color:var(--muted);padding:2px 6px 8px;flex-wrap:wrap}
+.legend .badge-c{font-size:10px;padding:1px 5px}
+.sumline{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);margin-bottom:12px}
+.sumline .cell{flex:1;padding:8px 12px;border-right:1px solid var(--border)}
+.sumline .cell:last-child{border-right:none}
+.sumline .k{font-size:10.5px;color:var(--muted);font-weight:600}
+.sumline .v{font-size:14px;font-weight:700;margin-top:2px}
+
+/* 审批 */
+.aprow .r1{display:flex;align-items:center;gap:7px}
+.aprow .act{font-size:12.5px;font-weight:700;margin-top:3px}
+.aprow .who{font-size:11px;color:var(--muted);margin-top:2px}
+.aprow .rt2{text-align:right;font-size:10.5px;color:var(--muted);flex:none}
+.remain{font-weight:700}
+.remain.hi{color:var(--danger)}.remain.mid{color:var(--warning)}
+.sect{padding:12px 16px;border-bottom:1px solid var(--border)}
+.sect h4{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin-bottom:9px}
+.dl{display:grid;grid-template-columns:1fr 1fr;gap:4px 26px;font-size:12px}
+.dl .row{display:flex;justify-content:space-between;gap:10px;padding:4.5px 0;border-bottom:1px dashed var(--border)}
+.dl .row:last-child{border-bottom:none}
+.dl dt{color:var(--muted);flex:none}
+.dl dd{font-weight:650;text-align:right;line-height:1.45}
+.quote{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:4px;padding:9px 12px;font-size:12px;line-height:1.7;color:#33404f}
+.note{display:flex;gap:8px;background:var(--danger-soft);border:1px solid #e6b7b3;border-radius:4px;padding:9px 12px;font-size:11.5px;color:#8c2620;line-height:1.65}
+.note svg{width:13px;height:13px;stroke:var(--danger);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;margin-top:1px}
+.mtable{width:100%;font-size:11.5px;border-collapse:collapse}
+.mtable th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;padding:5px 8px;border-bottom:1px solid var(--border);letter-spacing:.03em}
+.mtable td{padding:6.5px 8px;border-bottom:1px dashed var(--border)}
+.mtable tr:last-child td{border-bottom:none}
+.mtable .ok{color:var(--success);font-weight:700}
+.mtable .no{color:var(--danger);font-weight:700}
+.mtable .num{color:var(--muted)}
+.empty{margin:12px;border:1px dashed var(--border-2);border-radius:var(--radius);padding:22px 16px;text-align:center;color:var(--muted);background:var(--surface-2)}
+.empty svg{width:24px;height:24px;stroke:var(--border-2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;margin-bottom:7px}
+.empty b{display:block;font-size:12.5px;color:#3b4554;font-weight:650;margin-bottom:3px}
+.empty p{font-size:11px;line-height:1.6}
+.decide{display:flex;gap:8px;align-items:center;padding:12px 16px;background:var(--surface-2)}
+.decide .hint{font-size:10.5px;color:var(--muted);margin-left:auto}
+.kvs-inline{display:flex;gap:16px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
+.kvs-inline b{color:var(--text);font-weight:650}
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <span class="tag">方向 B · 指挥中心</span>
+  <button class="sw-btn active" data-screen="s-list">① 员工列表</button>
+  <button class="sw-btn" data-screen="s-detail">② 员工详情</button>
+  <button class="sw-btn" data-screen="s-approval">③ 审批详情</button>
+</div>
+
+<!-- ==================== 屏 1 · 员工列表（KPI + 双栏） ==================== -->
+<section class="screen on" id="s-list">
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><div class="logo">OS</div><div><b>AgentOS 控制面</b><small>COMMAND / 生产</small></div></div>
+      <nav class="nav">
+        <div class="navcap">监控</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M3 13h4l2.5-7 4 13L16 13h5"/></svg>总览大屏</a>
+        <a class="navitem active"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c1-3.6 3.4-5.4 6.5-5.4s5.5 1.8 6.5 5.4"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M16.5 14.7c2.9.2 4.5 1.9 5 4.6"/></svg>数字员工</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M9 12.5 11.5 15 16 9.5"/><circle cx="12" cy="12" r="9"/></svg>审批队列<span class="pill">5</span></a>
+        <div class="navcap">运行</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M5 12l3-3M5 12l3 3"/><circle cx="12" cy="15" r="1.6"/></svg>运行流</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>审计事件</a>
+        <div class="navcap">资产</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M12 4v16M6 7l6-3 6 3"/><path d="M6 7v10l6 3 6-3V7"/></svg>知识范围</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M4 6h16v13H4z"/><path d="M4 10h16M8 6v13"/></svg>工位绑定</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M9.8 10.2c0-1 1-1.6 2.2-1.6s2.2.6 2.2 1.5c0 2.3-4.4 1.5-4.4 3.7 0 .9 1 1.5 2.2 1.5s2.2-.6 2.2-1.6"/></svg>预算账本</a>
+        <div class="navcap">系统</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.6M12 17.9v2.6M3.5 12h2.6M17.9 12h2.6M6 6l1.9 1.9M16.1 16.1 18 18M18 6l-1.9 1.9M7.9 16.1 6 18"/></svg>设置</a>
+      </nav>
+      <div class="side-foot"><div class="ava">赵</div><div><span>赵倩</span><small>管理员 · 李文曦团队</small></div></div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="crumb"><b>数字员工</b><span>/</span>全部门</span>
+        <span class="env">PRODUCTION</span>
+        <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg><input placeholder="搜索员工 / run_id / 审批单（⌘K）"></div>
+        <span class="sync"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 0 1 14-4M20 14A8 8 0 0 1 6 18M18 6v3.5h-3.5M6 18v-3.5h3.5"/></svg>数据同步于 11-13 10:24</span>
+      </div>
+
+      <div class="content">
+        <div class="kpis">
+          <div class="kpi" style="--kc:var(--success-dim)"><div class="lbl">在岗员工<span class="b b-ok" style="font-size:10px;padding:1px 6px">实时</span></div><div class="val">2<small>/ 7 名在册</small></div><div class="delta">上岗中 1 · 已停用 1 · 草稿 1</div></div>
+          <div class="kpi" style="--kc:var(--info-dim)"><div class="lbl">今日运行</div><div class="val">38<small>次</small></div><div class="delta">失败 <b class="dn">2</b> · 中断 <b class="dn">1</b> · <b>成功率 92%</b></div></div>
+          <div class="kpi" style="--kc:var(--warning-dim)"><div class="lbl">待审批</div><div class="val">5<small>件</small></div><div class="delta">高风险 <b class="dn">1</b> · 最近 约 2 小时后过期</div></div>
+          <div class="kpi" style="--kc:var(--primary)"><div class="lbl">今日成本</div><div class="val">$12.84<small>USD</small></div><div class="delta">月度预算已用 <b>17%</b>（$428 / $2,500 USD）</div></div>
+        </div>
+
+        <div class="split">
+          <!-- 左：员工列表 -->
+          <div class="pane pane-l">
+            <div class="pane-bar">
+              <span class="t">员工</span><span class="n">7</span>
+              <div class="mini-search" style="margin-left:8px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg><input placeholder="筛选…"></div>
+              <select><option>状态：全部</option></select>
+            </div>
+            <div class="rows">
+              <div class="lrow sel"><span class="rail ok"></span><div class="in"><span class="ava c1">蓝</span><div class="nm"><b>小蓝</b><small>售后客服专员 · 负责人 李文曦</small></div><div class="rt"><span class="v">v2</span><small><span class="b b-ok" style="padding:1px 6px;font-size:10px">在岗</span></small></div></div></div>
+              <div class="lrow"><span class="rail ok"></span><div class="in"><span class="ava c2">巡</span><div class="nm"><b>阿巡</b><small>数据巡检分析师 · 负责人 周可</small></div><div class="rt"><span class="v">v1</span><small><span class="b b-ok" style="padding:1px 6px;font-size:10px">在岗</span></small></div></div></div>
+              <div class="lrow"><span class="rail info"></span><div class="in"><span class="ava c3">译</span><div class="nm"><b>小译</b><small>多语翻译编辑 · 负责人 陈叙</small></div><div class="rt"><span class="v">v1</span><small><span class="b b-info" style="padding:1px 6px;font-size:10px">上岗中</span></small></div></div></div>
+              <div class="lrow"><span class="rail warn"></span><div class="in"><span class="ava c4">档</span><div class="nm"><b>小档</b><small>合同归档文员 · 负责人 李文曦</small></div><div class="rt"><span class="v">v2</span><small><span class="b b-warn" style="padding:1px 6px;font-size:10px">已停用</span></small></div></div></div>
+              <div class="lrow"><span class="rail dash"></span><div class="in"><span class="ava c5">盘</span><div class="nm"><b>小盘</b><small>库存核对助手 · 负责人 王超</small></div><div class="rt"><span class="v">v1</span><small><span class="b b-none" style="padding:1px 6px;font-size:10px">草稿</span></small></div></div></div>
+              <div class="lrow"><span class="rail warn"></span><div class="in"><span class="ava c6">招</span><div class="nm"><b>小招</b><small>招聘筛选助手 · 负责人 陈叙</small></div><div class="rt"><span class="v">v3</span><small><span class="b b-neutral" style="padding:1px 6px;font-size:10px">离岗中</span></small></div></div></div>
+              <div class="lrow"><span class="rail"></span><div class="in"><span class="ava c5">库</span><div class="nm"><b>小库</b><small>供应商对账员 · 负责人 王超</small></div><div class="rt"><span class="v">v2</span><small><span class="b b-arc" style="padding:1px 6px;font-size:10px">已归档</span></small></div></div></div>
+            </div>
+          </div>
+
+          <!-- 右：选中详情 -->
+          <div class="pane pane-r">
+            <div class="det-head">
+              <span class="ava c1">蓝</span>
+              <div><h2>小蓝 <span class="b b-ok">在岗</span> <span class="b b-warn" style="border-radius:999px">待办 2</span></h2>
+              <div class="role">售后客服专员 · 岗位 v2（生效 11-08 09:30）· 负责人 李文曦</div></div>
+              <div class="ops"><button class="btn btn-plain">暂停</button><button class="btn btn-plain">编辑</button><button class="btn btn-primary"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>发布新版本</button></div>
+            </div>
+            <div class="tabs"><button>概览</button><button class="on">运行</button><button>审批</button><button>审计</button><button>职权 / 工位</button></div>
+            <div class="det-body">
+              <div class="sumline">
+                <div class="cell"><div class="k">今日运行</div><div class="v">14 次</div></div>
+                <div class="cell"><div class="k">今日成本</div><div class="v">$6.20 USD</div></div>
+                <div class="cell"><div class="k">月度预算</div><div class="v">$180 USD <span style="font-size:10.5px;color:var(--muted);font-weight:500">日 200 万 tokens · 单次 ≤ $2.50 USD</span></div></div>
+                <div class="cell"><div class="k">知识范围</div><div class="v">12 项</div></div>
+                <div class="cell"><div class="k">工位</div><div class="v">4 处 <span style="font-size:10.5px;color:var(--muted);font-weight:500">群 2 · 私聊 1 · 应用 1</span></div></div>
+              </div>
+
+              <div class="tr-run">
+                <div class="rh">
+                  <span class="b b-info">运行中</span>
+                  <span class="idchip">rn_8f3a2c91d7e4…<span style="letter-spacing:0">b9</span> <svg class="cp" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M4 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+                  <span style="font-size:11.5px;color:var(--muted)">华南门店服务群 · 客户改约配送时间</span>
+                  <div class="q"><span>开始 <b>11-13 10:22</b></span><span>已用 <b>2m 14s</b></span><span>成本 <b>$0.29 USD</b></span></div>
+                </div>
+                <div class="tree">
+                  <div class="tstep"><span class="guide"></span><span class="st ok"></span><span class="nm">理解请求</span><span class="snake">intent_understand</span><span class="dur"><span class="dbar"><i style="width:6%"></i></span><span class="dsec">0.4s</span></span><span class="badge-c up">$0.01</span></div>
+                  <div class="tstep"><span class="guide"></span><span class="st ok"></span><span class="nm">知识检索 · 售后政策包</span><span class="snake">knowledge_lookup</span><span class="dur"><span class="dbar"><i style="width:16%"></i></span><span class="dsec">1.1s</span></span><span class="badge-c up">$0.03</span></div>
+                  <div class="tstep"><span class="guide"></span><span class="st ok"></span><span class="nm">创建工单</span><span class="snake">tool_call.work_order.create</span><span class="dur"><span class="dbar"><i class="big" style="width:56%"></i></span><span class="dsec">3.8s</span></span><span class="badge-c up">$0.18</span><span class="expander"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>2 子步</span></div>
+                  <div class="tstep child"><span class="guide"></span><span class="st ok"></span><span class="nm" style="font-weight:550;color:#3b4554">参数提取</span><span class="snake">param_extract</span><span class="dur"><span class="dbar"><i style="width:9%"></i></span><span class="dsec">0.6s</span></span><span class="badge-c up">$0.02</span></div>
+                  <div class="tstep child last"><span class="guide"></span><span class="st ok"></span><span class="nm" style="font-weight:550;color:#3b4554">提交至工单系统</span><span class="snake">api_call.ticket_api</span><span class="dur"><span class="dbar"><i class="big" style="width:42%"></i></span><span class="dsec">2.9s</span></span><span class="badge-c">—</span></div>
+                  <div class="tstep"><span class="guide"></span><span class="st run"></span><span class="nm">生成回复草稿</span><span class="snake">llm_generate</span><span class="dur"><span class="dbar"><i style="width:20%;background:var(--info-dim)"></i></span><span class="dsec">56s+</span></span><span class="badge-c est">$0.06</span></div>
+                  <div class="tstep last"><span class="guide"></span><span class="st wait"></span><span class="nm" style="color:var(--muted)">回复投递</span><span class="snake">notify_send</span><span class="dur"><span class="dbar"></span><span class="dsec">—</span></span><span class="badge-c est">—</span></div>
+                </div>
+                <div class="legend"><span>耗时条按本 run 内最长步归一</span><span><span class="badge-c up" style="font-size:9.5px;padding:0 5px">$0.18</span> 实测（usage=upstream）</span><span><span class="badge-c est" style="font-size:9.5px;padding:0 5px">$0.06</span> 估算（estimated）</span></div>
+              </div>
+
+              <div class="tr-run">
+                <div class="rh">
+                  <span class="b b-ok">已完成</span>
+                  <span class="idchip">rn_4d1e77ab90c2…3f <svg class="cp" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M4 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+                  <span style="font-size:11.5px;color:var(--muted)">客户一对一 · 查询退款进度</span>
+                  <div class="q"><span>11-13 09:47</span><span>耗时 <b>1m 52s</b></span><span>成本 <b>$0.42 USD</b></span></div>
+                </div>
+              </div>
+              <div class="tr-run">
+                <div class="rh">
+                  <span class="b b-danger">失败</span>
+                  <span class="idchip">rn_b60c2f9a13dd…7a <svg class="cp" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M4 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+                  <span style="font-size:11.5px;color:var(--muted)">售后升级群 · 创建加急工单</span>
+                  <div class="q"><span>11-12 17:31</span><span>耗时 <b>0m 46s</b></span><span>成本 <b>$0.11 USD</b></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 屏 2 · 员工详情（运行 trace 全展开） ==================== -->
+<section class="screen" id="s-detail">
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><div class="logo">OS</div><div><b>AgentOS 控制面</b><small>COMMAND / 生产</small></div></div>
+      <nav class="nav">
+        <div class="navcap">监控</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M3 13h4l2.5-7 4 13L16 13h5"/></svg>总览大屏</a>
+        <a class="navitem active"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c1-3.6 3.4-5.4 6.5-5.4s5.5 1.8 6.5 5.4"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M16.5 14.7c2.9.2 4.5 1.9 5 4.6"/></svg>数字员工</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M9 12.5 11.5 15 16 9.5"/><circle cx="12" cy="12" r="9"/></svg>审批队列<span class="pill">5</span></a>
+        <div class="navcap">运行</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M5 12l3-3M5 12l3 3"/><circle cx="12" cy="15" r="1.6"/></svg>运行流</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>审计事件</a>
+        <div class="navcap">资产</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M12 4v16M6 7l6-3 6 3"/><path d="M6 7v10l6 3 6-3V7"/></svg>知识范围</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M4 6h16v13H4z"/><path d="M4 10h16M8 6v13"/></svg>工位绑定</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M9.8 10.2c0-1 1-1.6 2.2-1.6s2.2.6 2.2 1.5c0 2.3-4.4 1.5-4.4 3.7 0 .9 1 1.5 2.2 1.5s2.2-.6 2.2-1.6"/></svg>预算账本</a>
+        <div class="navcap">系统</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.6M12 17.9v2.6M3.5 12h2.6M17.9 12h2.6M6 6l1.9 1.9M16.1 16.1 18 18M18 6l-1.9 1.9M7.9 16.1 6 18"/></svg>设置</a>
+      </nav>
+      <div class="side-foot"><div class="ava">赵</div><div><span>赵倩</span><small>管理员 · 李文曦团队</small></div></div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="crumb"><b>数字员工</b><span>/</span><b>小蓝</b><span>/</span>运行详情</span>
+        <span class="env">PRODUCTION</span>
+        <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg><input placeholder="跳转其他员工 / run…"></div>
+        <span class="sync"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 0 1 14-4M20 14A8 8 0 0 1 6 18M18 6v3.5h-3.5M6 18v-3.5h3.5"/></svg>数据同步于 11-13 10:24</span>
+      </div>
+
+      <div class="content">
+        <div class="split">
+          <!-- 左：该员工运行列表（可选中） -->
+          <div class="pane pane-l">
+            <div class="pane-bar">
+              <span class="t">小蓝 · 运行</span><span class="n">近 7 天 38</span>
+              <select><option>状态：全部</option></select>
+            </div>
+            <div class="rows">
+              <div class="lrow sel"><span class="rail info"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div style="display:flex;gap:7px;align-items:center"><span class="b b-info">运行中</span><span class="idchip">rn_8f3a2c91…d7e4</span></div>
+                <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">华南门店服务群 · 改约配送</small>
+                <small style="display:block;color:var(--muted);font-size:10.5px">开始 11-13 10:22 · 已用 2m 14s</small>
+              </div><div class="rt" style="padding-top:2px"><span class="v">$0.29</span><small>估算</small></div></div></div>
+              <div class="lrow"><span class="rail ok"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div style="display:flex;gap:7px;align-items:center"><span class="b b-ok">已完成</span><span class="idchip">rn_4d1e77ab…90c2</span></div>
+                <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">客户一对一 · 查询退款进度</small>
+                <small style="display:block;color:var(--muted);font-size:10.5px">开始 11-13 09:47 · 耗时 1m 52s</small>
+              </div><div class="rt" style="padding-top:2px"><span class="v">$0.42</span><small>实测</small></div></div></div>
+              <div class="lrow"><span class="rail dgr"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div style="display:flex;gap:7px;align-items:center"><span class="b b-danger">失败</span><span class="idchip">rn_b60c2f9a…13dd</span></div>
+                <small style="display:block;margin-top:4px;color:var(--danger);font-size:11px">创建加急工单 · 工具调用超时</small>
+                <small style="display:block;color:var(--muted);font-size:10.5px">开始 11-12 17:31 · 耗时 0m 46s</small>
+              </div><div class="rt" style="padding-top:2px"><span class="v">$0.11</span><small>实测</small></div></div></div>
+              <div class="lrow"><span class="rail warn"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div style="display:flex;gap:7px;align-items:center"><span class="b b-warn">已中断</span><span class="idchip">rn_91cc40ab…22e8</span></div>
+                <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">售后升级群 · 客户人工接管</small>
+                <small style="display:block;color:var(--muted);font-size:10.5px">开始 11-12 15:03 · 已运行 0m 28s 后中断</small>
+              </div><div class="rt" style="padding-top:2px"><span class="v">$0.04</span><small>实测</small></div></div></div>
+              <div class="lrow"><span class="rail ok"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div style="display:flex;gap:7px;align-items:center"><span class="b b-ok">已完成</span><span class="idchip">rn_77a2b5ec…04d1</span></div>
+                <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px">华南门店服务群 · 政策问答</small>
+                <small style="display:block;color:var(--muted);font-size:10.5px">开始 11-12 14:40 · 耗时 0m 51s</small>
+              </div><div class="rt" style="padding-top:2px"><span class="v">$0.09</span><small>实测</small></div></div></div>
+            </div>
+          </div>
+
+          <!-- 右：trace 全展开 -->
+          <div class="pane pane-r">
+            <div class="det-head">
+              <span class="b b-info" style="font-size:12px;padding:4px 10px">运行中</span>
+              <div><h2 style="font-size:14px"><span class="idchip" style="font-size:12px">rn_8f3a2c91d7e4…b9 <svg class="cp" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M4 15V6a2 2 0 0 1 2-2h9"/></svg></span></h2>
+              <div class="role">小蓝 · 售后客服专员 · 工位「华南门店服务群」</div></div>
+              <div class="ops"><button class="btn btn-plain">中止运行</button><button class="btn btn-plain">导出 trace</button></div>
+            </div>
+            <div class="det-body">
+              <div class="sumline">
+                <div class="cell"><div class="k">开始时间</div><div class="v">11-13 10:22</div></div>
+                <div class="cell"><div class="k">已用耗时</div><div class="v">2m 14s</div></div>
+                <div class="cell"><div class="k">累计成本</div><div class="v">$0.29 USD <span style="font-size:10.5px;color:var(--muted);font-weight:500">估算（estimated）</span></div></div>
+                <div class="cell"><div class="k">单次预算</div><div class="v">≤ $2.50 USD</div></div>
+                <div class="cell"><div class="k">步数</div><div class="v">6 <span style="font-size:10.5px;color:var(--muted);font-weight:500">完成 3 · 运行 1 · 等待 2</span></div></div>
+              </div>
+
+              <div class="tr-run" style="margin-bottom:0">
+                <div class="rh" style="background:var(--surface)"><b style="font-size:12px">Step trace</b><span style="font-size:11px;color:var(--muted)">点击步展开详情 · 展开缩进为子步骤</span></div>
+                <div class="tree">
+                  <div class="tstep"><span class="guide"></span><span class="st ok"></span><span class="nm">理解请求</span><span class="snake">intent_understand</span><span class="dur"><span class="dbar"><i style="width:6%"></i></span><span class="dsec">0.4s</span></span><span class="badge-c up">$0.01</span><span class="b b-ok" style="padding:1px 6px;font-size:10px">完成</span></div>
+                  <div class="tstep"><span class="guide"></span><span class="st ok"></span><span class="nm">知识检索 · 售后政策包</span><span class="snake">knowledge_lookup</span><span class="dur"><span class="dbar"><i style="width:16%"></i></span><span class="dsec">1.1s</span></span><span class="badge-c up">$0.03</span><span class="b b-ok" style="padding:1px 6px;font-size:10px">完成</span></div>
+                  <div class="tstep"><span class="guide"></span><span class="st ok"></span><span class="nm">创建工单</span><span class="snake">tool_call.work_order.create</span><span class="dur"><span class="dbar"><i class="big" style="width:56%"></i></span><span class="dsec">3.8s</span></span><span class="badge-c up">$0.18</span><span class="b b-ok" style="padding:1px 6px;font-size:10px">完成</span><span class="expander"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>收起</span></div>
+                  <div class="jsonbox"><span class="k">request</span> { "action": <span class="s">"create_order"</span>, "payload": { "channel": <span class="s">"wechat_group"</span>, "customer": <span class="s">"华南-陈先生"</span>, "type": <span class="s">"改约配送"</span> } }
+<span class="k">response</span>{ "order_id": <span class="s">"WO-2231-0874"</span>, "status": <span class="s">"created"</span> }  <span class="k">usage</span>: <span class="s">"upstream"</span></div>
+                  <div class="tstep child"><span class="guide"></span><span class="st ok"></span><span class="nm" style="font-weight:550;color:#3b4554">参数提取</span><span class="snake">param_extract</span><span class="dur"><span class="dbar"><i style="width:9%"></i></span><span class="dsec">0.6s</span></span><span class="badge-c up">$0.02</span></div>
+                  <div class="tstep child last"><span class="guide"></span><span class="st ok"></span><span class="nm" style="font-weight:550;color:#3b4554">提交至工单系统</span><span class="snake">api_call.ticket_api</span><span class="dur"><span class="dbar"><i class="big" style="width:42%"></i></span><span class="dsec">2.9s</span></span><span class="badge-c">—</span></div>
+                  <div class="tstep"><span class="guide"></span><span class="st run"></span><span class="nm">生成回复草稿</span><span class="snake">llm_generate</span><span class="dur"><span class="dbar"><i style="width:22%;background:var(--info-dim)"></i></span><span class="dsec">56s+</span></span><span class="badge-c est">$0.06</span><span class="b b-info" style="padding:1px 6px;font-size:10px">运行中</span></div>
+                  <div class="tstep last"><span class="guide"></span><span class="st wait"></span><span class="nm" style="color:var(--muted)">回复投递</span><span class="snake">notify_send</span><span class="dur"><span class="dbar"></span><span class="dsec">—</span></span><span class="badge-c est">—</span><span class="b b-neutral" style="padding:1px 6px;font-size:10px">等待中</span></div>
+                </div>
+              </div>
+
+              <div class="sect" style="padding:12px 4px 4px;border-bottom:none">
+                <h4>该 run 关联审计</h4>
+                <table class="mtable">
+                  <thead><tr><th>动作</th><th>操作人</th><th>时间</th><th>结果</th></tr></thead>
+                  <tbody>
+                    <tr><td>发起运行（run.start）· 来自群消息 @工单管家</td><td>小蓝（系统代执行）</td><td class="num">11-13 10:22</td><td class="ok">通过</td></tr>
+                    <tr><td>调用工具 · 创建工单（tool.invoke）</td><td>小蓝</td><td class="num">11-13 10:22</td><td class="ok">成功</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 屏 3 · 审批（双栏 + 风险色条） ==================== -->
+<section class="screen" id="s-approval">
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><div class="logo">OS</div><div><b>AgentOS 控制面</b><small>COMMAND / 生产</small></div></div>
+      <nav class="nav">
+        <div class="navcap">监控</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M3 13h4l2.5-7 4 13L16 13h5"/></svg>总览大屏</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c1-3.6 3.4-5.4 6.5-5.4s5.5 1.8 6.5 5.4"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M16.5 14.7c2.9.2 4.5 1.9 5 4.6"/></svg>数字员工</a>
+        <a class="navitem active"><svg viewBox="0 0 24 24"><path d="M9 12.5 11.5 15 16 9.5"/><circle cx="12" cy="12" r="9"/></svg>审批队列<span class="pill">5</span></a>
+        <div class="navcap">运行</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M5 12l3-3M5 12l3 3"/><circle cx="12" cy="15" r="1.6"/></svg>运行流</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>审计事件</a>
+        <div class="navcap">资产</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M12 4v16M6 7l6-3 6 3"/><path d="M6 7v10l6 3 6-3V7"/></svg>知识范围</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><path d="M4 6h16v13H4z"/><path d="M4 10h16M8 6v13"/></svg>工位绑定</a>
+        <a class="navitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M9.8 10.2c0-1 1-1.6 2.2-1.6s2.2.6 2.2 1.5c0 2.3-4.4 1.5-4.4 3.7 0 .9 1 1.5 2.2 1.5s2.2-.6 2.2-1.6"/></svg>预算账本</a>
+        <div class="navcap">系统</div>
+        <a class="navitem"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.6M12 17.9v2.6M3.5 12h2.6M17.9 12h2.6M6 6l1.9 1.9M16.1 16.1 18 18M18 6l-1.9 1.9M7.9 16.1 6 18"/></svg>设置</a>
+      </nav>
+      <div class="side-foot"><div class="ava">赵</div><div><span>赵倩</span><small>管理员 · 李文曦团队</small></div></div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <span class="crumb"><b>审批队列</b><span>/</span>待我审批</span>
+        <span class="env">PRODUCTION</span>
+        <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg><input placeholder="搜索审批单号 / 员工…"></div>
+        <span class="sync"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 0 1 14-4M20 14A8 8 0 0 1 6 18M18 6v3.5h-3.5M6 18v-3.5h3.5"/></svg>数据同步于 11-13 10:24</span>
+      </div>
+
+      <div class="content">
+        <div class="split">
+          <!-- 左：审批队列 -->
+          <div class="pane pane-l">
+            <div class="pane-bar">
+              <span class="t">待我审批</span><span class="n">3</span>
+              <select><option>风险：全部</option></select>
+              <select><option>排序：快过期优先</option></select>
+            </div>
+            <div class="rows">
+              <div class="lrow sel aprow"><span class="rail dgr"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div class="r1"><span class="b b-danger">高</span><span class="idchip">ap_20261113_0042</span></div>
+                <div class="act">权限升级（grant.escalate）</div>
+                <div class="who">代 小蓝 · 发起人 李文曦 · 目标 客户订单库</div>
+              </div><div class="rt2"><span class="remain hi">约 5 小时后<br>过期</span><div style="margin-top:4px">11-13 09:12</div></div></div></div>
+              <div class="lrow aprow"><span class="rail warn"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div class="r1"><span class="b b-warn">中</span><span class="idchip">ap_20261113_0041</span></div>
+                <div class="act">新建岗位版本（employee.version.create）</div>
+                <div class="who">代 小译 · 发起人 陈叙 · 目标 多语翻译编辑 v2</div>
+              </div><div class="rt2"><span class="remain mid">约 21 小时<br>后过期</span><div style="margin-top:4px">11-13 08:40</div></div></div></div>
+              <div class="lrow aprow"><span class="rail ok"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div class="r1"><span class="b b-ok">低</span><span class="idchip">ap_20261113_0039</span></div>
+                <div class="act">预算调整（budget.update）</div>
+                <div class="who">代 阿巡 · 发起人 周可 · 日 token 150 万 → 220 万</div>
+              </div><div class="rt2"><span class="remain hi">约 2 小时后<br>过期</span><div style="margin-top:4px">11-13 07:55</div></div></div></div>
+              <div class="lrow aprow"><span class="rail warn"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div class="r1"><span class="b b-warn">中</span><span class="idchip">ap_20261112_0035</span></div>
+                <div class="act">工位绑定（channel.bind）</div>
+                <div class="who">代 小译 · 发起人 陈叙 · 目标 应用「跨境翻译台」</div>
+              </div><div class="rt2"><span class="b b-ok" style="padding:1px 6px">已通过</span><div style="margin-top:4px">11-12 18:02</div></div></div></div>
+              <div class="lrow aprow"><span class="rail"></span><div class="in" style="align-items:flex-start"><div class="nm" style="flex:1">
+                <div class="r1"><span class="b b-ok">低</span><span class="idchip">ap_20261111_0031</span></div>
+                <div class="act">员工恢复（employee.resume）</div>
+                <div class="who">代 小档 · 发起人 王超 · 被 赵倩 驳回</div>
+              </div><div class="rt2"><span class="b b-danger" style="padding:1px 6px">已驳回</span><div style="margin-top:4px">11-11 14:37</div></div></div></div>
+            </div>
+            <div class="empty" style="flex:none">
+              <svg viewBox="0 0 24 24"><path d="M9 12.5 11.5 15 16 9.5"/><circle cx="12" cy="12" r="9"/></svg>
+              <b>队列为空时的样式</b>
+              <p>「没有待办审批 — 高风险申请会置顶并高亮剩余时间。」</p>
+            </div>
+          </div>
+
+          <!-- 右：审批详情 -->
+          <div class="pane pane-r">
+            <div class="det-head" style="align-items:flex-start">
+              <span class="rail" style="background:var(--danger);width:4px;align-self:stretch;border-radius:2px"></span>
+              <div style="flex:1">
+                <h2 style="font-size:15px">权限升级（grant.escalate）<span class="b b-danger">高风险</span><span class="b b-warn">待审批（pending）</span></h2>
+                <div class="role" style="display:flex;gap:10px;align-items:center;margin-top:4px">
+                  <span class="idchip">ap_20261113_0042 <svg class="cp" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M4 15V6a2 2 0 0 1 2-2h9"/></svg></span>
+                  <span class="remain hi"><svg viewBox="0 0 24 24" style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>约 5 小时后过期 · 截止 11-13 17:24</span>
+                </div>
+              </div>
+              <div class="ops"><button class="btn btn-plain">查看完整数据</button></div>
+            </div>
+            <div class="det-body" style="padding:0;overflow:auto">
+              <div class="sect">
+                <h4>申请概要</h4>
+                <dl class="dl">
+                  <div class="row"><dt>发起人 / 代谁</dt><dd>李文曦 · 代 小蓝（售后客服专员）</dd></div>
+                  <div class="row"><dt>目标对象</dt><dd>客户订单库（order_db）</dd></div>
+                  <div class="row"><dt>提交时间</dt><dd>11-13 09:12</dd></div>
+                  <div class="row"><dt>指定审批人</dt><dd>赵倩（你）</dd></div>
+                  <div class="row"><dt>变更内容</dt><dd>动作 读取 → 读取 + <span style="color:var(--warning)">导出（新增）</span></dd></div>
+                  <div class="row"><dt>职权有效期</dt><dd>批准后至 11-30 23:59</dd></div>
+                </dl>
+              </div>
+              <div class="sect">
+                <h4>申请理由</h4>
+                <div class="quote">华南门店频繁出现跨区配送纠纷，需要按客户手机号反查跨区订单后创建升级工单。当前小蓝只能读取本区订单，处理一单需转人工 2~3 次。本次仅申请只读导出，用于当日对账。</div>
+              </div>
+              <div class="sect">
+                <h4>风险判定（高）</h4>
+                <div class="note">
+                  <svg viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5h.01"/></svg>
+                  <div>「导出」允许数据批量离开系统，且小蓝绑定 2 个群聊工位，导出内容可能被转发到群。
+                    <ul style="margin:4px 0 0 16px"><li>近 7 天该员工 0 次导出类操作先例。</li><li>建议批复时追加「单次导出 ≤ 500 行」限制。</li></ul>
+                  </div>
+                </div>
+              </div>
+              <div class="sect">
+                <h4>审批动态（写入审计）</h4>
+                <table class="mtable">
+                  <thead><tr><th>动作</th><th>操作人</th><th>时间</th><th>结果</th></tr></thead>
+                  <tbody>
+                    <tr><td>提交权限升级申请（grant.escalate.submit）</td><td>李文曦</td><td class="num">11-13 09:12</td><td class="ok">已受理</td></tr>
+                    <tr><td>系统风险评级（risk.evaluate）</td><td>系统</td><td class="num">11-13 09:12</td><td class="ok">高</td></tr>
+                    <tr><td>提醒审批人（approval.remind）</td><td>系统</td><td class="num">11-13 10:00</td><td class="ok">已发送</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="decide">
+                <button class="btn btn-primary"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17.5 19 7"/></svg>批准（含附加限制）</button>
+                <button class="btn btn-danger"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>驳回</button>
+                <button class="btn btn-plain">要求修改</button>
+                <span class="hint">批准后职权即时生效 · 抄送发起人</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const btns=document.querySelectorAll('.sw-btn');
+btns.forEach(b=>b.addEventListener('click',()=>{
+  btns.forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById(b.dataset.screen).classList.add('on');
+  window.scrollTo(0,0);
+}));
+</script>
+</body>
+</html>

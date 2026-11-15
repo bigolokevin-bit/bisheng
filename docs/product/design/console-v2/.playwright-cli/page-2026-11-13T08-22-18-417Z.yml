@@ -1,0 +1,236 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - generic [ref=f1e3]: 方向 A · 沉稳工作台
+    - button "① 员工列表" [ref=f1e4] [cursor=pointer]
+    - button "② 员工详情" [ref=f1e5] [cursor=pointer]
+    - button "③ 审批详情" [ref=f1e6] [cursor=pointer]
+  - generic [ref=f1e8]:
+    - complementary [ref=f1e9]:
+      - generic [ref=f1e10]:
+        - generic [ref=f1e11]: OS
+        - generic [ref=f1e12]:
+          - generic [ref=f1e13]: AgentOS 控制台
+          - text: 数字员工管理
+      - generic [ref=f1e14]:
+        - generic [ref=f1e15]: 工作台
+        - generic [ref=f1e16]: 总览
+      - generic [ref=f1e19]:
+        - generic [ref=f1e20]: 数字员工
+        - generic [ref=f1e21]: 员工列表
+        - generic [ref=f1e27]: 岗位版本
+        - generic [ref=f1e30]:
+          - text: 审批中心
+          - generic [ref=f1e34]: "3"
+      - generic [ref=f1e35]:
+        - generic [ref=f1e36]: 运行与观测
+        - generic [ref=f1e37]: 运行记录
+        - generic [ref=f1e40]: 审计日志
+      - generic [ref=f1e44]:
+        - generic [ref=f1e45]: 资源与预算
+        - generic [ref=f1e46]: 知识范围
+        - generic [ref=f1e50]: 预算池
+      - generic [ref=f1e54]:
+        - generic [ref=f1e55]: 系统
+        - generic [ref=f1e56]: 成员与权限
+        - generic [ref=f1e60]: 设置
+      - generic [ref=f1e64]:
+        - generic [ref=f1e65]: 赵
+        - generic [ref=f1e66]:
+          - text: 赵倩
+          - generic [ref=f1e67]: 管理员
+    - main [ref=f1e68]:
+      - generic [ref=f1e69]:
+        - generic [ref=f1e70]:
+          - heading "数字员工" [level=1] [ref=f1e71]
+          - paragraph [ref=f1e72]: 管理在岗数字员工的岗位版本、职权范围与运行预算。修改职权或发布新岗位版本需经审批。
+        - generic [ref=f1e73]:
+          - textbox "搜索姓名、岗位或负责人" [ref=f1e78]
+          - button "导出" [ref=f1e79] [cursor=pointer]
+          - button "新建员工" [ref=f1e82] [cursor=pointer]
+      - generic [ref=f1e85]:
+        - generic [ref=f1e86]:
+          - button "全部7" [ref=f1e87] [cursor=pointer]
+          - button "在岗2" [ref=f1e88] [cursor=pointer]
+          - button "上岗中1" [ref=f1e89] [cursor=pointer]
+          - button "已停用1" [ref=f1e90] [cursor=pointer]
+          - button "草稿1" [ref=f1e91] [cursor=pointer]
+          - button "离岗中1" [ref=f1e92] [cursor=pointer]
+          - button "已归档1" [ref=f1e93] [cursor=pointer]
+        - generic [ref=f1e94]:
+          - text: 负责人：
+          - generic [ref=f1e97]: 全部
+        - generic [ref=f1e100]:
+          - text: 排序：
+          - generic [ref=f1e101]: 最近活跃
+      - generic [ref=f1e104]:
+        - table [ref=f1e105]:
+          - rowgroup [ref=f1e106]:
+            - row [ref=f1e107]:
+              - columnheader "员工 / 岗位" [ref=f1e108]
+              - columnheader "状态" [ref=f1e109]
+              - columnheader "岗位版本" [ref=f1e110]
+              - columnheader "负责人" [ref=f1e111]
+              - columnheader "预算（月 / 日）" [ref=f1e112]
+              - columnheader "工位" [ref=f1e113]
+              - columnheader "待办审批" [ref=f1e114]
+              - columnheader "操作" [ref=f1e115]
+          - rowgroup [ref=f1e116]:
+            - row [ref=f1e117]:
+              - cell "蓝 小蓝 售后客服专员" [ref=f1e118]:
+                - generic [ref=f1e119]:
+                  - generic [ref=f1e120]: 蓝
+                  - generic [ref=f1e121]:
+                    - generic [ref=f1e122]: 小蓝
+                    - text: 售后客服专员
+              - cell "在岗" [ref=f1e123]
+              - cell "v2 生效 11-08 09:30" [ref=f1e125]:
+                - text: v2
+                - generic [ref=f1e126]: 生效 11-08 09:30
+              - cell "李文曦" [ref=f1e127]
+              - cell "$180 USD 日 200 万 tokens" [ref=f1e128]:
+                - text: $180 USD
+                - generic [ref=f1e129]: 日 200 万 tokens
+              - cell "群 2 · 私聊 1 · 应用 1" [ref=f1e130]
+              - cell "2" [ref=f1e132]
+              - cell [ref=f1e134]:
+                - generic [ref=f1e135]:
+                  - button "查看" [ref=f1e136] [cursor=pointer]
+                  - button "暂停" [ref=f1e137] [cursor=pointer]
+                  - button [ref=f1e138] [cursor=pointer]
+            - row [ref=f1e143]:
+              - cell "巡 阿巡 数据巡检分析师" [ref=f1e144]:
+                - generic [ref=f1e145]:
+                  - generic [ref=f1e146]: 巡
+                  - generic [ref=f1e147]:
+                    - generic [ref=f1e148]: 阿巡
+                    - text: 数据巡检分析师
+              - cell "在岗" [ref=f1e149]
+              - cell "v1 生效 10-21 14:05" [ref=f1e151]:
+                - text: v1
+                - generic [ref=f1e152]: 生效 10-21 14:05
+              - cell "周可" [ref=f1e153]
+              - cell "$120 USD 日 150 万 tokens" [ref=f1e154]:
+                - text: $120 USD
+                - generic [ref=f1e155]: 日 150 万 tokens
+              - cell "群 1 · 应用 2" [ref=f1e156]
+              - cell "1" [ref=f1e158]
+              - cell [ref=f1e160]:
+                - generic [ref=f1e161]:
+                  - button "查看" [ref=f1e162] [cursor=pointer]
+                  - button "暂停" [ref=f1e163] [cursor=pointer]
+                  - button [ref=f1e164] [cursor=pointer]
+            - row [ref=f1e169]:
+              - cell "译 小译 多语翻译编辑" [ref=f1e170]:
+                - generic [ref=f1e171]:
+                  - generic [ref=f1e172]: 译
+                  - generic [ref=f1e173]:
+                    - generic [ref=f1e174]: 小译
+                    - text: 多语翻译编辑
+              - cell "上岗中" [ref=f1e175]
+              - cell "v1 生效 11-10 10:00" [ref=f1e177]:
+                - text: v1
+                - generic [ref=f1e178]: 生效 11-10 10:00
+              - cell "陈叙" [ref=f1e179]
+              - cell "$90 USD 日 80 万 tokens" [ref=f1e180]:
+                - text: $90 USD
+                - generic [ref=f1e181]: 日 80 万 tokens
+              - cell "私聊 1 · 应用 1" [ref=f1e182]
+              - cell "3" [ref=f1e184]
+              - cell [ref=f1e186]:
+                - generic [ref=f1e187]:
+                  - button "查看" [ref=f1e188] [cursor=pointer]
+                  - button "继续上岗" [ref=f1e189] [cursor=pointer]
+                  - button [ref=f1e190] [cursor=pointer]
+            - row [ref=f1e195]:
+              - cell "档 小档 合同归档文员" [ref=f1e196]:
+                - generic [ref=f1e197]:
+                  - generic [ref=f1e198]: 档
+                  - generic [ref=f1e199]:
+                    - generic [ref=f1e200]: 小档
+                    - text: 合同归档文员
+              - cell "已停用" [ref=f1e201]
+              - cell "v2 生效 09-28 16:40" [ref=f1e203]:
+                - text: v2
+                - generic [ref=f1e204]: 生效 09-28 16:40
+              - cell "李文曦" [ref=f1e205]
+              - cell "$60 USD 日 50 万 tokens" [ref=f1e206]:
+                - text: $60 USD
+                - generic [ref=f1e207]: 日 50 万 tokens
+              - cell "群 1 · 应用 1" [ref=f1e208]
+              - cell "—" [ref=f1e210]
+              - cell [ref=f1e212]:
+                - generic [ref=f1e213]:
+                  - button "查看" [ref=f1e214] [cursor=pointer]
+                  - button "恢复" [ref=f1e215] [cursor=pointer]
+                  - button [ref=f1e216] [cursor=pointer]
+            - row [ref=f1e221]:
+              - cell "盘 小盘 库存核对助手" [ref=f1e222]:
+                - generic [ref=f1e223]:
+                  - generic [ref=f1e224]: 盘
+                  - generic [ref=f1e225]:
+                    - generic [ref=f1e226]: 小盘
+                    - text: 库存核对助手
+              - cell "草稿" [ref=f1e227]
+              - cell "v1 未发布" [ref=f1e229]:
+                - text: v1
+                - generic [ref=f1e230]: 未发布
+              - cell "王超" [ref=f1e231]
+              - cell "$40 USD 日 30 万 tokens" [ref=f1e232]:
+                - text: $40 USD
+                - generic [ref=f1e233]: 日 30 万 tokens
+              - cell "未绑定" [ref=f1e234]
+              - cell "—" [ref=f1e236]
+              - cell [ref=f1e238]:
+                - generic [ref=f1e239]:
+                  - button "查看" [ref=f1e240] [cursor=pointer]
+                  - button "继续配置" [ref=f1e241] [cursor=pointer]
+                  - button [ref=f1e242] [cursor=pointer]
+            - row [ref=f1e247]:
+              - cell "招 小招 招聘筛选助手" [ref=f1e248]:
+                - generic [ref=f1e249]:
+                  - generic [ref=f1e250]: 招
+                  - generic [ref=f1e251]:
+                    - generic [ref=f1e252]: 小招
+                    - text: 招聘筛选助手
+              - cell "离岗中" [ref=f1e253]
+              - cell "v3 生效 11-11 18:00" [ref=f1e255]:
+                - text: v3
+                - generic [ref=f1e256]: 生效 11-11 18:00
+              - cell "陈叙" [ref=f1e257]
+              - cell "$50 USD 日 40 万 tokens" [ref=f1e258]:
+                - text: $50 USD
+                - generic [ref=f1e259]: 日 40 万 tokens
+              - cell "群 1 · 私聊 1" [ref=f1e260]
+              - cell "1" [ref=f1e262]
+              - cell [ref=f1e264]:
+                - generic [ref=f1e265]:
+                  - button "查看" [ref=f1e266] [cursor=pointer]
+                  - button "归档" [ref=f1e267] [cursor=pointer]
+                  - button [ref=f1e268] [cursor=pointer]
+            - row [ref=f1e273]:
+              - cell "库 小库 供应商对账员" [ref=f1e274]:
+                - generic [ref=f1e275]:
+                  - generic [ref=f1e276]: 库
+                  - generic [ref=f1e277]:
+                    - generic [ref=f1e278]: 小库
+                    - text: 供应商对账员
+              - cell "已归档" [ref=f1e279]
+              - cell "v2 生效 08-30 09:00" [ref=f1e281]:
+                - text: v2
+                - generic [ref=f1e282]: 生效 08-30 09:00
+              - cell "王超" [ref=f1e283]
+              - cell "$0 USD 预算已回收" [ref=f1e284]:
+                - text: $0 USD
+                - generic [ref=f1e285]: 预算已回收
+              - cell "已解绑" [ref=f1e286]
+              - cell "—" [ref=f1e288]
+              - cell [ref=f1e290]:
+                - generic [ref=f1e291]:
+                  - button "查看" [ref=f1e292] [cursor=pointer]
+                  - button [ref=f1e293] [cursor=pointer]
+        - generic [ref=f1e298]:
+          - generic [ref=f1e299]: 共 7 名员工 · 在岗 2 名
+          - generic [ref=f1e300]:
+            - generic [ref=f1e301]: ‹
+            - generic [ref=f1e302]: "1"
+            - generic [ref=f1e303]: ›

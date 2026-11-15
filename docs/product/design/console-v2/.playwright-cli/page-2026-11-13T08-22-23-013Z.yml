@@ -1,0 +1,267 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e2]:
+    - generic [ref=f3e3]: 方向 C · 现代 Agent 中台
+    - button "① 员工列表" [ref=f3e4] [cursor=pointer]
+    - button "② 员工详情" [ref=f3e5] [cursor=pointer]
+    - button "③ 审批详情" [ref=f3e6] [cursor=pointer]
+  - generic [ref=f3e8]:
+    - complementary [ref=f3e9]:
+      - generic [ref=f3e10]:
+        - generic [ref=f3e11]: OS
+        - generic [ref=f3e12]:
+          - generic [ref=f3e13]: AgentOS
+          - text: 数字员工中台
+      - navigation [ref=f3e14]:
+        - generic [ref=f3e15]: 总览
+        - generic [ref=f3e18]: 管理
+        - generic [ref=f3e19]: 数字员工
+        - generic [ref=f3e25]:
+          - text: 审批
+          - generic [ref=f3e29]: "5"
+        - generic [ref=f3e30]: 岗位版本
+        - generic [ref=f3e33]: 观测
+        - generic [ref=f3e34]: 运行记录
+        - generic [ref=f3e38]: 审计日志
+        - generic [ref=f3e42]: 配置
+        - generic [ref=f3e43]: 知识与工位
+        - generic [ref=f3e47]: 预算
+        - generic [ref=f3e51]: 设置
+      - generic [ref=f3e55]:
+        - generic [ref=f3e56]: 赵
+        - generic [ref=f3e57]:
+          - generic [ref=f3e58]: 赵倩
+          - text: 管理员
+    - main [ref=f3e59]:
+      - generic [ref=f3e60]:
+        - generic [ref=f3e61]:
+          - heading "数字员工" [level=1] [ref=f3e62]
+          - paragraph [ref=f3e63]: 你的团队正在使用 7 名数字员工。这里管理他们的岗位版本、职权范围与运行预算；所有变更都需要经过审批。
+        - generic [ref=f3e64]:
+          - textbox "搜索员工或岗位…" [ref=f3e69]
+          - button "筛选" [ref=f3e70] [cursor=pointer]
+          - button "新建员工" [ref=f3e73] [cursor=pointer]
+      - generic [ref=f3e76]:
+        - button "全部7" [ref=f3e77] [cursor=pointer]
+        - button "在岗2" [ref=f3e78] [cursor=pointer]
+        - button "上岗中1" [ref=f3e79] [cursor=pointer]
+        - button "已停用1" [ref=f3e80] [cursor=pointer]
+        - button "草稿1" [ref=f3e81] [cursor=pointer]
+        - button "离岗中1" [ref=f3e82] [cursor=pointer]
+        - button "已归档1" [ref=f3e83] [cursor=pointer]
+        - generic [ref=f3e84]: 负责人：全部
+        - generic [ref=f3e87]: 排序：最近活跃
+      - generic [ref=f3e90]:
+        - generic [ref=f3e91]:
+          - generic [ref=f3e92]:
+            - generic [ref=f3e93]: 蓝
+            - generic [ref=f3e94]:
+              - text: 小蓝
+              - generic [ref=f3e95]: 售后客服专员
+            - generic [ref=f3e96]: 在岗
+          - generic [ref=f3e97]:
+            - generic [ref=f3e98]:
+              - generic [ref=f3e99]: 岗位版本
+              - generic [ref=f3e100]:
+                - text: v2
+                - generic [ref=f3e101]: 生效 11-08 09:30
+            - generic [ref=f3e102]:
+              - generic [ref=f3e103]: 负责人
+              - generic [ref=f3e104]: 李文曦
+            - generic [ref=f3e105]:
+              - generic [ref=f3e106]: 知识范围
+              - generic [ref=f3e107]: 12 项
+            - generic [ref=f3e108]:
+              - generic [ref=f3e109]: 工位
+              - generic [ref=f3e110]:
+                - text: 4 处
+                - generic [ref=f3e111]: 群聊 2 · 私聊 1 · 应用 1
+          - generic [ref=f3e112]:
+            - generic [ref=f3e113]: $180USD / 月
+            - generic [ref=f3e114]: 日 200 万 tokens · 单次 ≤ $2.50 USD
+          - generic [ref=f3e115]:
+            - generic [ref=f3e116]: 待办审批 2
+            - button "管理" [ref=f3e117] [cursor=pointer]
+            - button "查看详情" [ref=f3e118] [cursor=pointer]
+        - generic [ref=f3e119]:
+          - generic [ref=f3e120]:
+            - generic [ref=f3e121]: 巡
+            - generic [ref=f3e122]:
+              - text: 阿巡
+              - generic [ref=f3e123]: 数据巡检分析师
+            - generic [ref=f3e124]: 在岗
+          - generic [ref=f3e125]:
+            - generic [ref=f3e126]:
+              - generic [ref=f3e127]: 岗位版本
+              - generic [ref=f3e128]:
+                - text: v1
+                - generic [ref=f3e129]: 生效 10-21 14:05
+            - generic [ref=f3e130]:
+              - generic [ref=f3e131]: 负责人
+              - generic [ref=f3e132]: 周可
+            - generic [ref=f3e133]:
+              - generic [ref=f3e134]: 知识范围
+              - generic [ref=f3e135]: 8 项
+            - generic [ref=f3e136]:
+              - generic [ref=f3e137]: 工位
+              - generic [ref=f3e138]:
+                - text: 3 处
+                - generic [ref=f3e139]: 群聊 1 · 应用 2
+          - generic [ref=f3e140]:
+            - generic [ref=f3e141]: $120USD / 月
+            - generic [ref=f3e142]: 日 150 万 tokens · 单次 ≤ $1.80 USD
+          - generic [ref=f3e143]:
+            - generic [ref=f3e144]: 待办审批 1
+            - button "管理" [ref=f3e145] [cursor=pointer]
+            - button "查看详情" [ref=f3e146] [cursor=pointer]
+        - generic [ref=f3e147]:
+          - generic [ref=f3e148]:
+            - generic [ref=f3e149]: 译
+            - generic [ref=f3e150]:
+              - text: 小译
+              - generic [ref=f3e151]: 多语翻译编辑
+            - generic [ref=f3e152]: 上岗中
+          - generic [ref=f3e153]:
+            - generic [ref=f3e154]:
+              - generic [ref=f3e155]: 岗位版本
+              - generic [ref=f3e156]:
+                - text: v1
+                - generic [ref=f3e157]: 生效 11-10 10:00
+            - generic [ref=f3e158]:
+              - generic [ref=f3e159]: 负责人
+              - generic [ref=f3e160]: 陈叙
+            - generic [ref=f3e161]:
+              - generic [ref=f3e162]: 知识范围
+              - generic [ref=f3e163]: 5 项
+            - generic [ref=f3e164]:
+              - generic [ref=f3e165]: 工位
+              - generic [ref=f3e166]:
+                - text: 2 处
+                - generic [ref=f3e167]: 私聊 1 · 应用 1
+          - generic [ref=f3e168]:
+            - generic [ref=f3e169]: $90USD / 月
+            - generic [ref=f3e170]: 日 80 万 tokens · 单次 ≤ $1.20 USD
+          - generic [ref=f3e171]:
+            - generic [ref=f3e172]: 待办审批 3
+            - button "管理" [ref=f3e173] [cursor=pointer]
+            - button "查看详情" [ref=f3e174] [cursor=pointer]
+        - generic [ref=f3e175]:
+          - generic [ref=f3e176]:
+            - generic [ref=f3e177]: 档
+            - generic [ref=f3e178]:
+              - text: 小档
+              - generic [ref=f3e179]: 合同归档文员
+            - generic [ref=f3e180]: 已停用
+          - generic [ref=f3e181]:
+            - generic [ref=f3e182]:
+              - generic [ref=f3e183]: 岗位版本
+              - generic [ref=f3e184]:
+                - text: v2
+                - generic [ref=f3e185]: 生效 09-28 16:40
+            - generic [ref=f3e186]:
+              - generic [ref=f3e187]: 负责人
+              - generic [ref=f3e188]: 李文曦
+            - generic [ref=f3e189]:
+              - generic [ref=f3e190]: 知识范围
+              - generic [ref=f3e191]: 15 项
+            - generic [ref=f3e192]:
+              - generic [ref=f3e193]: 工位
+              - generic [ref=f3e194]:
+                - text: 2 处
+                - generic [ref=f3e195]: 群聊 1 · 应用 1
+          - generic [ref=f3e196]:
+            - generic [ref=f3e197]: $60USD / 月
+            - generic [ref=f3e198]: 日 50 万 tokens · 单次 ≤ $0.80 USD
+          - generic [ref=f3e199]:
+            - generic [ref=f3e200]: 无待办审批
+            - button "管理" [ref=f3e201] [cursor=pointer]
+            - button "查看详情" [ref=f3e202] [cursor=pointer]
+        - generic [ref=f3e203]:
+          - generic [ref=f3e204]:
+            - generic [ref=f3e205]: 盘
+            - generic [ref=f3e206]:
+              - text: 小盘
+              - generic [ref=f3e207]: 库存核对助手
+            - generic [ref=f3e208]: 草稿
+          - generic [ref=f3e209]:
+            - generic [ref=f3e210]:
+              - generic [ref=f3e211]: 岗位版本
+              - generic [ref=f3e212]:
+                - text: v1
+                - generic [ref=f3e213]: 尚未发布
+            - generic [ref=f3e214]:
+              - generic [ref=f3e215]: 负责人
+              - generic [ref=f3e216]: 王超
+            - generic [ref=f3e217]:
+              - generic [ref=f3e218]: 知识范围
+              - generic [ref=f3e219]: 3 项
+            - generic [ref=f3e220]:
+              - generic [ref=f3e221]: 工位
+              - generic [ref=f3e222]: 未绑定
+          - generic [ref=f3e223]:
+            - generic [ref=f3e224]: $40USD / 月
+            - generic [ref=f3e225]: 日 30 万 tokens · 单次 ≤ $0.50 USD
+          - generic [ref=f3e226]:
+            - generic [ref=f3e227]: 发布前需完成配置
+            - button "继续配置" [ref=f3e228] [cursor=pointer]
+        - generic [ref=f3e229]:
+          - generic [ref=f3e230]:
+            - generic [ref=f3e231]: 招
+            - generic [ref=f3e232]:
+              - text: 小招
+              - generic [ref=f3e233]: 招聘筛选助手
+            - generic [ref=f3e234]: 离岗中
+          - generic [ref=f3e235]:
+            - generic [ref=f3e236]:
+              - generic [ref=f3e237]: 岗位版本
+              - generic [ref=f3e238]:
+                - text: v3
+                - generic [ref=f3e239]: 生效 11-11 18:00
+            - generic [ref=f3e240]:
+              - generic [ref=f3e241]: 负责人
+              - generic [ref=f3e242]: 陈叙
+            - generic [ref=f3e243]:
+              - generic [ref=f3e244]: 知识范围
+              - generic [ref=f3e245]: 6 项
+            - generic [ref=f3e246]:
+              - generic [ref=f3e247]: 工位
+              - generic [ref=f3e248]:
+                - text: 2 处
+                - generic [ref=f3e249]: 群聊 1 · 私聊 1
+          - generic [ref=f3e250]:
+            - generic [ref=f3e251]: $50USD / 月
+            - generic [ref=f3e252]: 日 40 万 tokens · 单次 ≤ $0.90 USD
+          - generic [ref=f3e253]:
+            - generic [ref=f3e254]: 待办审批 1
+            - button "管理" [ref=f3e255] [cursor=pointer]
+            - button "查看详情" [ref=f3e256] [cursor=pointer]
+        - generic [ref=f3e257]:
+          - generic [ref=f3e258]:
+            - generic [ref=f3e259]: 库
+            - generic [ref=f3e260]:
+              - text: 小库
+              - generic [ref=f3e261]: 供应商对账员
+            - generic [ref=f3e262]: 已归档
+          - generic [ref=f3e263]:
+            - generic [ref=f3e264]:
+              - generic [ref=f3e265]: 岗位版本
+              - generic [ref=f3e266]:
+                - text: v2
+                - generic [ref=f3e267]: 生效 08-30 09:00
+            - generic [ref=f3e268]:
+              - generic [ref=f3e269]: 负责人
+              - generic [ref=f3e270]: 王超
+            - generic [ref=f3e271]:
+              - generic [ref=f3e272]: 知识范围
+              - generic [ref=f3e273]:
+                - text: 9 项
+                - generic [ref=f3e274]: 已只读保留
+            - generic [ref=f3e275]:
+              - generic [ref=f3e276]: 工位
+              - generic [ref=f3e277]: 已解绑
+          - generic [ref=f3e278]:
+            - generic [ref=f3e279]: $0USD / 月
+            - generic [ref=f3e280]: 预算已回收
+          - generic [ref=f3e281]:
+            - generic [ref=f3e282]: —
+            - button "查看档案" [ref=f3e283] [cursor=pointer]
+        - button [ref=f3e284] [cursor=pointer]
