@@ -59,3 +59,33 @@ S3_SHARED_URL={"search":"?range=28d&weeks=6&focus=heat","pressed":"7d:false,28d:
 S4_RELOAD={"search":"?range=28d&weeks=6&focus=heat","pressed":"7d:false,28d:true,90d:false","weeks":"6","trendBars":28,"heatCells":168,"heatFoot":"颜色仅反映运行次数（时区 Asia/Shanghai）","heatInView":true,"scrollY":762,"runsKpi":"近 28 天运行 14 其中失败 0 次","sparkRuns":true,"anomalyText":"异常/告警 暂无需要处理的异常 已扫描：近 28 天运行失败、待审批逾期"}
 S5_RANGE90D={"search":"?range=90d","pressed":"7d:false,28d:false,90d:true","weeks":"4","trendBars":90,"heatCells":168,"heatFoot":"颜色仅反映运行次数（时区 Asia/Shanghai）","heatInView":true,"scrollY":0,"runsKpi":"近 90 天运行 14 其中失败 0 次","sparkRuns":true,"anomalyText":"异常/告警 暂无需要处理的异常 已扫描：近 90 天运行失败、待审批逾期"}
 DONE5
+
+===== l4wb-probe.out (fixB data-plane, 2026-11-16) =====
+URL0=http://127.0.0.1:5399/agent
+PROBE={"runStats":{"s":200,"topKeys":["from","to","bucket","buckets"],"bucketN":2,"buckets":[{"bucketStart":"2026-11-12T00:00:00.000Z","runs":1,"succeeded":1,"failed":0,"costUsd":0.009875,"upstreamRuns":1,"estimatedRuns":0,"unknownRuns":0},{"bucketStart":"2026-11-14T00:00:00.000Z","runs":13,"succeeded":12,"failed":0,"costUsd":0.121198,"upstreamRuns":12,"estimatedRuns":0,"unknownRuns":0}]},"runActivity":{"s":200,"topKeys":["from","to","tz","max","cells"],"from":"2026-10-18T21:20:21.457Z","to":"2026-11-15T21:20:21.457Z","tz":"Asia/Shanghai","max":4,"cellN":7,"cellSample":[{"dow":4,"hour":22,"count":1},{"dow":6,"hour":22,"count":1},{"dow":6,"hour":23,"count":1}]}}
+DONE-P
+
+
+===== l4wb-shots.out (fixB final shots, 2026-11-16) =====
+URL0=http://127.0.0.1:5399/agent
+ACTIVITY_ROWS=8
+DOM1440={"url":"/agent","blocks":{"header":1,"kpis":1,"queue":1,"trend":1,"heat":1,"cost":1,"anomaly":1,"activity":1},"blockTotal":8,"kpiCount":4,"kpiValues":{"onduty":"在岗员工 2 共 2 名在册","pending":"待审批 0","runs":"近 7 天运行 14 其中失败 0 次","cost":"本月成本 USD 0.13 口径：成本账本"},"sparkRuns":true,"sparkCost":true,"runsKpiNoTrendShown":false,"trendLegend":["agent-v2-ov-trend-legend-success","agent-v2-ov-trend-legend-failed","agent-v2-ov-trend-legend-p95"],"p95Line":false,"p95LegendGrayed":{"opacity":"0.45","text":"P95 时长 · 样本不足（<20）"},"trendTicksTotal":7,"trendTicksVisible":["11-10","11-13","11-16"],"trendBarTitleSample":"2026-11-10 · 成功 0 · 失败 0 · P95 样本不足（<20）","trendBars":7,"trendFoot":"成功 13 · 失败 0 · 按 UTC 日界分桶（北京 08:00 换日）","heatRowLabels":["周一","周二","周三","周四","周五","周六","周日"],"heatLegend":true,"heatLegendText":"少 多 每格＝1 小时，颜色只表数量","heatTiers":4,"heatCells":168,"heatCellTitleSamples":["周一 00:00 · 无运行","周一 01:00 · 无运行","周一 02:00 · 无运行"],"heatFoot":"颜色仅反映运行次数（时区 Asia/Shanghai） · 10-19 05:36 → 11-16 05:36","queueHead":"待处理队列 审批 查看全部 暂无数据 任务 查看全部 暂无数据 运行 查看全部 暂无数据","costBudgetText":"本月成本与预算 USD 0.13 口径：成本账本 预算配额 AgentOS 产品助理 f2b540 1.2% USD 0.12 / USD 10.00 AgentOS 产品助理 a22649 0.1% USD 0.01 / USD 10.00","quotaIds":["f2b540","a22649"],"anomalyText":"异常/告警 暂无需要处理的异常 已扫描：近 7 天运行失败、待审批逾期","activityRows":8,"retryButtons":0,"placeholderCount":0,"theme":"dark","lsTheme":"dark","railMaskNonNone":false,"railMaskSample":"none","leaks":{"rawKey":false,"undefinedWord":false,"mustache":false,"singleBrace":false,"pendingJargon":false,"fakeZero":false},"g7":{"sw":1440,"iw":1440,"cw":1425,"overflow":["DIV.","DIV.flex h-full flex-col","DIV.agent-app","DIV.a2s-frame","DIV.a2s-main","HEADER.a2s-topbar","DIV.a2s-page","DIV."]}}
+SHOT1=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-1440x900-dark.png
+DOM375={"url":"/agent","blocks":{"header":1,"kpis":1,"queue":1,"trend":1,"heat":1,"cost":1,"anomaly":1,"activity":1},"blockTotal":8,"kpiCount":4,"kpiValues":{"onduty":"在岗员工 2 共 2 名在册","pending":"待审批 0","runs":"近 7 天运行 14 其中失败 0 次","cost":"本月成本 USD 0.13 口径：成本账本"},"sparkRuns":true,"sparkCost":true,"runsKpiNoTrendShown":false,"trendLegend":["agent-v2-ov-trend-legend-success","agent-v2-ov-trend-legend-failed","agent-v2-ov-trend-legend-p95"],"p95Line":false,"p95LegendGrayed":{"opacity":"0.45","text":"P95 时长 · 样本不足（<20）"},"trendTicksTotal":7,"trendTicksVisible":["11-10","11-13","11-16"],"trendBarTitleSample":"2026-11-10 · 成功 0 · 失败 0 · P95 样本不足（<20）","trendBars":7,"trendFoot":"成功 13 · 失败 0 · 按 UTC 日界分桶（北京 08:00 换日）","heatRowLabels":["周一","周二","周三","周四","周五","周六","周日"],"heatLegend":true,"heatLegendText":"少 多 每格＝1 小时，颜色只表数量","heatTiers":4,"heatCells":168,"heatCellTitleSamples":["周一 00:00 · 无运行","周一 01:00 · 无运行","周一 02:00 · 无运行"],"heatFoot":"颜色仅反映运行次数（时区 Asia/Shanghai） · 10-19 05:36 → 11-16 05:36","queueHead":"待处理队列 审批 查看全部 暂无数据 任务 查看全部 暂无数据 运行 查看全部 暂无数据","costBudgetText":"本月成本与预算 USD 0.13 口径：成本账本 预算配额 AgentOS 产品助理 f2b540 1.2% USD 0.12 / USD 10.00 AgentOS 产品助理 a22649 0.1% USD 0.01 / USD 10.00","quotaIds":["f2b540","a22649"],"anomalyText":"异常/告警 暂无需要处理的异常 已扫描：近 7 天运行失败、待审批逾期","activityRows":8,"retryButtons":0,"placeholderCount":0,"theme":"dark","lsTheme":"dark","railMaskNonNone":true,"railMaskSample":"linear-gradient(to right, rgba(0, 0, 0, 0) 0px, rgb(0, 0, 0) 12px, rgb(0, 0, 0) calc(100% ","leaks":{"rawKey":false,"undefinedWord":false,"mustache":false,"singleBrace":false,"pendingJargon":false,"fakeZero":false},"g7":{"sw":375,"iw":375,"cw":375,"overflow":["DIV.a2s-groups","DIV.a2s-group","A.a2s-nav","SPAN.a2s-glyph","SPAN.a2s-nav-label","DIV.a2s-group","A.a2s-nav","SPAN.a2s-glyph"]}}
+SHOT2=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-375x812-dark.png
+SHOT3=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-1280x800-dark.png
+SHOT4=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-768x1024-dark.png
+LIGHT_DOM={"url":"/agent","theme":"light","blocks":5}
+SHOT5=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-1440x900-light.png
+DONE5
+
+
+===== l4wb-err2.out (fixB G10 injection proof, 2026-11-16) =====
+INJ_ID=1
+ERRSTATE={"trendError":"运行趋势暂时取不到（HTTP 500）","retryTrend":true,"kpiRunsError":"intercepted.for.evidence","retryKpiRuns":true,"retryAnomaly":true,"retryCount":3,"trendBarsGone":true,"heatOk":true,"costOk":true,"queueOk":true}
+SHOT_ERR_VIEW=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-errstate-trend-1440x900-dark.png
+SHOT_ERR_FULL=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-errstate-1440x900-dark.png
+FETCH_RESTORE=fetch-restored
+RETRY_CLICK=clicked
+RECOVERED={"trendBarsBack":true,"barCount":7,"firstBarTitle":"2026-11-10 · 成功 0 · 失败 0 · P95 样本不足（<20）","trendErrorGone":true,"retryCountNow":0,"runsKpi":"近 7 天运行 14 其中失败 0 次","sparkRuns":true}
+DONE-ERR2
