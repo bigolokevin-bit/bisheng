@@ -13,13 +13,16 @@
 
 - [ ] **C0 需求覆盖**：本卡逐条对应 PRD §4.2；每个按钮/空态/错误态有需求；PRD v2 评审通过前该项保持未过
 - [ ] **C1 视觉还原**：1440×900 / 1280 / 768 / 375 四档、深/浅各一套，与 mockup 同屏并排；发丝线/圆角/`tabular-nums`/KPI 字阶/单一强调色/状态软药丸/按钮三级；无 `undefined`/`[object Object]`/内部术语/假 0/“待接入”
-  - 证据（2026-11-15 L4）：`EVIDENCE.md` 截图像素表（1440×900/375×812，sips 实测）+ DOM 读回（无 undefined/0.00/raw key/“待接入”成品）。仍差：1280/768 两档与浅色套图、与 mockup 并排图。
+  - 证据（2026-11-15 L4 更新，L0 卡 2211）：浅色四档已补齐（w2-employees-{1280x800,768x1024,375x812,1440x900}-light.png，sips 实测像素、data-theme=light+localStorage 验证，rows=2 真实数据），并排图 w2-compare-1440-{light,dark}.png（2892×900，左 mockup 右实现）；逐元素差异清单见 EVIDENCE.md『EMP-01 fixed evidence』节。深色仍为 1440/375/1280/768 既有套图。
 - [ ] **C2 功能闭环**：搜索、状态/部门/负责人/工位/知识筛选、视图切换、URL 保存、排序、分页、行操作（详情/复制 ID/Bisheng 打开/暂停按权限）、创建入口均可达且有结果；返回保留筛选
   - 证据（2026-11-15 L4）：`EVIDENCE.md` DOM/API 读回——搜索+状态筛选真实（E11 keyword/lifecycleState）、视图切换、URL 保存（?keyword=&lifecycleState=&cursor=&view=）、keyset 分页、复制 ID/详情入口在位。仍差：部门/负责人/工位/知识筛选（无服务端参数，诚实禁用）、排序、Bisheng 打开/暂停、行级详情路由（W3）、创建入口后端（无 BFF 写代理，禁用+原因）。
+  - 范围归属（L0 卡 2211）：归本页=keyword+lifecycleState 筛选、URL 保存、keyset 分页、复制 ID、enrichment 四列（岗位版本实测 v3·11-15 11:27 / v2·11-13 14:30）；归 W3=详情路由与行点击进详情、创建入口后端（E1 无 BFF 写代理，按钮 disabled+原因注记）；数据口缺=部门/负责人/工位类型/知识范围筛选无 E11 服务端参数（诚实禁用）、最紧急待办无批量口（enrichment 无 pendingApprovalCount 时显示 —）、排序未做、totals/asOf 未接（B4）。
 - [ ] **C3 数据真实**：真实登录/租户/数据；每个数字可追溯到接口；缺失显示 `—` 或明确空态；served entry == 验收分支 build
   - 证据（2026-11-15 L4）：`EVIDENCE.md` API 读回——真实 BFF 五请求全 200（employees expand=version,workstations,knowledge,pending / employee-stats / run-stats / budget-usage / run-activity），每数字有来源，缺失列显 —（8101 domain 旧进程不返 enrichment，根因与修复归属已记）。仍差：served entry == 验收分支 build 的对账归 L7（8182 尚未部署本分支）。
 - [ ] **C4 权限负例**：未登录 401；非管理员 403 `console.forbidden`；跨租户 404 同 payload；写开关关闭时创建/暂停不可见或 405；内部 token 不出现在浏览器/Network/HTML
+  - 证据（2026-11-15 L4 实测，L0 卡 2211）：viewer01 API 真实登录（口令经本地凭据文件注入，零回显）→ CDP clearBrowserCookies+setCookie 注入浏览器 → 访问 /agent/employees 跳转 /403 页（『您无权访问该页面』，截图 w2-employees-viewer-403.png）；同源 API GET /agent-api/api/employees → 403 {"code":"console.forbidden","message":"console entry not authorized for this account"}（x-console-reason 头未出现，照实）。未登录 401/跨租户 404 同 payload/写开关负例引用主仓 apps/console/tests/test_bff_authz.py 单测。
 - [ ] **C5 全链 E2E**：登录→列表→详情→返回→筛选保留；无 console error、无 404 资源、首屏不白屏
+  - 证据（2026-11-15 L4，L0 卡 2211）：BLOCKED——详情路由不存在（routes/index.tsx 无 employees/:id，操作列详情按钮 disabled，locale emp.detailPending『详情页施工中』）；登录→列表→详情→返回链待 W3，不临时造页。登录→列表段已由 C1/C3 截图与真实数据读回覆盖。
 - [ ] **C6 回归与交付**：目标服务测试（无 DSN + PG）全绿；构建/type/lint exit 0；`git diff --check` 0；分支已 push；上一波页面未破坏
 
 ## 字段与数据来源
@@ -61,5 +64,5 @@ BFF 路由（M1 现有名）：`GET /api/employees?keyword=&lifecycleState=&limi
 - 功能：Playwright 脚本/命令 + 步骤截图
 - 数据：E14/E11/E15/E10/R5/R6/AP8/P9 响应摘要 + served entry sha256 + build commit
 - 权限：401/403/404/405 curl 或 Network 截图
-- 偏差/未覆盖：B3 `expand` 尚未在 BFF 透传；B4 totals 已合入但页面未接；在线 403 缺 viewer 账号（C4 只能单测+负例）。
+- 偏差/未覆盖（2026-11-15 L4 更新，L0 卡 2211）：B3 expand 已透传并实测闭环（BFF 重启 pid 67576 后 enrichment 真实返回，详见 EVIDENCE.md enrichment 两节）；B4 totals/asOf 已合入但页面未接（维持）；C4 在线 403 已用 viewer01 实测（不再缺账号，凭据零回显）；排序未做；1280/768 浅色与本节深色套图分轮采集，mockup 样例数字为示意值非数据承诺。
 - 结论：**in-progress**（C0-B 未闭不得 passed；生产页必须调真实 API）

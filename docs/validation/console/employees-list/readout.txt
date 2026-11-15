@@ -91,3 +91,21 @@ PROBE375={"s":200,"rows":[{"id":"emp_86A81CE8FF","enr":{"currentVersionNo":3,"ef
 DONE_W2L
 Screenshots overwritten in-place: w2-employees-1440x900.png / w2-employees-375x812.png / w2-employees-1440-table.png (sips: 1440x900, 375x812, 1440x900). Earlier -20261115-2115.png set kept as historical BLOCKED evidence.
 Re-shoot round-2 (l4w2m, post-BFF-restart reload screenshots): 2026-11-15T13:25:41Z; w2m probes show identical enrichment DOM (v3/v2 rows). Four viewport-exact pngs overwritten in place.
+
+===== l4w2n-shotB.out (light/dark tiers + mockup, key lines) =====
+THEME=light rows=2 attr=light
+THEME=dark rows=2 attr=dark
+MOCK_light_nav=notfound
+MOCK_dark_nav=notfound
+
+===== l4w2n-shotC.out (mockup list/detail screens, key lines) =====
+
+===== l4w2n-viewer1.out (C4 real viewer 403; zero secrets, lengths only) =====
+VIEWER_URL=http://127.0.0.1:8182/403
+VIEWER_BODY="403\n\n您无权访问该页面\n\n切换账号"
+VIEWER_API={"s":403,"reason":null,"body":"{\"code\":\"console.forbidden\",\"message\":\"console entry not authorized for this account\"}"}
+VIEWER_SHOT_DONE
+
+===== composition result =====
+w2-compare-1440-light.png 2892x900 313572B (mockup light list | implementation light)
+w2-compare-1440-dark.png 2892x900 391898B (mockup dark list | implementation dark)

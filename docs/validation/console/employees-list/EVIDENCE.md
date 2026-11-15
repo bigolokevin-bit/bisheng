@@ -99,3 +99,37 @@ Status: four viewport tiers + light theme now evidenced. W2 remains in-progress 
 - Screenshots overwritten: w2-employees-1440x900.png, w2-employees-375x812.png, w2-employees-1440-table.png. Previous 2115 BLOCKED screenshots kept alongside as history.
 - W2 remains in-progress (C0-B open; not judged PASS here).
 - Caveat: the 1440x900 above-fold screenshot is byte-identical to the previous one because the employees table sits below the fold and enrichment does not alter KPI/heatmap/filters; row-level enrichment is proven by the table screenshots (1440 + 375) and the DOM cell text (v3 11-15 11:27 / v2 11-13 14:30) captured in the same reload sessions.
+
+## EMP-01 fixed evidence (L0 card 2211, 2026-11-15 22:40+)
+
+Scope: light-theme tiers, mockup side-by-sides, real viewer01 403, detail scope split. No feature changes; no PASS claimed (C0-B open; all C0-C6 boxes stay unchecked in ACCEPTANCE.md).
+
+### Light-tier screenshots (verified via data-theme attribute + localStorage key agentConsole.v2.theme; both themes report rows=2 real E11 employees)
+- w2-employees-1280x800-light.png - 1280x800 (66676 B)
+- w2-employees-768x1024-light.png - 768x1024 (85698 B)
+- w2-employees-375x812-light.png - 375x812 (54374 B, CDP mobile:true)
+- w2-employees-1440x900-light.png - 1440x900 (93494 B, replaces the 21:08 capture)
+- w2-impl-1440x900-dark.png - 1440x900 (175340 B, dark reference for comparisons)
+
+### Mockup captures and side-by-side comparisons (mockup-v2 screens driven by [data-scr], served from this worktree copy)
+- w2-mockup-v2-light-list-1440.png (202249 B) / w2-mockup-v2-light-detail-1440.png (206359 B) / w2-mockup-v2-dark-list-1440.png (194926 B) / w2-mockup-v2-dark-detail-1440.png (201561 B)
+- w2-compare-1440-light.png - 2892x900 (mockup light list | implementation light, 313572 B)
+- w2-compare-1440-dark.png - 2892x900 (mockup dark list | implementation dark, 391898 B)
+
+### Per-screen differences (mockup list screen vs current implementation, read from this round's captures)
+- Mockup has / implementation lacks: row avatar color blocks; KPI trend mini-bars; mockup KPI naming (today runs / today cost / success rate) differs from the EMP-01 field-table set (on-duty / pending / month cost / anomaly) - implementation follows the field table; quota bar (USD 412.50 / 800); knowledge-count column with hover scopes; conversable pill; row kebab menu (copy ID / open in Bisheng / pause); pagination totals "of 200" (implementation has no totals - B4 open); heatmap tooltip with failed-run count and click-to-filter (no failed-count source today); global cross-entity search (implementation searches employees only).
+- Implementation has / mockup lacks: six-state lifecycle tabs with live counts; honest-disabled filter chips with reason note; enrichment-driven version/workstation/pending cells with '—' fallback; copy-ID per row.
+- Mockup numbers are sample values for review, not data commitments; the implementation shows only values returned by the services.
+
+### C4 real 403 (viewer01, non-admin)
+- viewer01 logged in through /api/v1/user/login (captcha read from backend container logs; credential and cookie values never echoed or stored - cookie len=264 recorded only); browser cookies replaced via CDP; /agent/employees opened.
+- Result: route-level redirect to http://127.0.0.1:8182/403, page text "403 / 您无权访问该页面 / 切换账号"; screenshot w2-employees-viewer-403.png (1440x900, 15787 B).
+- BFF API through Caddy: HTTP 403, body {"code":"console.forbidden","message":"console entry not authorized for this account"}; no x-console-reason header observed (recorded as-is).
+- Unauthenticated 401, cross-tenant 404 identical payload, and write-switch negatives remain covered by main-repo apps/console/tests/test_bff_authz.py unit tests (substituted evidence, stated in ACCEPTANCE C4).
+
+### C5 detail chain BLOCKED (per card: do not fabricate a page)
+- routes/index.tsx has no employees/:id; the list action column renders the detail button disabled with emp.detailPending hint. Login -> list -> detail chain belongs to W3. The list leg (opsadmin login -> /agent/employees real render, rows=2) is already evidenced under C1/C3.
+
+### Coverage note
+- Dark tiers: 1440/375 (enrichment re-shoot round) + 1280/768 (four-tier round). Light tiers: all four this round. Mockup side-by-sides: light + dark list screens this round.
+- W2 status remains in-progress; this section only closes the fixed-evidence gaps named in L0 card 2211.
