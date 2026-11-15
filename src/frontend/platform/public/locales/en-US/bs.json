@@ -4645,6 +4645,23 @@
         "authExpired": "Session expired",
         "noPermission": "No console admin permission",
         "emptyEmployees": "No digital employees yet"
+      },
+      "apr": {
+        "desc": "Approval to-do queue: review pending approvals; selection covers this page (read-only in this wave).",
+        "tabPending": "Pending",
+        "tabHistory": "Decided",
+        "historyDisabledNote": "The decided list is not available in this wave: the current data source only serves the pending queue; decided records arrive in a later wave.",
+        "batchNote": "Batch decisions are not enabled in this wave: the approval action entry point arrives with the detail wave; only selection works here.",
+        "selectAll": "Select this page",
+        "selectedCount": "{{count}} selected",
+        "forbidden": "No access to the approval queue",
+        "forbiddenHint": "This account lacks console approval permission. Contact an administrator to enable it.",
+        "colEmployee": "Employee",
+        "colDue": "Due countdown",
+        "blockQueue": "Approval queue",
+        "prevPage": "Previous page",
+        "nextPage": "Next page",
+        "pageInfo": "Page {{page}} · {{count}} rows on this page"
       }
     },
     "approvals": {

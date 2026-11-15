@@ -4590,6 +4590,23 @@
         "authExpired": "登录已失效",
         "noPermission": "没有管理控制台权限",
         "emptyEmployees": "还没有数字员工"
+      },
+      "apr": {
+        "desc": "审批待办队列：查看待处理的审批单，可按本页选择（本波只读）。",
+        "tabPending": "待办",
+        "tabHistory": "已决",
+        "historyDisabledNote": "已决列表本波未提供：当前数据源只支持待办队列查询，已决记录将在后续波次接入。",
+        "batchNote": "批量决策本波未开放：审批处理入口将在详情波次接入，当前仅支持选择。",
+        "selectAll": "全选本页",
+        "selectedCount": "已选 {{count}} 项",
+        "forbidden": "无权查看审批队列",
+        "forbiddenHint": "当前账号没有控制台审批权限，请联系管理员开通。",
+        "colEmployee": "员工",
+        "colDue": "到期倒计时",
+        "blockQueue": "审批队列",
+        "prevPage": "上一页",
+        "nextPage": "下一页",
+        "pageInfo": "第 {{page}} 页 · 本页 {{count}} 条"
       }
     },
     "approvals": {
