@@ -5,7 +5,7 @@
 // Missing data renders as an em-dash or an explicit honest note — no fake
 // zeroes, no fake curves, no internal keys leaking as labels.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { EmployeesHeatPanel } from './EmployeesHeatPanel';
 import {
@@ -839,9 +839,14 @@ export function EmployeesListPage() {
                         >
                           {t('agentConsole.v2.emp.copyId')}
                         </button>
-                        <button type="button" className="a2-btn" disabled title={t('agentConsole.v2.emp.detailPending')}>
+                        {/* EMP-03: detail route is live — link instead of disabled stub. */}
+                        <NavLink
+                          className="a2-btn"
+                          to={`/agent/employees/${r.employeeId}`}
+                          data-testid="agent-v2-employee-detail-link"
+                        >
                           {t('agentConsole.v2.detail')}
-                        </button>
+                        </NavLink>
                       </div>
                     </td>
                   </tr>

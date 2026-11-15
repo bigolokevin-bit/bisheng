@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
 import { ApprovalsListPage } from './ApprovalsListPage';
+import { EmployeeDetailPage } from './EmployeeDetailPage';
 import { EmployeesListPage } from './EmployeesListPage';
 import { HermesMetricsSection } from './HermesMetricsSection';
 import { OverviewPage as OverviewScreen } from './OverviewPage';
@@ -43,6 +44,11 @@ export function OverviewPage() {
 /* W2: the real employee list screen (parity spec §4 / EMP-01). */
 export function EmployeesPage() {
   return <EmployeesListPage />;
+}
+
+/* EMP-03: employee detail screen at /agent/employees/:id. */
+export function EmployeeDetailScreen() {
+  return <EmployeeDetailPage />;
 }
 
 /* APR-01: real approvals pending list (owned by the APR-01 page lane). */
