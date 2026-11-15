@@ -89,3 +89,15 @@ FETCH_RESTORE=fetch-restored
 RETRY_CLICK=clicked
 RECOVERED={"trendBarsBack":true,"barCount":7,"firstBarTitle":"2026-11-10 · 成功 0 · 失败 0 · P95 样本不足（<20）","trendErrorGone":true,"retryCountNow":0,"runsKpi":"近 7 天运行 14 其中失败 0 次","sparkRuns":true}
 DONE-ERR2
+
+===== l4wc-err1.out (G15 injection proof, 2026-11-16) =====
+URL0=http://127.0.0.1:5399/agent
+INJ_ID=1
+ERR500={"kpiRunsError":"近 7 天运行暂时取不到（HTTP 500）","trendError":"运行趋势暂时取不到（HTTP 500）","anomalyState":"异常数据暂时不可用","injectedCodeShown":false,"codeishOnErrors":[],"retryCount":3,"trendBarsGone":true,"heatOk":true,"costOk":true}
+SHOT_ERR_FULL=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-errstate-1440x900-dark.png
+ERR400={"kpiRunsError":"近 7 天运行暂时取不到（HTTP 400）","trendError":"运行趋势暂时取不到（HTTP 400）","anomalyState":"异常数据暂时不可用","injectedCodeShown":false,"codeishOnErrors":[],"retryCount":3,"trendBarsGone":true,"heatOk":true,"costOk":true}
+SHOT_ERR_VIEW=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-errstate-trend-1440x900-dark.png
+FETCH_RESTORE=fetch-restored
+RETRY_CLICK=clicked
+RECOVERED={"trendBarsBack":true,"barCount":7,"trendErrorGone":true,"retryCountNow":0,"runsKpi":"近 7 天运行 14 其中失败 0 次","sparkRuns":true,"nosparkOnduty":"无趋势源","nosparkPending":"无趋势源"}
+DONE-WC1

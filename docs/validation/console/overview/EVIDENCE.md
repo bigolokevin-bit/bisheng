@@ -119,3 +119,18 @@ opsadmin 真实登录 8182（CAPTCHA_LEN=4，口令零回显）；CDP `Emulation
 - 回归面不变：blockTotal=8、kpiCount=4、placeholderCount=0、anomaly 空态+扫描说明在、待处理队列三段诚实空态、本月成本与预算合并块（USD 0.13 + 配额条 1.2%/0.1%，分母 USD 10.00）。
 - 门禁（每块 commit 前复跑）：platform lint exit 0；`test -- src/pages/AgentConsoleV2` 10 files / 114 tests passed（旧 112 不回退）；`git diff --check` 0。
 - 过程：取证中途 opsadmin 会话曾被登出，已按既定登录腿自愈（口令零回显）。边界：本拍不动 8182/Caddy/BFF/受管服务，不扩功能，**不判 PASS**——交 L7 部署 + L6 复审。
+
+## OV-01 片6（G15 单点修复+N1）：错误态本地化（L6 r2 唯一阻断关闭）
+
+- 修法：OverviewPage.tsx 四处 KPI 错误槽（onduty/pending/runs/cost）与 OverviewBlocks.tsx 成本块错误行，统一改为 `t('agentConsole.v2.ov.blockUnavailable', { block: <本地化块名>, code: <HTTP status> })`；`code` 只作为参数进入三语文案「{{block}}暂时取不到（HTTP {{code}}）」，页面不再出现任何 `x.code` 或 a.b 形态机器码。语义哨兵保留专用文案：`agent-console.no-uid`→noteNoUid/queueNoUid、`agent-console.no-employees`→noteNoEmployees/noEmployeesNote；trend/heat 错误态与 anomaly 的 anomalyUnavailable 行本就本地化，未动。grep 复核两文件 `code ??` 与 `http-${` = 0 命中。
+- N1：在岗/待审批 KPI 卡 ok 分支各加一行 `kpiNoSpark`（zh「无趋势源」/ en "No trend source" / ja「トレンド元なし」，testid `agent-v2-ov-kpi-{onduty,pending}-nospark`），数据逻辑不变。
+- 测试：`OverviewErrors.test.tsx` 用例1 新增断言——注入 500 时 `run-stats` 原始码 `agent.http.500` 不得上屏：所有 `[data-testid$="-error"]` 可见文本不匹配 `/[a-z]+\.[a-z_]+/`，且 runs 错误文本含 `HTTP 500`；用例2 新增恢复真值断言（runs KPI 含 3）。targeted **10 files / 114 passed** 不回退；platform lint exit 0；`git diff --check` 0。
+- 现场注入复测（dev 5399 代理真实 BFF 8092，opsadmin 真实登录态，`Page.addScriptToEvaluateOnNewDocument` 包装 fetch，脚本 `l4wc-err1.sh`，原文见 `readout.txt` 末段）：
+  - 注入 500+`{"code":"run.stats_range_too_large"}`：`kpiRunsError=「近 7 天运行暂时取不到（HTTP 500）」`、`trendError=「运行趋势暂时取不到（HTTP 500）」`、`anomalyState=「异常数据暂时不可用」`；`injectedCodeShown=false`、`codeishOnErrors=[]`、`retryCount=3`，heat/cost 不受影响。
+  - 注入 400+`{"code":"request.missing_filter"}`：同文案换 HTTP 400，注入码同样 0 上屏。
+  - 解除注入+点块级重试：`trendBarsBack=true（7 柱）`、错误态消失、`retryCountNow=0`、runs KPI 恢复真值「近 7 天运行 14 其中失败 0 次」、spark 在；正常态两行 N1 文案实测=「无趋势源」。
+- 截图同名覆盖重拍（深色，CDP 1440×900）：`ov01-errstate-1440x900-dark.png` 237292B 1440×1823（fullPage，注入 500 错误态）；`ov01-errstate-trend-1440x900-dark.png` 74506B 1440×900（注入 400 时趋势卡视口）。
+- 复测命令：`corepack pnpm@9.15.9 -C src/frontend/platform lint`；`corepack pnpm@9.15.9 -C src/frontend/platform test -- src/pages/AgentConsoleV2`；注入取证 `bash $T/l4wc-err1.sh`。
+- 代码提交：`01d34aa` fix(console-v2): OV-01 G15 error slots localize BFF codes + N1 no-trend-source note（链 …→4a9e7b8→01d34aa）。
+- G13 口径：本片全部证据（DOM 读数与两张截图）来自本地 dev 5399 代理真实 BFF 8092 的 opsadmin 登录态，**非** 8182 served entry；8182 对账与重新部署归 L7。
+- 边界：本拍不动 BFF/契约/部署/受管服务；口令零回显。G15+N1 之外未扩任何功能。本节只交证据与实现，**不判 PASS**；G15 关闭与否交 L6 r3 复审。
