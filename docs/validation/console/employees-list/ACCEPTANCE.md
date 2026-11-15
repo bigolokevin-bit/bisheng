@@ -13,6 +13,7 @@
 
 - [ ] **C0 需求覆盖**：本卡逐条对应 PRD §4.2；每个按钮/空态/错误态有需求；PRD v2 评审通过前该项保持未过
 - [ ] **C1 视觉还原**：1440×900 / 1280 / 768 / 375 四档、深/浅各一套，与 mockup 同屏并排；发丝线/圆角/`tabular-nums`/KPI 字阶/单一强调色/状态软药丸/按钮三级；无 `undefined`/`[object Object]`/内部术语/假 0/“待接入”
+  - 证据（2026-11-16 L4，L6 第四轮 C1 收口）：`EVIDENCE.md` round-4 节——1280 成本列为截图时序问题已修复重拍（waitCosts 后 ["USD 0.12…","USD 0.01…"]）；375 底栏导航真实缺陷（1023px 带隐藏 .a2s-group 优先级盖过首修）已修，rail h=94 fixed、8 nav 含图标+标签、条内横向滚动首屏约 5 项；新增 w2-c2-pagination.png、w2-c2-searchempty.png；chips `.a2-pill.active` 视觉态补上（此前 url/search 图 blob 相同的根因）；工位/负责人列 nowrap，工位口径=E10 分段或 enrichment 计数。全部 blob/sips/rect 见 EVIDENCE 表。
   - 证据（2026-11-15 rework, card 2260）：light 四档截图已重拍并全部包含表格数据行（scrollIntoView 后 rect 顶部在视口内，sips 实测 1440x900/1280x800/768x1024/375x812），375 dark+light 底部导航 fixed rail 可见；见 EVIDENCE.md『EMP-01 rework』节。
 - [ ] **C2 功能闭环**：搜索、状态/部门/负责人/工位/知识筛选、视图切换、URL 保存、排序、分页、行操作（详情/复制 ID/Bisheng 打开/暂停按权限）、创建入口均可达且有结果；返回保留筛选
   - 证据（2026-11-15 rework, card 2260）：列排序已实现（当前页客户端排序+URL ?sort=col:dir+aria-sort，全量排序为已知缺口），搜索/视图切换/URL 持久化/翻页点击各附操作后截图 w2-c2-{url,search,viewchat,sort,nextpage}.png 与 readout。

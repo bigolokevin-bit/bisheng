@@ -211,3 +211,51 @@ Scope note: per-page client-side sort only (E11 has no server sort param);
 pagination cursor is server-issued keyset. No fake values: missing cells
 render '—'; sort readouts above are real BFF data through the preview proxy.
 EMP-01 stays in-progress; C0-B items remain open.
+
+## L6 round-4 C1 closure (2026-11-16 01:0x)
+
+1. 1280 cost '—' regression: root cause was shot timing — the per-page
+   budget-usage batch resolves after first paint, the earlier capture fired
+   before settle. Re-shoot waits until every `agent-v2-col-cost` resolves
+   (waitCosts): M1280 readout costs=["USD 0.12…","USD 0.01…"], not a data
+   gap. No interface/field deficit involved.
+2. 375 bottom nav: real bug — the icon-rail band rule
+   `.a2s-frame:not(.is-collapsed) .a2s-group { display:none }` (<=1023px)
+   outranked the first fix and hid every nav inside `.a2s-group`, so the bar
+   collapsed to a 16px border strip. Fixed in consoleShell.css (equal
+   specificity, later source order, both collapsed and expanded frame).
+   Re-shoot readout: rail h=94 position=fixed bottom (top=718 bottom=812
+   vh=812), all 8 navs rendered with glyph+label inside the bar; 8 items
+   exceed 375px so the bar scrolls horizontally — first ~5 items and the
+   active 数字员工 underline are visible without scrolling (honest wording;
+   no "all labels visible" claim).
+3. Two new in-frame shots: `w2-c2-pagination.png` (table + pagination bar:
+   pageInfo + prev/next, next carries server keyset cursor) and
+   `w2-c2-searchempty.png` (no-match keyword -> rows=0, empty state in frame).
+4. Chips/tabs active visual state: `.a2-pill.active` style added
+   (accent-soft bg + accent fg + 600 weight) — previously the selected
+   lifecycle chip had no styling, which made url/search shots pixel-identical
+   (same blob). Re-shot: w2-c2-url.png (blob 04e0e0d8…, filter card in frame,
+   在岗 chip active) vs w2-c2-search.png (blob 0790496a…, table in frame,
+   全部 chip active) — distinct blobs. Workstation/owner cells got
+   `a2-cell-nowrap`; station cell caliber documented: shows "groups · dms ·
+   crons" from E10 when the row-level fetch settled, otherwise the
+   server-side enrichment.workstationCount integer (e.g. "1") while pending —
+   both are real values, not placeholders. c2-url now shows the same
+   "0 · 0 · 0 / 0 · 1 · 0" format as the other shots.
+
+Round-4 blobs (sips-verified; url/search re-taken in step 4b above):
+
+| file | blob | bytes | px |
+|---|---|---|---|
+| w2-c2-url.png | 04e0e0d8d339166d35fd830f3a8bf5bb7c6305da | 104680 | 1440x900 |
+| w2-c2-search.png | 0790496a0fc26e84c1adb859e41e68a3340ddcb2 | 108087 | 1440x900 |
+| w2-c2-sort.png | 2cbe07bb1d9bbcead3ae0ff5d597b86dd34807c7 | 106326 | 1440x900 |
+| w2-c2-viewchat.png | 9ed895fc32aa171ed45be7ed68ca17fa664d2990 | 88614 | 1440x900 |
+| w2-c2-nextpage.png | c47b084d3923ab96fcd0d68297482fc5cc8e3d0f | 100188 | 1440x900 |
+| w2-c2-pagination.png | 8c598ecfbabc965ba1b97a96f8ddb5c5b99e7bf5 | 93795 | 1440x900 |
+| w2-c2-searchempty.png | 978cd476d16b0d3e28a19f8eb786d399f5835311 | 89056 | 1440x900 |
+| w2-employees-375x812-dark-table.png | b9cc218963bfd5df82605793f34fb05dc9fbf56e | 51028 | 375x812 |
+| w2-employees-1280x800-light.png | 1dd08fef0b75c175d6a3e9e2c5bb3b4b8c6ccbbd | 99883 | 1280x800 |
+
+EMP-01 remains in-progress (C0-B open); no PASS claimed.

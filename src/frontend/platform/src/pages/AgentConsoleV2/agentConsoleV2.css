@@ -244,6 +244,13 @@
 .agent-app .a2-pill.is-warn { background: var(--warning-soft); color: hsl(var(--warning)); }
 .agent-app .a2-pill.is-danger { background: var(--danger-soft); color: hsl(var(--danger)); }
 .agent-app .a2-pill.is-accent { background: var(--accent-soft); color: hsl(var(--accent)); }
+/* Lifecycle filter chips use `.active` (L6 round 4: the selected tab had no
+ * visual state, so url/search shots rendered pixel-identical). */
+.agent-app .a2-pill.active {
+  background: var(--accent-soft);
+  color: hsl(var(--accent));
+  font-weight: 600;
+}
 .agent-app .a2-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .agent-app .a2-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .agent-app .a2-cards { display: flex; flex-direction: column; gap: 10px; }

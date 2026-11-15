@@ -301,8 +301,21 @@
   }
 
   .agent-app .a2s-rail-head,
-  .agent-app .a2s-group {
+  .agent-app .a2s-group-label {
     display: none;
+  }
+
+  /* Keep the group containers visible: the icon-rail band (<=1023px) hides
+   * `.a2s-frame:not(.is-collapsed) .a2s-group`, and that rule outranked the
+   * earlier fix here, so the bottom bar still collapsed to a 16px strip with
+   * zero visible nav items (L6 round 4). Match its specificity and win by
+   * source order; cover the collapsed frame too. */
+  .agent-app .a2s-frame .a2s-groups,
+  .agent-app .a2s-frame:not(.is-collapsed) .a2s-group,
+  .agent-app .a2s-frame.is-collapsed .a2s-group {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
   }
 
   .agent-app .a2s-nav,

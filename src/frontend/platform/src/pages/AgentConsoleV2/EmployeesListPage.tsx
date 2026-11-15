@@ -782,10 +782,10 @@ export function EmployeesListPage() {
                     <td className="a2-cell-nowrap" data-testid="agent-v2-col-status">
                       {t(`agentConsole.lifecycle.${r.lifecycleState}`, r.lifecycleState)}
                     </td>
-                    <td className="a2-mono" title={r.ownerUserId}>
+                    <td className="a2-mono a2-cell-nowrap" title={r.ownerUserId}>
                       {fmtId(r.ownerUserId)}
                     </td>
-                    <td data-testid="agent-v2-col-workstation">
+                    <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap">
                       {en?.stations
                         ? `${en.stations.groups} · ${en.stations.dms} · ${en.stations.crons}`
                         : r.enrichment?.workstationCount !== undefined
