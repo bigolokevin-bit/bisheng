@@ -24,6 +24,18 @@ export type Fetcher = <T>(
 
 // ---------- shapes (field names verified live 2026-11-15, w1-shape-verify2) ----------
 
+// Batch enrichment from E11 `?expand=` (dimensions: version, workstations,
+// knowledge, pending). The domain omits a key when the source row is missing —
+// never fabricate zero values here.
+export interface EmployeeEnrichment {
+  currentVersionNo?: number;
+  effectiveFrom?: string;
+  effectiveBudget?: VersionBudget;
+  knowledgeCount?: number;
+  workstationCount?: number;
+  pendingApprovalCount?: number;
+}
+
 export interface EmployeeRow {
   employeeId: string;
   name: string;
@@ -31,6 +43,7 @@ export interface EmployeeRow {
   lifecycleState: string;
   ownerUserId?: string;
   updatedAt?: string;
+  enrichment?: EmployeeEnrichment;
 }
 
 export interface EmployeeListBody {
@@ -188,13 +201,21 @@ export function makeFetcher(base = '/agent-api', getToken?: () => string | null)
 
 export function fetchEmployeesPage(
   fetch: Fetcher,
-  args: { keyword?: string; lifecycleState?: string; limit?: number; cursor?: string }
+  args: {
+    keyword?: string;
+    lifecycleState?: string;
+    limit?: number;
+    cursor?: string;
+    // Server-supported batch dimensions only: version,workstations,knowledge,pending.
+    expand?: string;
+  }
 ): Promise<ApiRes<EmployeeListBody>> {
   return fetch<EmployeeListBody>('/api/employees', {
     keyword: args.keyword,
     lifecycleState: args.lifecycleState,
     limit: args.limit ?? 20,
     cursor: args.cursor,
+    expand: args.expand,
   });
 }
 

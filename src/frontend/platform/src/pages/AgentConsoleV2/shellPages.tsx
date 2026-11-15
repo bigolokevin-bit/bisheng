@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
+import { EmployeesListPage } from './EmployeesListPage';
 import { HermesMetricsSection } from './HermesMetricsSection';
 import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
@@ -41,15 +42,9 @@ export function OverviewPage() {
   );
 }
 
-/* W1 placeholder: replaced by the real employee list screen in W2. */
+/* W2: the real employee list screen (parity spec §4 / EMP-01). */
 export function EmployeesPage() {
-  return (
-    <L1Page
-      titleKey="agentConsole.v2.navEmployees"
-      descKey="agentConsole.v2.shell.employeesDesc"
-      testid="agent-v2-page-employees"
-    />
-  );
+  return <EmployeesListPage />;
 }
 
 export function ApprovalsPage() {
