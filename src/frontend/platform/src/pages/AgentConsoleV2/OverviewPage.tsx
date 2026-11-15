@@ -71,9 +71,14 @@ function trendText(
   days: number
 ): string | null {
   const buckets = current?.buckets ?? [];
-  if (!ok || !current || buckets.length === 0 || bucketSum(buckets).runs <= 0) {
+  // fix A (G2): "no trend data" is shown ONLY when the current window's
+  // own buckets are empty/all-zero. If the comparison fetch failed or has
+  // no runs, the delta line is silently omitted — never a fake empty state
+  // while the spark's source (current buckets) clearly has data.
+  if (!current || buckets.length === 0 || bucketSum(buckets).runs <= 0) {
     return t('agentConsole.v2.ov.noTrend');
   }
+  if (!ok) return null;
   const prev = bucketSum(previous?.buckets);
   if (prev.runs <= 0) return null;
   const cur = bucketSum(buckets);
@@ -201,9 +206,16 @@ export function OverviewPage() {
     setActivityRuns(pendingKpi);
     setActivityAudit(pendingKpi);
     void (async () => {
-      const windowCur = dayWindow(rangeDays);
+      // The BFF caps day-bucket run-stats at a 90-day span and the UTC
+      // floor in dayWindow() adds up to a day, so clamp the requested
+      // window to 89 days: 90d then measures a <=90-day span instead of
+      // 400 run.stats_range_too_large. The comparison window spans the
+      // PREVIOUS statDays block ([2x floor, 1x floor]), keeping its own
+      // span <=90 days and non-degenerate at the 90d clamp.
+      const statDays = Math.min(rangeDays, 89);
+      const windowCur = dayWindow(statDays);
       const windowPrev = {
-        from: dayWindow(rangeDays * 2).from,
+        from: dayWindow(statDays * 2).from,
         to: windowCur.from,
       };
       const window24 = {
