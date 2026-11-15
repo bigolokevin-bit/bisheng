@@ -87,3 +87,19 @@ opsadmin 真实登录 8182（CAPTCHA_LEN=4，口令零回显）；CDP `Emulation
   - 回归面不变：blockTotal=8、kpiCount=4（在岗 2 / 待审批 0 / 近 7 天运行 14 无趋势数据 其中失败 0 次 / 本月成本 USD 0.13 口径：成本账本）、quota 两条 1.2%/0.1%、activityRows=9（11-14 19:25Z 一条运行行滚出 24h 窗属正常时间语义）、placeholderCount=0、leaks 全 false；375 mobile 口径 sw==cw==375、overflow 仍仅 rail 横滚区。
   - 截图覆盖同名重拍：`ov01-final-1440x900.png` 160968B 1440×900；`ov01-final-375x812.png` 75729B 375×812（字节数较片3 首拍变化=队列段空态→真实行的视觉证据）；探针原文见 `readout.txt` 末段 `l4x5-shots2.out`。
   - 门禁复跑：platform lint exit 0；`test -- src/pages/AgentConsoleV2` Test Files 9 passed (9)、Tests 112 passed (112) 不回退。
+
+## OV-01 片4（修复A·结构/数据口径）：G1/G2/G3/G9/G11/G14
+
+- 卡：L6 首轮 FAIL（主仓 `docs/validation/console/overview/L6-REVIEW.md`，main 327a924/b30bddf）后 L0 裁定 ACCEPTANCE §7；本片只做结构+数据语义六项，视觉/证据缺口（G4/G5/G6 趋势 P95·图例·轴标、截图命名口径等）另片。分支 `lane/L4-w1-w2-ui` 自 `f68d8ac` 续，交付链：`cf52383`（页面代码）→`c69df35`（三语 i18n 键）→`fe5957f`（90d 窗口诚实性修复）。按用户增量指令改为每块 commit 后即 push；远端==`fe5957f`（docs 笔随后）。
+- **G1 异常/告警区块**（新增，第 8 区块，永不整块省略）：`AnomalyBlock`（OverviewBlocks.tsx，named export）真实派生——`run-stats` 日桶失败合计 + `approval-stats.dueSoon`，无任何前端造数。当前双 0 → DOM 空态原文：`异常/告警 暂无需要处理的异常 已扫描：近 7 天运行失败、待审批逾期`（testid `agent-v2-ov-anomaly-empty/-scan`；range 变化时扫描天数跟随：28d/90d 实测文案为「近 28/90 天」）。有值分支列计数+下钻链接（/agent/runs、/agent/approvals），源不可用显示原因行（no-uid→`queueNoUid`，其余→`anomalyUnavailable`）。
+- **G11 成本/配额合并**：`CostBlock`+`QuotaBlock` 合并为 `CostBudgetBlock`（区块标题「本月成本与预算」，子标题「预算配额」），独立 `agent-v2-ov-block-quota` 已删除；DOM 原文：`本月成本与预算 USD 0.13 口径：成本账本 预算配额 AgentOS 产品助理 1.2% USD 0.12 / USD 10.00 · 0.1% USD 0.01 / USD 10.00`（分母仍为版本预算真实 monthlyCostUsd=10.00）。页面 `blockTotal=8`（quota 亡、anomaly 现）。
+- **G14**：队列标题 zh-Hans `queueTitle` 改「待处理队列」（en Pending Queue / ja 未処理キュー 已符合口径，未动）；DOM `queueHead=待处理队列`。
+- **G3 队列口径**（三条腿全部只列可处理项，空段诚实空态）：审批 `approvals?assignee=human:1&status=pending&limit=5` = **200 n=0**；任务 `tasks?assignee=human:1&dueBefore=<now>&limit=5` = **200 n=0**（超期口径）；运行 `runs?status=failed&since=<now-24h>&limit=5` = **200 n=0**（异常运行口径）。三段上屏均为「暂无数据」空态（合法：现网确无可处理项），无造数、无前端过滤冒充。
+- **G2 KPI spark 与假空态修正**：运行卡=run-stats 7 日桶 `runs` 序列、成本卡=同日桶 `costUsd` 序列（`sparkPoints`/本地 `costSparkPoints`，同源同窗）；在岗/待审批无可信序列不画（允许）。实测 `sparkRuns=true sparkCost=true`；运行卡文案 `近 7 天运行 14 其中失败 0 次`——**buckets 非空时不再显示「无趋势数据」**（`runsKpiNoTrendShown=false`）。`trendText` 重写：仅当前窗无桶/全零才显 `noTrend`；对照窗不可用或零基线时省略趋势行（不放假对比）。
+- **90d 窗口钳位与诚实性（fe5957f）**：BFF run-stats 日桶跨度上限实测 ≤90 天（`span=91 → 400 run.stats_range_too_large`，探针对照原文：clamped win(89)=200 {runs:14,failed:0,cost:0.1311} / naive win(90)=400，页面从不发 naive 请求）。页面 `statDays=min(range,89)`，对照窗取非退化 `[2x,1x)` 块。修复后 `?range=90d` 实测：KPI `近 90 天运行 14 其中失败 0 次`（无「无趋势数据」）、trendBars=90、spark 存在、无 400 报错面。
+- **G9 URL 状态**（`useSearchParams` 读写，刷新/分享/后退可复原）：页头新增统计窗口分段控件（testid `agent-v2-ov-range-{7d,28d,90d}`，aria-pressed 反映当前值），热力卡新增周数 select（`agent-v2-ov-weeks`，1..12，默认 4 不写参数）。实测五步：S0 默认 `search=''`；S1 点 28d→`?range=28d`、trendBars=28、KPI「近 28 天运行 14」；S2 `history.back()`→全部复原默认；S3 分享 URL `?range=28d&weeks=6&focus=heat`→pressed 28d、weeks select=6、`scrollY=762` heat 块滚入视口；S4 reload 持久化同 S3；S5 `?range=90d` 如上。range 同时驱动趋势柱数、KPI 窗口文案、异常扫描口径；weeks 驱动 `run-activity?weeks=`（注：BFF 返回恒 7×24 聚合 cells，周数不改格数，属数据侧口径）。
+- 端点原文与 DOM 全值见 `readout.txt` 末两段（`l4wa-shots.out` 最终态复拍 / `l4wa-g9b.out` G9 复验）；回归面不变：kpiCount=4、placeholderCount=0、leaks 五项全 false、375 mobile `sw==cw==375`（overflow 仅底部 rail 横滚区，G8 口径允许）。
+- 截图（深色，CDP `Emulation.setDeviceMetricsOverride` 真视口 + sips 回读）：`ov01-fixA-1440x900.png` 161083B 1440×900；`ov01-fixA-375x812.png` 73132B 375×812。**G13 声明：本批截图与全部探针均取自本地 dev 5399（vite 代理 /agent-api→BFF 8092，opsadmin 真实登录态），非 8182 served entry；8182 对账与重新部署归 L7。** 取证期间 opsadmin 会话曾被登出，已按授权登录法自愈（口令零回显），登录成功后续拍。
+- 门禁：platform lint exit 0；`test -- src/pages/AgentConsoleV2` Test Files 9 passed (9)、Tests 112 passed (112) 不回退；`git diff --check` exit 0。
+- 越界说明：G12（同名员工显示层区分）**不在本片六项内**，本拍未做，归视觉/证据片；页面存在两条同名「AgentOS 产品助理」配额行属实，留待后片。
+- 边界声明：本片未动 BFF/契约/8182/Caddy/受管服务；不判 PASS（判定归 L6）。
