@@ -75,3 +75,15 @@ opsadmin 真实登录 8182（CAPTCHA_LEN=4，口令零回显）；CDP `Emulation
 - 截图（CDP Emulation.setDeviceMetricsOverride 真视口，sips 实测）：`ov01-final-1440x900.png` 157599B 1440×900；`ov01-final-375x812.png` 72791B 375×812；原始探针输出在 `readout.txt` 末段。
 - 门禁：platform lint exit 0；`test -- src/pages/AgentConsoleV2` Test Files 9 passed (9)、Tests 112 passed (112) 不回退。
 - 边界声明：本拍不动 8182/Caddy/BFF/受管服务；dev 5399 仅过程预览（起后已停）；served entry 对账归 L7；本节只交证据与实现，**不判 PASS**。
+
+### 片3 修复子项：运行队列 400 request.missing_filter 关闭（L0 卡 2533）
+
+- 缺陷：L7 部署 `2c34afb` 后 8182 出现 1 条 failed resource：`GET /agent-api/api/runs?limit=5` → 400 `request.missing_filter`。根因=`OverviewPage.tsx` 队列运行段只传 `limit`，未传 BFF 白名单过滤参数。
+- 修复：该请求改为 `fetch<QueueBody>('/api/runs', { since: window24.from, limit: 5 })`（复用现有 24h 窗口 `window24`，不加新 helper、不加新端点；单文件 +3/−1，带英文注释）。
+- 复跑证据（本地 dev 5399 代理真实 BFF 8092，opsadmin 登录态，2026-11-16 03:06 复拍）：
+  - `runsNew`（`/api/runs?since=<now-24h>&limit=5`）= **200**，n=1，首条 `rn_01M7DRBJ3MYENKP532MDNCE0VW · completed`（createdAt 2026-11-14T19:25:40.345Z，在 24h 窗内）。
+  - 页面队列运行段显示真实行（DOM `queueRunsRows=1`，文本 `运行 查看全部 rn_01M7DRBJ3MYENKP532MDNCE0VW · completed`），不再是空态；`queueRunsEmptyMark=false`。
+  - 对照 `runsOld`（裸 `?limit=5`）直连仍 400 `request.missing_filter`——仅作 BFF 守卫行为对照，页面自身已不再发该请求 ⇒ 预期 L7 重新部署后 **failed resource=0**。
+  - 回归面不变：blockTotal=8、kpiCount=4（在岗 2 / 待审批 0 / 近 7 天运行 14 无趋势数据 其中失败 0 次 / 本月成本 USD 0.13 口径：成本账本）、quota 两条 1.2%/0.1%、activityRows=9（11-14 19:25Z 一条运行行滚出 24h 窗属正常时间语义）、placeholderCount=0、leaks 全 false；375 mobile 口径 sw==cw==375、overflow 仍仅 rail 横滚区。
+  - 截图覆盖同名重拍：`ov01-final-1440x900.png` 160968B 1440×900；`ov01-final-375x812.png` 75729B 375×812（字节数较片3 首拍变化=队列段空态→真实行的视觉证据）；探针原文见 `readout.txt` 末段 `l4x5-shots2.out`。
+  - 门禁复跑：platform lint exit 0；`test -- src/pages/AgentConsoleV2` Test Files 9 passed (9)、Tests 112 passed (112) 不回退。

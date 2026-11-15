@@ -222,7 +222,9 @@ export function OverviewPage() {
         uid
           ? fetch<QueueBody>('/api/tasks', { assignee: `human:${uid}`, limit: 5 })
           : Promise.resolve(null),
-        fetch<QueueBody>('/api/runs', { limit: 5 }),
+        // Runs list requires a server-side filter (request.missing_filter);
+        // reuse the 24h window so the queue shows recent activity honestly.
+        fetch<QueueBody>('/api/runs', { since: window24.from, limit: 5 }),
         fetchActivity(fetch, { weeks: 4, tz: 'Asia/Shanghai' }),
         fetch<QueueBody>('/api/runs', { since: window24.from, limit: 8 }),
         fetch<AuditBody>('/api/audit', {
