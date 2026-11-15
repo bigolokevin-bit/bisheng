@@ -252,7 +252,7 @@ export function ApprovalsListPage() {
         >
           {t('agentConsole.v2.apr.tabPending')}
           {countShown !== null && (
-            <span className="a2-badge" data-testid="agent-v2-approvals-count" style={{ marginLeft: 6 }}>
+            <span data-testid="agent-v2-approvals-count" style={{ marginLeft: 6 }}>
               {countShown}
             </span>
           )}
@@ -268,6 +268,9 @@ export function ApprovalsListPage() {
           {t('agentConsole.v2.apr.tabHistory')}
         </button>
       </div>
+      <p className="a2-micro" data-testid="agent-v2-approvals-history-note">
+        {t('agentConsole.v2.apr.historyDisabledNote')}
+      </p>
 
       {tab === 'history' ? (
         /* Deep link ?status=history: explicit honest state; the queue
@@ -275,7 +278,7 @@ export function ApprovalsListPage() {
            is fetched and nothing is faked. Back/refresh-safe via URL. */
         <div className="a2-card" data-testid="agent-v2-approvals-history">
           <p className="a2-h2">{t('agentConsole.v2.apr.tabHistory')}</p>
-          <p className="a2-card-sub" data-testid="agent-v2-approvals-history-note">
+          <p className="a2-card-sub" data-testid="agent-v2-approvals-history-reason">
             {t('agentConsole.v2.apr.historyDisabledNote')}
           </p>
           <button
