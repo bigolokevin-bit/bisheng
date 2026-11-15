@@ -45,6 +45,32 @@ const EXPAND = 'version,workstations,knowledge,pending';
 const PAGE_LIMIT = 20;
 const ROW_CAP = 4; // bounded per-row fan-out: never N+1 against a fleet
 
+// EMP-01 C2: in-page sorting. E11 has no server-side sort, so the order is
+// applied to the currently loaded page only and recorded in the URL (?sort=
+// col:asc|desc). Scope is stated in EVIDENCE.md; no cross-page promise.
+type SortCol =
+  | 'name'
+  | 'version'
+  | 'status'
+  | 'owner'
+  | 'workstation'
+  | 'pending'
+  | 'lastRun'
+  | 'success'
+  | 'cost';
+
+const SORT_COLS: SortCol[] = [
+  'name',
+  'version',
+  'status',
+  'owner',
+  'workstation',
+  'pending',
+  'lastRun',
+  'success',
+  'cost',
+];
+
 interface RowEnrich {
   stations?: StationSummary;
   stationsFailed?: boolean;
@@ -88,6 +114,11 @@ export function EmployeesListPage() {
   const lifecycleState = searchParams.get('lifecycleState') ?? '';
   const cursor = searchParams.get('cursor') ?? '';
   const view = searchParams.get('view') ?? 'table';
+  const sortParam = searchParams.get('sort') ?? '';
+  const rawLimit = Number.parseInt(searchParams.get('limit') ?? '', 10);
+  const pageLimit = Number.isFinite(rawLimit)
+    ? Math.min(Math.max(rawLimit, 1), 50)
+    : PAGE_LIMIT;
 
   const [draftKeyword, setDraftKeyword] = useState(keyword);
   const [reloadToken, setReloadToken] = useState(0);
@@ -140,6 +171,13 @@ export function EmployeesListPage() {
     patchParams({ view: next === 'table' ? null : next });
   };
 
+  const handleSort = (col: SortCol) => {
+    pagesRef.current = [''];
+    if (!sortCol || sortCol !== col) patchParams({ sort: `${col}:asc`, cursor: null });
+    else if (sortDir === 'asc') patchParams({ sort: `${col}:desc`, cursor: null });
+    else patchParams({ sort: null, cursor: null });
+  };
+
   const handleNextPage = () => {
     const nc = listRes?.data?.nextCursor;
     if (!nc) return;
@@ -165,7 +203,7 @@ export function EmployeesListPage() {
     fetchEmployeesPage(fetchApi, {
       keyword: keyword || undefined,
       lifecycleState: lifecycleState || undefined,
-      limit: PAGE_LIMIT,
+      limit: pageLimit,
       cursor: cursor || undefined,
       expand: EXPAND,
     }).then((res) => {
@@ -177,7 +215,7 @@ export function EmployeesListPage() {
     return () => {
       alive = false;
     };
-  }, [fetchApi, keyword, lifecycleState, cursor, reloadToken]);
+  }, [fetchApi, keyword, lifecycleState, cursor, pageLimit, reloadToken]);
 
   // ---- KPI aggregates: E14 + AP8 + R6 two rolling windows + P9 months ----
   useEffect(() => {
@@ -204,6 +242,65 @@ export function EmployeesListPage() {
   );
   const rowIds = useMemo(() => rows.map((r) => r.employeeId), [rows]);
   const rowIdsKey = rowIds.join(',');
+
+  // ---- EMP-01 C2: in-page sort over the loaded rows only ----
+  const sortMatch = /^([A-Za-z]+):(asc|desc)$/.exec(sortParam);
+  const sortCol: SortCol | null =
+    sortMatch && SORT_COLS.indexOf(sortMatch[1] as SortCol) >= 0
+      ? (sortMatch[1] as SortCol)
+      : null;
+  const sortDir: 'asc' | 'desc' = sortMatch?.[2] === 'desc' ? 'desc' : 'asc';
+
+  const sortValue = useCallback(
+    (r: EmployeeRow): number | string | null => {
+      if (!sortCol) return null;
+      const en = rowEnrich[r.employeeId];
+      const runs7 = en?.runs ? bucketSum(en.runs.buckets) : null;
+      const costRow = (kpi.costNow?.data?.items ?? []).find(
+        (i) => i.employeeId === r.employeeId
+      );
+      switch (sortCol) {
+        case 'name':
+          return r.name ?? null;
+        case 'version':
+          return r.enrichment?.currentVersionNo ?? null;
+        case 'status':
+          return r.lifecycleState ?? null;
+        case 'owner':
+          return r.ownerUserId ?? null;
+        case 'workstation':
+          return en?.stations?.total ?? r.enrichment?.workstationCount ?? null;
+        case 'pending':
+          return r.enrichment?.pendingApprovalCount ?? null;
+        case 'lastRun':
+          return runs7 && runs7.runs > 0 ? runs7.runs : null;
+        case 'success':
+          return runs7 && runs7.runs > 0 ? runs7.succeeded / runs7.runs : null;
+        case 'cost':
+          return typeof costRow?.costUsd === 'number' ? costRow.costUsd : null;
+        default:
+          return null;
+      }
+    },
+    [sortCol, rowEnrich, kpi.costNow]
+  );
+
+  const displayRows = useMemo(() => {
+    if (!sortCol) return rows;
+    return [...rows].sort((a, b) => {
+      const av = sortValue(a);
+      const bv = sortValue(b);
+      // Rows missing the sort value always sink to the bottom, either direction.
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      const cmp =
+        typeof av === 'number' && typeof bv === 'number'
+          ? av - bv
+          : String(av).localeCompare(String(bv));
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [rows, sortCol, sortDir, sortValue]);
 
   // ---- month cost KPI once ids are known (P9 batched, never per row) ----
   useEffect(() => {
@@ -521,20 +618,128 @@ export function EmployeesListPage() {
           <table className="a2-table" data-testid="agent-v2-employees-table">
             <thead>
               <tr>
-                <th>{t('agentConsole.v2.colName')}</th>
-                <th>{t('agentConsole.v2.emp.colVersion')}</th>
-                <th>{t('agentConsole.v2.colStatus')}</th>
-                <th>{t('agentConsole.v2.colOwner')}</th>
-                <th>{t('agentConsole.v2.emp.colWorkstation')}</th>
-                <th>{t('agentConsole.v2.emp.colPending')}</th>
-                <th>{t('agentConsole.v2.emp.colLastRun')}</th>
-                <th>{t('agentConsole.v2.emp.colSuccessRate')}</th>
-                <th>{t('agentConsole.v2.emp.colMonthCost')}</th>
+                <th aria-sort={sortCol === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-name"
+                    onClick={() => handleSort('name')}
+                  >
+                    {t('agentConsole.v2.colName')}
+                    <span aria-hidden>
+                      {sortCol === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'version' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-version"
+                    onClick={() => handleSort('version')}
+                  >
+                    {t('agentConsole.v2.emp.colVersion')}
+                    <span aria-hidden>
+                      {sortCol === 'version' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-status"
+                    onClick={() => handleSort('status')}
+                  >
+                    {t('agentConsole.v2.colStatus')}
+                    <span aria-hidden>
+                      {sortCol === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'owner' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-owner"
+                    onClick={() => handleSort('owner')}
+                  >
+                    {t('agentConsole.v2.colOwner')}
+                    <span aria-hidden>
+                      {sortCol === 'owner' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'workstation' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-workstation"
+                    onClick={() => handleSort('workstation')}
+                  >
+                    {t('agentConsole.v2.emp.colWorkstation')}
+                    <span aria-hidden>
+                      {sortCol === 'workstation' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'pending' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-pending"
+                    onClick={() => handleSort('pending')}
+                  >
+                    {t('agentConsole.v2.emp.colPending')}
+                    <span aria-hidden>
+                      {sortCol === 'pending' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'lastRun' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-lastRun"
+                    onClick={() => handleSort('lastRun')}
+                  >
+                    {t('agentConsole.v2.emp.colLastRun')}
+                    <span aria-hidden>
+                      {sortCol === 'lastRun' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'success' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-success"
+                    onClick={() => handleSort('success')}
+                  >
+                    {t('agentConsole.v2.emp.colSuccessRate')}
+                    <span aria-hidden>
+                      {sortCol === 'success' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
+                <th aria-sort={sortCol === 'cost' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                  <button
+                    type="button"
+                    className="a2-th-btn"
+                    data-testid="agent-v2-sort-cost"
+                    onClick={() => handleSort('cost')}
+                  >
+                    {t('agentConsole.v2.emp.colMonthCost')}
+                    <span aria-hidden>
+                      {sortCol === 'cost' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </span>
+                  </button>
+                </th>
                 <th>{t('agentConsole.v2.colAction')}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {displayRows.map((r) => {
                 const en = rowEnrich[r.employeeId];
                 const runs7 = en?.runs && en.runs !== null ? bucketSum(en.runs.buckets) : null;
                 const lastBucket = en?.runs?.buckets?.length
@@ -565,6 +770,7 @@ export function EmployeesListPage() {
                       {r.enrichment?.currentVersionNo !== undefined ? (
                         <>
                           v{r.enrichment.currentVersionNo}
+                          {" · "}
                           <span className="a2-meta">{fmtTime(r.enrichment.effectiveFrom)}</span>
                         </>
                       ) : (
@@ -573,10 +779,12 @@ export function EmployeesListPage() {
                         </>
                       )}
                     </td>
-                    <td data-testid="agent-v2-col-status">
+                    <td className="a2-cell-nowrap" data-testid="agent-v2-col-status">
                       {t(`agentConsole.lifecycle.${r.lifecycleState}`, r.lifecycleState)}
                     </td>
-                    <td className="a2-mono">{fmtId(r.ownerUserId)}</td>
+                    <td className="a2-mono" title={r.ownerUserId}>
+                      {fmtId(r.ownerUserId)}
+                    </td>
                     <td data-testid="agent-v2-col-workstation">
                       {en?.stations
                         ? `${en.stations.groups} · ${en.stations.dms} · ${en.stations.crons}`

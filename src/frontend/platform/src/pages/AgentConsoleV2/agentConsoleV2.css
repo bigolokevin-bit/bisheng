@@ -699,3 +699,24 @@
 .agent-app .a2-table-scroll table { min-width: 880px; }
 .agent-app .a2-table th { white-space: nowrap; }
 .agent-app .a2-kpi .a2-meta { display: block; }
+
+/* EMP-01 C2 sortable headers: the trigger inherits the th typography so the
+   header row stays visually unchanged apart from the active sort arrow. */
+.agent-app .a2-table .a2-th-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+.agent-app .a2-table .a2-th-btn:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.agent-app .a2-cell-nowrap {
+  white-space: nowrap;
+}

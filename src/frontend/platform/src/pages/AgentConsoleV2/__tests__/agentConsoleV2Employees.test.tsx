@@ -9,8 +9,8 @@
  * so assertions reference raw keys and unformatted service values.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 import { EmployeesListPage } from '../EmployeesListPage';
 
@@ -113,6 +113,7 @@ const activityBody = {
 };
 
 let urls: string[] = [];
+let employeesNextCursor: string | null = null;
 let employeesStatus = 200;
 let employeesEnriched = true;
 
@@ -125,7 +126,10 @@ function routeRequest(url: string) {
         message: 'stubbed failure',
       });
     }
-    return jsonResponse(200, employeesBody(employeesEnriched));
+    return jsonResponse(200, {
+      ...employeesBody(employeesEnriched),
+      ...(employeesNextCursor ? { nextCursor: employeesNextCursor } : {}),
+    });
   }
   if (url.includes('/api/employee-stats')) return jsonResponse(200, statsBody);
   if (url.includes('/api/approval-stats')) return jsonResponse(200, { pending: 3, dueSoon: 1 });
@@ -165,20 +169,27 @@ function isoWeekAgoBoundary() {
   return d.toISOString();
 }
 
-function renderPage() {
+function renderPage(entry = '/agent/employees') {
   return render(
-    <MemoryRouter initialEntries={['/agent/employees']}>
+    <MemoryRouter initialEntries={[entry]}>
       <Routes>
         <Route path="/agent/employees" element={<EmployeesListPage />} />
       </Routes>
+      <RouteSearchProbe />
     </MemoryRouter>
   );
+}
+
+function RouteSearchProbe() {
+  const loc = useLocation();
+  return <div data-testid="route-search">{loc.search}</div>;
 }
 
 beforeEach(() => {
   urls = [];
   employeesStatus = 200;
   employeesEnriched = true;
+  employeesNextCursor = null;
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => routeRequest(String(input)))
@@ -312,5 +323,56 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
       'agentConsole.v2.emp.heatTzNote'
     );
     expect(screen.getByTestId('agent-v2-employees-heat').textContent).not.toContain('undefined');
+  });
+
+  it('EMP-01 C2: sorts the loaded page via clickable headers and records sort in the URL', async () => {
+    renderPage();
+    await screen.findByTestId('agent-v2-employees-table');
+    const rowNames = () =>
+      Array.from(
+        document.querySelectorAll('[data-testid="agent-v2-employee-row"] td:first-child')
+      ).map((td) => td.textContent ?? '');
+    expect(rowNames()[0]).toContain('AgentOS Product Assistant');
+
+    // first click: ascending by name -> 'A' < 'I', AgentOS still leads
+    fireEvent.click(screen.getByTestId('agent-v2-sort-name'));
+    await waitFor(() =>
+      expect(decodeURIComponent(screen.getByTestId('route-search').textContent ?? '')).toContain(
+        'sort=name:asc'
+      )
+    );
+    const th = screen.getByTestId('agent-v2-sort-name').closest('th');
+    expect(th?.getAttribute('aria-sort')).toBe('ascending');
+    expect(rowNames()[0]).toContain('AgentOS Product Assistant');
+
+    // second click: descending -> Inspector Two leads
+    fireEvent.click(screen.getByTestId('agent-v2-sort-name'));
+    await waitFor(() => expect(rowNames()[0]).toContain('Inspector Two'));
+    expect(th?.getAttribute('aria-sort')).toBe('descending');
+    expect(decodeURIComponent(screen.getByTestId('route-search').textContent ?? '')).toContain(
+      'sort=name:desc'
+    );
+
+    // third click: sort cleared, service order restored, URL param removed
+    fireEvent.click(screen.getByTestId('agent-v2-sort-name'));
+    await waitFor(() =>
+      expect(screen.getByTestId('route-search').textContent).not.toContain('sort=')
+    );
+    expect(rowNames()[0]).toContain('AgentOS Product Assistant');
+  });
+
+  it('EMP-01 C2: keyset pagination sends the next cursor and keeps state in the URL', async () => {
+    employeesNextCursor = 'cur_page2';
+    renderPage('/agent/employees?limit=1');
+    await screen.findByTestId('agent-v2-employees-table');
+    const employeesUrls = () => urls.filter((u) => u.includes('/api/employees'));
+    expect(employeesUrls()[0]).toContain('limit=1');
+    const next = screen.getByTestId('agent-v2-next-page') as HTMLButtonElement;
+    expect(next.disabled).toBe(false);
+    fireEvent.click(next);
+    await waitFor(() =>
+      expect(employeesUrls().some((u) => u.includes('cursor=cur_page2'))).toBe(true)
+    );
+    expect(screen.getByTestId('route-search').textContent).toContain('cursor=cur_page2');
   });
 });

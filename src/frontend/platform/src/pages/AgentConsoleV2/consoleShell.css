@@ -278,15 +278,22 @@
 
   .agent-app .a2s-rail {
     order: 2;
-    position: sticky;
+    /* Fixed (not sticky): in the single-column grid the rail's cell sits
+       after tall page content, so sticky only became visible at the very
+       bottom — it looked like a missing nav affordance (L6 round 2). */
+    position: fixed;
     bottom: 0;
+    left: 0;
+    right: 0;
     top: auto;
+    z-index: 20;
+    background: hsl(var(--card));
     height: auto;
     flex-direction: row;
     overflow-x: auto;
     border-right: 0;
     border-top: 1px solid var(--line);
-    padding: 8px;
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     gap: 6px;
     justify-content: flex-start;
   }
@@ -325,7 +332,8 @@
   }
 
   .agent-app .a2s-page {
-    padding: 14px;
+    /* keep content clear of the fixed bottom rail */
+    padding: 14px 14px 88px;
   }
 
   .agent-app .a2s-topbar {
