@@ -31,3 +31,32 @@ opsadmin 真实登录 8182（CAPTCHA_LEN=4，口令零回显）；CDP `Emulation
 
 ### 仍缺（后续片）
 - 趋势/配额/热力/员工概览四块为诚实占位；`?expand=stats,cost,owner` 维度不被服务端接受（合法维度=version,workstations,knowledge,pending），成本/统计类扩展列需按已验批量端点接入。
+
+## 片 2（2026-11-16 02:36，卡 @2471@）：待处理队列 + 近 7 天趋势 + 7×24 热力（真实 BFF）
+
+范围：`/agent` 总览页新增三块——`agent-v2-ov-queue`（审批/任务/运行三段，各 Top 5 + 「查看全部」链接 /agent/approvals|tasks|runs）、`agent-v2-ov-trend`（7 根柱）、`agent-v2-ov-heat`（7×24=168 格）。配额、员工概览仍为诚实占位（片 1 口径不变）。页头/4 KPI 未改动。
+取证环境：同片 1——本地 dev 5399（V2=1，代理 `/agent-api`→BFF 8092 真实数据）；opsadmin 真实登录 8182（CAPTCHA_LEN=4，口令零回显）；CDP 真视口截图，sips 回读 1440×900 / 375×812。
+
+### DOM 读数（原文见 readout.txt 片 2 段）
+- 队列三段（1440 与 375 一致）：审批 rows=0 空态「暂无数据」；任务 rows=0 空态「暂无数据」；运行 空态「队列暂不可用」。
+- 趋势：`trend-bar` ×7，无 trend-empty，脚注「成功 13 · 失败 0」（R6 滚动 7 天服务聚合 11-12 runs1 + 11-14 runs13/succ12 系，柱高按真实 runs）。
+- 热力：`heat-cell` ×168，grid 在位，脚注「颜色仅反映运行次数（时区 Asia/Shanghai）」，仅按 count 着色、未画失败维度；R7 `run-activity?weeks=4&tz=Asia/Shanghai` 有真实 cells（max=4 稀疏分布），非全灰。
+- 泄漏判据（双视口）：raw i18n key / undefined / `{{` / 「待接入」/ NaN 全 false。
+- 溢出：375 档 scrollW==clientW==375 无横向溢出；1440 档覆盖后 scrollW=1440==innerW、clientW=1425（差值=经典滚动条伪差，非横向溢出，片 1 同项口径）。
+
+### 端点状态码（浏览器内 fetch 原文）
+- `approvals?assignee=human%3A1&status=pending&limit=5` = 200 `{"items":[]}` → 空态「暂无数据」（真实空，非造假）。
+- `tasks?assignee=human%3A1&limit=5` = 200 `{"items":[]}` → 空态「暂无数据」。
+- `runs?limit=5`（卡面「/api/runs 全量」措辞）= **400** `{"code":"request.missing_filter","message":"at least one of employeeId/status/since is required"}`——BFF 运行列表强制过滤，无过滤全量列表不存在该口径；运行段按实况显示「队列暂不可用」空态+原因，不造数据、不私加过滤冒充全量。
+- 探索项：`runs?limit=5&status=succeeded` = 422 `unknown status 'succeeded'`（合法枚举另议，本片不加过滤分支，仅记实况）。
+
+### 截图（同目录入库）
+- `ov01-slice2-1440x900.png`（79130B，sips 1440×900）
+- `ov01-slice2-375x812.png`（54551B，sips 375×812）
+
+### 门禁（实现轮全量 + 本收口轮复跑）
+- 实现轮：lint 0；全量冻结 43 failed/18 files 新增 0；双 build 0（数字承 W2/EMP 轮基线）。
+- 收口轮复跑（commit 前实测）：platform lint exit 0；`test -- src/pages/AgentConsoleV2` Test Files 9 passed (9)、Tests 112 passed (112) 不回退基线。
+
+### 状态
+- OV-01 片 2 三块交付完成；配额/员工概览两块与「运行队列可用过滤口径」为后续波缺口。不判 PASS（归 L6）。

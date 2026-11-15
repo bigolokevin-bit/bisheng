@@ -8,3 +8,16 @@ SHOT1440=done
 DOM375={"url":"http://127.0.0.1:5399/agent","cards":[{"id":"agent-v2-ov-kpi-onduty","text":"在岗员工 | 2 | 共 2 名在册"},{"id":"agent-v2-ov-kpi-pending","text":"待审批 | 0"},{"id":"agent-v2-ov-kpi-runs","text":"近 7 天运行 | 14 | 无趋势数据 | 其中失败 0 次"},{"id":"agent-v2-ov-kpi-cost","text":"本月成本 | USD 0.13 | 口径：成本账本"}],"refresh":true,"updated":"数据时间 11-16 02:09","placeholders":[{"k":"trendTitle","text":"本块施工于后续波"},{"k":"quotaTitle","text":"本块施工于后续波"},{"k":"heatTitle","text":"本块施工于后续波"},{"k":"tableTitle","text":"本块施工于后续波"}],"nav":8,"leakRaw":false,"leakUndefined":false,"leakMustache":false,"leakFakeZero":false,"leakPending":false,"sw":375,"cw":375}
 SHOT375=done
 DONE_OV1
+
+# OV-01 slice-2 raw readout (2026-11-16 02:36, dev 5399 + BFF 8092)
+
+URL=http://127.0.0.1:5399/agent
+PROBE1440={"page":true,"queue":{"queueApprovals":{"rows":0,"empty":"暂无数据"},"queueTasks":{"rows":0,"empty":"暂无数据"},"queueRuns":{"rows":0,"empty":"队列暂不可用"}},"trendBars":7,"trendEmpty":false,"trendFoot":"成功 13 · 失败 0","heatCells":168,"heatGrid":true,"heatEmpty":false,"heatFoot":"颜色仅反映运行次数（时区 Asia/Shanghai）","leaks":{"rawKey":false,"undef":false,"mustache":false,"pendingWord":false,"nan":false},"scrollW":1380,"clientW":1365,"innerW":1380}
+SHOT1440=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-slice2-1440x900.png
+PROBE375={"page":true,"queue":{"queueApprovals":{"rows":0,"empty":"暂无数据"},"queueTasks":{"rows":0,"empty":"暂无数据"},"queueRuns":{"rows":0,"empty":"队列暂不可用"}},"trendBars":7,"trendEmpty":false,"trendFoot":"成功 13 · 失败 0","heatCells":168,"heatGrid":true,"heatEmpty":false,"heatFoot":"颜色仅反映运行次数（时区 Asia/Shanghai）","leaks":{"rawKey":false,"undef":false,"mustache":false,"pendingWord":false,"nan":false},"scrollW":375,"clientW":375,"innerW":375}
+SHOT375=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/ov01-slice2-375x812.png
+DONE_SHOTS
+
+
+W1440={"scrollW":1440,"clientW":1425,"innerW":1440}
+API={"approvals":{"s":200,"n":0,"head":"{\"items\":[]}"},"tasks":{"s":200,"n":0,"head":"{\"items\":[]}"},"runs":{"s":400,"n":null,"head":"{\"code\":\"request.missing_filter\",\"message\":\"at least one of employeeId/status/since is required\"}"},"runsWindow":{"s":422,"n":null,"head":"{\"code\":\"request.invalid_query\",\"message\":\"unknown status 'succeeded'\"}"}}
