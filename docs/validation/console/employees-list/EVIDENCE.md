@@ -233,9 +233,11 @@ EMP-01 stays in-progress; C0-B items remain open.
    pageInfo + prev/next, next carries server keyset cursor) and
    `w2-c2-searchempty.png` (no-match keyword -> rows=0, empty state in frame).
 4. Chips/tabs active visual state: `.a2-pill.active` style added
-   (accent-soft bg + accent fg + 600 weight) — previously the selected
-   lifecycle chip had no styling, which made url/search shots pixel-identical
-   (same blob). Re-shot: w2-c2-url.png (blob 04e0e0d8…, filter card in frame,
+   (accent-soft bg + accent fg + 600 weight). The real defect was simply that
+   the selected lifecycle chip had no visual difference; correction to earlier
+   wording in this file: the round-3 url/search blobs were always distinct
+   (1d120dea / 676c3db1) — only this round's first re-capture produced two
+   identical files (d958b8e3) because the unstyled chips rendered the same. Re-shot: w2-c2-url.png (blob 04e0e0d8…, filter card in frame,
    在岗 chip active) vs w2-c2-search.png (blob 0790496a…, table in frame,
    全部 chip active) — distinct blobs. Workstation/owner cells got
    `a2-cell-nowrap`; station cell caliber documented: shows "groups · dms ·
@@ -259,3 +261,25 @@ Round-4 blobs (sips-verified; url/search re-taken in step 4b above):
 | w2-employees-1280x800-light.png | 1dd08fef0b75c175d6a3e9e2c5bb3b4b8c6ccbbd | 99883 | 1280x800 |
 
 EMP-01 remains in-progress (C0-B open); no PASS claimed.
+
+Provenance and carried-by notes (L6 round-5 text closure, 8.5 b–f):
+- Evidence source: the nine `w2-*` round-4 images were captured on the dev
+  :5399 preview (now stopped). The live-service state was independently
+  re-verified by L6 (round-4 §8.3) against :8182; those L6 images are
+  sha256-identical to the L4 00:49 service-state captures: l6r4-1280x800.png
+  b27d855a2026…, l6r4-375x812.png f01a41debb0b…, l6r4-nextpage-1440x900.png /
+  l6r4-page1-1440x900.png c2dddcc288fb….
+- Chip-active served-state proof is carried by
+  `l6r4-chipactive-1440x900.png` (source: L6 round-4 capture on :8182,
+  sha256 3844a42104f4c22b5b36458f7295ff41aa89c8165afb88052b5ab2ce220cad22):
+  clicking 在岗 yields the accent-soft chip and URL lifecycleState=active.
+  Note: seven of the nine w2 round-4 images (sort/viewchat/nextpage/
+  pagination/searchempty/375/1280) were captured before the chip CSS landed;
+  chip active styling is only evidenced by w2-c2-url.png, w2-c2-search.png
+  and this served shot.
+- `w2-c2-nextpage.png` shows the page-2 row after clicking next; the
+  pagination bar text itself is framed in `w2-c2-pagination.png` (carried by
+  that file, not withdrawn).
+- 375 note: the bottom nav holds all 8 items in a horizontally scrollable
+  fixed bar (first ~5 visible at 375px). Full-visibility of all 8 labels on
+  one screen is a shell/W1 experience item, not an EMP-01 acceptance gap.

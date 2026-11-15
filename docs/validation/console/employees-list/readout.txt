@@ -1,3 +1,9 @@
+NOTE (L6 round-5 text closure): the body below is the historical snapshot
+from commit 319faf4 (rounds 1–3). Round-4/5 readouts (M1280 costs
+["USD 0.12…","USD 0.01…"] after waitCosts; C1 375 rail h=94 pos=fixed
+top=718 bottom=812 vh=812, visCount=8; chip active URL_CHIPS 在岗=true) live
+in EVIDENCE.md "L6 round-4 C1 closure" and provenance sections.
+
 === l4w2b-shots.out (round 1, pre-fix) ===
 URL0=http://127.0.0.1:5399/agent/employees
 ROWS_AFTER=0
