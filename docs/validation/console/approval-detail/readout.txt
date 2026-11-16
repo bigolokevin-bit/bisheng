@@ -64,3 +64,20 @@ DIFFCHECK_EXIT=0
 TYPECHECK_ERRORS_IN_MY_FILES=0
 64482 Sun Nov 15 21:07:02 2026     11:59:59 /Users/kevin_studio/.cache/uv/builds-v0/.tmp7dPgf2/bin/python /Users/kevin_studio/Projects/seakoi-agent-os/ops/domain-dev-server.py
 CR-043 commit=86e9ff6 2026-11-16 07:32:17 +0800
+PAGE_OK
+LIST_URL=http://127.0.0.1:5399/agent/approvals
+LIST_DOM={"rows":0,"links":[],"empty":true,"tabHist":{"disabled":true,"title":"已决列表本波未提供：当前数据源只支持待办队列查询，已决记录将在后续波次接入。"},"hscroll":false}
+CLICKED=no-rows-in-list(pending=0 real data) → detail via direct URL
+DETAIL_PAGE_PRESENT=1
+DETAIL_DOM={"url":"/agent/approvals/ap_0A8BC8A6F02C457FA781D89417","heading":"审批详情","id":"ap_0A8…9417","kind":"变更类型 employee_version_create","status":"已过期","risk":"中风险","type":"类型 business_action","meta":"申请信息 申请人 system:l7-append 代理人 — 审批人 human:1 (owner) 需要审批人数 1 有效期 86400 秒 剩余时间 剩余 0 秒 策略决定 ID s10b6-append-t2-pol 参数摘要 th_6b48663e2196d9704787d8d98193475c 创建时间 11-13 08:49 剩余时间由服务端给出，到期时间见悬停提示。 申请理由 S10b-6 追加拍 t2：验证 approval.denied 审计双层（strip 后 actor/responsible=原始数字，decision 行保持 human:1）。","binding":"变更对象 对象类型 employee 对象 ID emp_0166858D562149938FBDA22649 变更类型 employee_version_create 目标摘要 th_6b48663e2196d9704787d8d98193475c","change":"变更明细 起始版本 empv_9791100658C84EDDB419EDEE1E → 目标版本号 2 员工 emp_0166858D562149938FBDA22649 起始版本 empv_9791100658C84EDDB419EDEE1E 目标版本号 2 新增授权 — 移除授权 — 生效时间 11-13 09:00 取值来源 resource+versions 版本 状态 生效时间 知识域 v2 当前 11-13 14:30 1 个 v1 已取代 11-13 08:48 1 个","changeBranch":"diff-head :: 起始版本 empv_9791100658C84EDDB419EDEE1E → 目标版本号 2","decisions":"决策记录 暂无决策记录","approve":{"disabled":true,"title":"M1 只读，写路径归后续波","text":"批准"},"reject":{"disabled":true,"title":"M1 只读，写路径归后续波","text":"驳回"},"revise":{"disabled":true,"title":"M1 只读，写路径归后续波","text":"要求修改"},"actionsNote":"M1 只读，写路径归后续波","remainingText":"剩余时间 剩余 0 秒","remainingTitle":null,"bodyHasUndefined":false,"hscroll":true,"scrollW":1380}
+CODE_SCAN=["S10b-6 追加拍 t2：验证 approval.denied 审计双层（strip 后 actor/responsible=原始数字，decision 行保"]
+SHOT1440=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/apr02-1440x900-dark.png
+W375={"sw":375,"cw":375}
+SHOT375=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/apr02-375x812-dark.png
+EMPTY_URL=http://127.0.0.1:5399/agent/approvals/
+EMPTY_DOM={"found":{"agent-v2-approvals-list":"审批 审批待办队列：查看待处理的审批单，可按本页选择（本波只读）。 待办 0 已决 已决列表本波未提供：当前数据源只支持待办队列查询，已决记录将在后续波次接入。 暂无待办审批 当前账号没有需要处理的审批"},"backExists":true}
+SHOT_EMPTY=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/apr02-empty-1440x900-dark.png
+NF_URL=http://127.0.0.1:5399/agent/approvals/apr_does_not_exist_zzz
+NF_DOM={"card":"未找到或无权查看 审批单不存在，或不属于当前租户。 返回审批列表","backExists":true,"machineCodeOnScreen":false,"codeish":[]}
+SHOT_404=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/apr02-404-1440x900-dark.png
+DONE_SHOTS

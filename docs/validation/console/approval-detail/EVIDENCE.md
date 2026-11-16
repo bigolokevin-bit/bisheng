@@ -62,3 +62,59 @@
 3. 403 与第二账号权限负例、pending>0 的倒计时真机腿：需第二角色会话或新的待办审批单。
 4. `employee_owner_transfer` 在本地数据集内无真实样本（AP4 全状态枚举未见）→ 该分支只有单测证据。
 5. 复制 ID 按钮的真实 clipboard 写入：依赖 served 页面（路由未接）→ 在线未测；无 clipboard API 时降级为「复制失败」提示，完整值始终在 `title` 且 id 文本 `user-select:all` 可选手动复制。
+
+## APR-02 接线后截图腿（WB65 follow-up，2026-11-16 09:30）
+
+G13 口径：**dev 5399 = 过程预览**（Vite HMR 载工作树，含协调者未提交的路由接线笔：
+routes `approvals/:id` + shellPages `ApprovalDetailScreen` + ApprovalsListPage 行内 NavLink——
+接线哈希 e58e4d8/f41e0f8 不在 origin 历史对象内，实际以工作树形态存在，本腿只读未动）。
+**served 8182 = 未测量**：现 entry 仍为 `index-BMUzMMBj.js`（75440dd 时代旧产物，未含接线），
+待 L7 部署后补拍；本片不部署不重启。
+
+### 截图四件（CDP setDeviceMetricsOverride 真视口，非 fullPage 单屏；sips 实测）
+| 文件 | 实测 | 内容 |
+|---|---|---|
+| apr02-1440x900-dark.png | 1440×900, 211024B | 真实单 ap_0A8BC8A6F02C457FA781D89417 详情（dark） |
+| apr02-375x812-dark.png | 375×812, 82730B | 同页 375 视口：scrollWidth=375=clientWidth **无横向溢出** |
+| apr02-empty-1440x900-dark.png | 1440×900, 120561B | 空 id 腿（实测为路由回落，见下） |
+| apr02-404-1440x900-dark.png | 1440×900, 105750B | 未知 id `apr_does_not_exist_zzz` 404 同体文案 |
+
+### 链路声明（列表→详情）
+真实数据 pending=0：列表页 DOM rows=0、empty=「暂无待办审批」、已决 tab disabled=true
+（title=「已决列表本波未提供」）。故**无法从列表真实点击行**；行链接接线代码存在于工作树
+ApprovalsListPage diff（id 单元格 NavLink → /agent/approvals/:id），本腿以**直达 URL**
+进入详情并全量渲染成功（agent-v2-aprd 存在、无错误卡）。点击腿待 pending>0 数据后补。
+
+### 详情 DOM 读数原文（真实 expired 单，ap_0A8…9417）
+- heading=审批详情；id=ap_0A8…9417（截断，完整值在 title）；kind=变更类型 employee_version_create
+- 状态 pill=已过期；风险 pill=中风险；类型 pill=类型 business_action
+- 元数据区=「申请信息 申请人 system:l7-append 代理人 — 审批人 human:1 (owner) 需要审批人数 1
+  有效期 86400 秒 剩余时间 剩余 0 秒 策略决定 ID s10b6-append-t2-pol 参数摘要
+  th_6b48663e2196d9704787d8d98193475c 创建时间 11-13 08:49 …申请理由（原文透传）」
+- 倒计时上屏值=**「剩余 0 秒」**（expired 行 remainingSeconds=0，服务端原值；expiresAt 仅 title）
+- changeKind 分支=**diff-head**（非「不可得」）：09:30 实测 AP3 已返回 detail 投影
+  （起始版本 empv_9791100658C84EDDB419EDEE1E → 目标版本号 2；新增/移除授权 —；生效时间 11-13 09:00；
+  取值来源 resource+versions；版本表 v2 当前 / v1 已取代）。与本目录早前 08:57 探针
+  （hasDetail=false）不一致=8101 已在此间重启加载 CR-043（86e9ff6，重启归 L7/运维，本片只转述）。
+  「不可得（未返回 changeDetail）」预期文案在实际数据里未出现；页面按卡显真实差异。
+- 决策历史=「暂无决策记录」（该单 decisions 空数组，空态正确；非「暂无决策」字面——复用既有键
+  agentConsole.approvals.decisionsEmpty，与卡 §3 措辞差一「记录」字，如实记）
+- 操作区三按钮 disabled 布尔实测：approve=true reject=true revise=true，
+  title 全=「M1 只读，写路径归后续波」；无任何 AP2 请求发出（页面代码只读 GET）。
+- 无 undefined/{{/待接入 上屏：实测 false。
+
+### 空/404/机器码扫描
+- **空 id 腿路由回落**：/agent/approvals/ 在 react-router v6 匹配到 `approvals`（列表页）而非
+  详情空态卡——`:id` 要求非空段。断言结果：详情错误区=不存在（渲染列表），返回列表链接=存在。
+  接线观察转报协调者（若需详情自身承接空 id，是集成拍的决定，本片未动代码）。
+- 404 腿：卡文案「未找到或无权查看／审批单不存在，或不属于当前租户。」+返回按钮存在；
+  错误态机器码扫描=0 命中。
+- **数据内容注意**：全页文本正则扫出 1 处 `approval.denied`——位于**申请理由 reasonText 原文内**
+  （S10b-6 追加拍的审计文本），属契约字段透传（卡要求显示 reasonText），非页面泄漏错误码；
+  若验收认为需过滤业务文本内点号串，需协调者拍板（本片不改代码不脱敏）。
+- 1440×900 下 documentElement.scrollWidth=1380 > clientWidth=1371（约 9px，疑似滚动条/表内边距
+  伪差，375 无溢出）；截图为视口顶部单屏，下部区块以 DOM 读数留证。
+
+### 结论（不判 PASS）
+在线四图+DOM 读数齐；detail 投影真实在线；链路=直达 URL（点击腿待 pending 数据）；
+served 腿待 L7 部署 e58e4d8 代产物；空 id 路由回落与 1440 下 9px scrollWidth 差待协调者裁量。
