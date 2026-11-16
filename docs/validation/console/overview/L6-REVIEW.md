@@ -48,3 +48,32 @@ R2 轮（main `3d9e547`）观察①「succeeded=13 vs 列表 completed=12+runnin
 **OV-01 整页不 PASS。** 阻断/未测面：C2 交互腿 NOT MEASURED、C5 E2E 腿 NOT MEASURED（均因浏览器工具缺位，非页面缺陷证据）、**C4-P2 GAP-OV-19 FAIL（BFF is_child_admin 直通未删，须 L2 修复后 C4 复跑）**。数据真实（C3）与权限负例（C4 三腿）、C6 测试面 PASS。下一步顺序建议：① L2 收紧 BFF+修 test_bff_authz 断言方向；② 部署 8182（新 entry 现查）；③ L6 带浏览器腿（playwright 可用环境或 L7 pair 工具）复跑 C2/C5；④ 之后才可判整页 PASS。
 
 回报判词时间：本笔 push 即判词生效（14:0x +0800）。
+
+## R1b — C2/C5 浏览器腿（ego-browser，2026-11-16 14:0x–14:2x +0800）
+
+方法：`/Users/kevin_studio/.local/bin/ego-browser nodejs`（taskSpace l6-ov-r1b，复用 ego 现役登录态，零新口令、零共享 cookie 清除）；dev 5399 + BFF 8092；1440×900 dsf2；DOM 断言脚本 $T/r1b-ego.js / r1b-ego2.js；console error 钩子=console.error+window.error+unhandledrejection 全流采样；截图 $T/r1b-c5-final-1440.png。
+
+| 项 | 判据 | 判定 | 证据 |
+|---|---|---|---|
+| C2-F 默认档 | 默认 28d | **PASS** | ov-range-28d aria-pressed=true、URL 无 range、range28pressed 一致 |
+| C2-F range 切换 | 7/28/90 URL+数据+时间刷新 | **PASS** | ?range=7d → updated『更新于 11-16 13:55（本页最晚成功响应）』、runs KPI=14（基线）；?range=90d；28d 复原 true |
+| C2-F 下钻 href | KPI/区块链接 | **PASS** | /agent/employees?lifecycle=active&src=ov、/agent/approvals?status=pending&src=ov、/agent/audit ×3、去审批中心/运行中心/任务板（队列空态 CTA） |
+| C2-F weeks 切换 | 4/8/12 | **PASS（修正 R1）** | 控件=BUTTON aria-pressed（4周 true）；点『12 周』→ URL ?weeks=12；R1『weeksLinks=[]』系我只查 <a href> 的探测映射错误，非页面缺陷 |
+| C2-F7 focus/复原 | ?range=&weeks=&focus= 五步复原 | **FAIL** | 三参数解析生效（URL 保持+heat 列变化+scrollIntoView @194），但页内无『清除条件』控件（button/a 文本 清除|clear|×|✕ 全枚举=0），focus=cost 无持久可见高亮态（cost 卡片 className 无 focus 标记）→ 用户无法一步复原；owner=L4 |
+| C2 空态诚实 | 各队列/活动空态 | **PASS** | 『今天没有到期单』『这里会出现：待你审批…』×3 队列、异常『0 条…这里会出现：失败、中断…』、活动『近 24 小时暂无运行或审计记录』、M2『组织级待办未接入』注记在位——非光杆『暂无数据』 |
+| C5-E 登录→列表→详情→返回→刷新 | E2E 链路 | **MEASURED PASS** | 现役会话登录态 200（approval-stats）；总览→在岗 KPI→/agent/employees（items=2 列表）→emp_86A8 详情→history.back→列表；总览重载 updated 时间刷新（13:55 腿）。程序偏差注：back 后 reload 落在列表页；总览 reload 腿已由 range 切换步覆盖 |
+| C5 console errors | 零 | **PASS** | 全流 __errs=[]（两脚本独立采样均 0） |
+
+## R2 — C4-P2 GAP-OV-19 修复轮 + C6 eslint 复测（14:2x +0800）
+
+- **C4-P2 判定：PASS（代码 + 单测矩阵代证）+ OBSERVATION(no child_admin account)**。fixer 交付 `lane/L7-ov01-bff-authz` @ `9f509136629e3e8ed2d8afb570c906957ba0d621`（基点 ed2bab9，L0 提供，本轮 fetch 亲验）：`_identity_granted` 现仅 `return data.get("is_global_super") is True`，`is_child_admin` 直通已删；注释明确『子租户管理员一律凭 web_menu 授权，默认 403』。test 反向 `test_child_admin_flag_without_menus_is_denied` + 新增 `test_child_admin_with_granted_menu_is_allowed`（菜单为授权源）+ 矩阵断言 `g({is_child_admin:True}) is False` / `g({is_child_admin:True, web_menu:["agent"]}) is True`。L0 独立跑 `apps/console/tests/test_bff_authz.py` = **15 passed**。在线无 child_admin 账号，页面层 403 腿待部署拍（checklist §4 允许单测代证，非阻断 NM）。未合并、未部署（遵卡）。
+- C4 viewer01/未登录/admin/404 三负例沿用 R1 PASS。
+- **C6 scoped eslint：PASS（exit 0）**——修正 R1『NM』。可复现命令：`ln -sfn $F/src/frontend/node_modules $T/wt-ovl6/src/frontend/node_modules` 后，于 src/frontend/platform 执行
+  `../../node_modules/.bin/eslint --suppressions-location eslint-suppressions.json src/pages/AgentConsoleV2/{OverviewPage.tsx,OverviewBlocks.tsx,__tests__/OverviewRedo.test.tsx}` → **rc=0**。
+  教训（坑位记录）：临时目录 npx 拼装（react-hooks@6）会引入仓库未钉规则（set-state-in-effect/purity）产生 2 个假阳性；必须用 pnpm store 钉版 eslint@9.39.5 + eslint-plugin-react-hooks@5.2.0（require.resolve 实证），且 config import 解析自 wt 内新增的 src/frontend/node_modules 软链。$T/wt-ovl6/src/frontend/node_modules 为 untracked 环境软链，非交付物。
+
+## R1b/R2 后整页状态（供 r3 终局）
+
+已收口：C3 三方 PASS、C4 全腿 PASS（P2 代证）、C5 浏览器腿 MEASURED PASS、C6 全 PASS（vitest 134/134 + scoped eslint rc=0 + diff-check 0）。
+仍开放：① **C2-F7 FAIL**（focus 持久高亮与页内清除控件，owner=L4，代码位 OverviewPage.tsx:190-197）；② C1 视觉门已 PASS（369c2fa 审计件）；③ C5-E1 8182 冒烟 PENDING(deploy)。
+整页判定：仍不 PASS——唯余 C2-F7 一项实现级 FAIL；其修复后 + 部署 8182 补 C5-E1 即可宣告整页 PASS。预计 r3 终局判词=L4 修复 C2-F7 并 push 后 10 分钟内（range/weeks/focus 三参 URL 与数据腿已全绿，修复面小）。
