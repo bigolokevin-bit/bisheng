@@ -77,3 +77,10 @@ R2 轮（main `3d9e547`）观察①「succeeded=13 vs 列表 completed=12+runnin
 已收口：C3 三方 PASS、C4 全腿 PASS（P2 代证）、C5 浏览器腿 MEASURED PASS、C6 全 PASS（vitest 134/134 + scoped eslint rc=0 + diff-check 0）。
 仍开放：① **C2-F7 FAIL**（focus 持久高亮与页内清除控件，owner=L4，代码位 OverviewPage.tsx:190-197）；② C1 视觉门已 PASS（369c2fa 审计件）；③ C5-E1 8182 冒烟 PENDING(deploy)。
 整页判定：仍不 PASS——唯余 C2-F7 一项实现级 FAIL；其修复后 + 部署 8182 补 C5-E1 即可宣告整页 PASS。预计 r3 终局判词=L4 修复 C2-F7 并 push 后 10 分钟内（range/weeks/focus 三参 URL 与数据腿已全绿，修复面小）。
+
+## R2b — C4-P2 独立矩阵重跑（L6 亲验，14:2x +0800）
+
+按卡要求不引用修复方 15/15，独立重跑：worktree @9f50913（`git worktree add --detach $T/wt-bffr2 9f50913`）执行
+`uv run --with pytest --with httpx pytest apps/console/tests/test_bff_authz.py -v`
+→ **rc=0，15 passed in 1.03s**（原文 $T/bffr2-pytest.out）。关键用例亲验：`test_child_admin_flag_without_menus_is_denied` PASSED、`test_child_admin_with_granted_menu_is_allowed` PASSED、`test_identity_granted_matrix` PASSED。
+**C4-P2 判定升级为 L6 独立 PASS**（代码 diff 亲读 + 矩阵亲跑），OBSERVATION(no child_admin account，在线腿待部署拍) 维持。四硬门收口：C2=PASS 除 C2-F7 FAIL；C5=MEASURED PASS；C4-P2=PASS(独立)；eslint=PASS(rc=0 钉版)。整页仍不 PASS，唯一实现级阻断=**C2-F7**（focus 持久高亮+页内清除控件，OverviewPage.tsx:190-197，owner=L4）；部署腿=C5-E1 PENDING(deploy)。r3 终局=L4 修 C2-F7 push 后 ≤10 分钟给。
