@@ -6,7 +6,12 @@
  *   system / sessions_stats), each headed by its own `sources.<name>.state`
  *   chip: ok → 正常, degraded → 「降级（reason）」 with the value area as
  *   「暂不可用」 (never 0). A failed request (401/403/503) turns the whole
- *   block into 「服务指标暂不可用」 and shows the returned code verbatim.
+ *   block into fully localized copy — OV-01/EMP-01 G15 idiom:
+ *   「{{block}}暂时取不到（HTTP nnn）」 where the HTTP status is only an
+ *   interpolation parameter; the internal machine code (runtime.* /
+ *   agent.http.*) never reaches the screen. This adapter's ApiResult carries
+ *   no requestId, so no request id is inlined anywhere and nothing is
+ *   clipboard-exposed here either (copyDiag appears only where an id exists).
  *   `gateway.note` (当日计数、重启归零) is rendered verbatim; nulls render
  *   「—」.
  * - 模型与工具用量: runtime.hermes.usage.v1 with a 7/30-day toggle (default
@@ -26,7 +31,8 @@
  *
  * Honest-data rules: nothing is 0-filled, nothing is estimated, no Hermes
  * Dashboard iframe/embedding, read-only (no write affordances). Every block
- * keeps its own Box loading/error state with the returned code. Layout uses
+ * keeps its own Box loading/error state; errors store only the HTTP status
+ * (never a machine code). Layout uses
  * fraction tracks (minmax(0,1fr)) only so 375px and 1440px stay free of
  * horizontal overflow.
  */
@@ -48,10 +54,13 @@ import {
   type HermesUsage,
 } from '@/controllers/API/agentConsoleHermes';
 
+/** G15: the error arm carries ONLY the HTTP status (0 = network failure,
+ *  401 = thrown AuthError). Envelope machine codes (runtime.*, console.*,
+ *  agent.http.*) are deliberately dropped — they never render. */
 type Box<T> =
   | { phase: 'loading' }
   | { phase: 'ok'; value: T }
-  | { phase: 'error'; code: string | null };
+  | { phase: 'error'; status: number };
 
 const boxLoading = { phase: 'loading' } as const;
 
@@ -77,16 +86,14 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-/** Error codes: envelope code when present; thrown AuthError is the 401
- *  case of the same idiom; network failures carry no upstream code. */
-function errCodeOf(e: unknown): string {
-  if (e instanceof AuthError) return 'agent.http.401';
-  return 'network';
-}
-
-function codeOf(res: { ok: boolean; status: number; code?: string }): string | null {
-  if (res.ok) return null;
-  return res.code ?? `agent.http.${res.status}`;
+/** Failure status for the error arm (G15): only the HTTP status is kept as
+ *  an interpolation parameter; the envelope machine code is dropped (an
+ *  `ok` response with an unusable body reports its real status). Thrown
+ *  AuthError is the 401 case of the same idiom; network failures carry no
+ *  status and report 0. */
+function thrownStatusOf(e: unknown): number {
+  if (e instanceof AuthError) return 401;
+  return 0;
 }
 
 /** Numbers/strings render verbatim; null/undefined always 「—」, never 0. */
@@ -155,9 +162,9 @@ export function HermesMetricsSection({ hermesApi, trendsApi }: HermesMetricsSect
       .then((res) =>
         res.ok && res.data
           ? set({ phase: 'ok', value: res.data })
-          : set({ phase: 'error', code: res.ok ? `agent.http.${res.status}.empty` : codeOf(res) }),
+          : set({ phase: 'error', status: res.status }),
       )
-      .catch((e) => set({ phase: 'error', code: errCodeOf(e) }));
+      .catch((e) => set({ phase: 'error', status: thrownStatusOf(e) }));
     return () => {
       live = false;
     };
@@ -175,9 +182,9 @@ export function HermesMetricsSection({ hermesApi, trendsApi }: HermesMetricsSect
       .then((res) =>
         res.ok && res.data
           ? set({ phase: 'ok', value: res.data })
-          : set({ phase: 'error', code: res.ok ? `agent.http.${res.status}.empty` : codeOf(res) }),
+          : set({ phase: 'error', status: res.status }),
       )
-      .catch((e) => set({ phase: 'error', code: errCodeOf(e) }));
+      .catch((e) => set({ phase: 'error', status: thrownStatusOf(e) }));
     return () => {
       live = false;
     };
@@ -194,7 +201,7 @@ export function HermesMetricsSection({ hermesApi, trendsApi }: HermesMetricsSect
       .getRunActivity({ weeks: 4, tz: 'Asia/Shanghai' })
       .then((res) => {
         if (!res.ok || !res.data || !Array.isArray(res.data.cells)) {
-          set({ phase: 'error', code: res.ok ? `agent.http.${res.status}.empty` : codeOf(res) });
+          set({ phase: 'error', status: res.status });
           return;
         }
         const cells = res.data.cells;
@@ -204,7 +211,7 @@ export function HermesMetricsSection({ hermesApi, trendsApi }: HermesMetricsSect
             : cells.reduce((m, c) => Math.max(m, c.count), 0);
         set({ phase: 'ok', value: { cells, max } });
       })
-      .catch((e) => set({ phase: 'error', code: errCodeOf(e) }));
+      .catch((e) => set({ phase: 'error', status: thrownStatusOf(e) }));
     return () => {
       live = false;
     };
@@ -228,8 +235,10 @@ export function HermesMetricsSection({ hermesApi, trendsApi }: HermesMetricsSect
           {summary.phase === 'loading' ? <p className="a2-meta">{t('agentConsole.v2.loading')}</p> : null}
           {summary.phase === 'error' ? (
             <p className="a2-meta" data-testid="agent-v2-metrics-health-error">
-              {t('agentConsole.v2.metricsServiceUnavailable')}
-              {summary.code ? <> · <span className="a2-mono">{summary.code}</span></> : null}
+              {t('agentConsole.v2.ov.blockUnavailable', {
+                block: t('agentConsole.v2.metricsHealthTitle'),
+                code: summary.status,
+              })}
             </p>
           ) : null}
           {summary.phase === 'ok'
@@ -430,8 +439,10 @@ export function HermesMetricsSection({ hermesApi, trendsApi }: HermesMetricsSect
           {usage.phase === 'loading' ? <p className="a2-meta">{t('agentConsole.v2.loading')}</p> : null}
           {usage.phase === 'error' ? (
             <p className="a2-meta" data-testid="agent-v2-metrics-usage-error">
-              {t('agentConsole.v2.errorQuery')}
-              {usage.code ? <> · <span className="a2-mono">{usage.code}</span></> : null}
+              {t('agentConsole.v2.ov.blockUnavailable', {
+                block: t('agentConsole.v2.metricsUsageTitle'),
+                code: usage.status,
+              })}
             </p>
           ) : null}
           {usage.phase === 'ok'
@@ -615,8 +626,10 @@ export function HermesMetricsSection({ hermesApi, trendsApi }: HermesMetricsSect
               {heat.phase === 'loading' ? <p className="a2-meta">{t('agentConsole.v2.loading')}</p> : null}
               {heat.phase === 'error' ? (
                 <p className="a2-meta" data-testid="agent-v2-metrics-heat-error">
-                  {t('agentConsole.v2.heatError')}
-                  {heat.code ? <> · <span className="a2-mono">{heat.code}</span></> : null}
+                  {t('agentConsole.v2.ov.blockUnavailable', {
+                    block: t('agentConsole.v2.metricsHeatTitle'),
+                    code: heat.status,
+                  })}
                 </p>
               ) : null}
               {heat.phase === 'ok' && heat.value.cells.length === 0 ? (
