@@ -38,6 +38,7 @@ import {
   type WorkstationListBody,
 } from './v2Data';
 
+import { HelpTip } from './HelpTip';
 import { KpiSpark } from './OverviewBlocks';
 import type { OverviewQueueBody } from './OverviewBlocks';
 
@@ -317,6 +318,7 @@ export function EmployeeDetailPage() {
           <p className="a2-meta" style={{ margin: '4px 0 0' }}>
             {t('agentConsole.v2.ed.bannerOwner')}{' '}
             <span className="a2-mono">{d.ownerUserId ? `human:${d.ownerUserId}` : '—'}</span>
+            {d.ownerUserId ? <HelpTip term="humanPrefix" testId="agent-v2-ed-help-owner" /> : null}
             {' · '}
             {t('agentConsole.v2.ed.bannerRevision', { count: d.revision ?? 0 })}
             {' · '}

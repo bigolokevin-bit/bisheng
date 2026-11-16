@@ -4332,6 +4332,40 @@
   },
   "agentConsole": {
     "v2": {
+      "help": {
+        "targetHash": {
+          "title": "Target hash",
+          "body": "Hash of the change target this approval was raised for: it confirms the approval covers exactly the object shown here."
+        },
+        "messageDigest": {
+          "title": "Message digest",
+          "body": "Digest of the message body this approval covers; the plain text is never shown, so the digest is what confirms the content."
+        },
+        "presentOnly": {
+          "title": "Provided fields only",
+          "body": "Fields the response did not carry are simply not shown — no placeholder, no zero, no internal error codes."
+        },
+        "bucketSum": {
+          "title": "Bucket sum",
+          "body": "Total built by adding the server's time buckets one by one, never by re-adding page-level rows."
+        },
+        "pendingKpi": {
+          "title": "Pending metric",
+          "body": "While its request is still in flight the metric stays pending — it shows neither a zero nor the previous value."
+        },
+        "caliber": {
+          "title": "Caliber",
+          "body": "The caliber line states the scope and source of these numbers; values from different calibers cannot be compared or converted."
+        },
+        "humanPrefix": {
+          "title": "Human reference",
+          "body": "The human: prefix marks a human account reference (for example human:9); employee: marks a digital employee."
+        },
+        "sourceEnum": {
+          "title": "Task source",
+          "body": "The channel message the task was created from; the UI shows the channel name and keeps the raw enum in the hover title."
+        }
+      },
       "title": "Console",
       "navEmployees": "Digital employees",
       "navApprovals": "Approvals",
@@ -4427,6 +4461,41 @@
       "metricsDegraded": "Degraded ({{reason}})",
       "metricsDegradedPlain": "Degraded",
       "metricsUnavailable": "Unavailable",
+      "tableScrollHint": "Scroll the table sideways",
+      "help": {
+        "targetHash": {
+          "title": "targetHash (change-target fingerprint)",
+          "body": "Hash the service computed for the target of this change, used to check whether the approval still points at the current version. It is a comparison only and carries no amounts or people."
+        },
+        "messageDigest": {
+          "title": "messageDigest (message digest)",
+          "body": "Digest of the message body this approval covers. The field comes with the service payload; when it is absent the approval is not tied to a single message."
+        },
+        "presentOnly": {
+          "title": "present-only (rendered only when returned)",
+          "body": "Keys the response did not return are not rendered and never defaulted. A missing field means \"this approval has none\", not an empty string, a 0, or \"not filled in\"."
+        },
+        "bucketSum": {
+          "title": "bucketSum (sum of buckets)",
+          "body": "Adds the buckets the service already aggregated per day or per hour. It never walks pages or raw rows, so nothing is double-counted across pages."
+        },
+        "pendingKpi": {
+          "title": "pendingKpi (KPI awaiting the service)",
+          "body": "While the KPI request has not returned the card is pending: a skeleton or 「—」, never a 0. A number on screen means the service returned that value."
+        },
+        "caliber": {
+          "title": "Caliber",
+          "body": "The range and source behind a group of numbers (time window, data source, unit, instance-level or tenant-level). Numbers from different calibers cannot be subtracted or compared."
+        },
+        "humanPrefix": {
+          "title": "human: prefix",
+          "body": "Actor-id prefix: human: is a person account, employee: is a digital employee; the id itself follows the colon."
+        },
+        "sourceEnum": {
+          "title": "source (channel enum)",
+          "body": "Machine enum for the channel a task came from (feishu, chat, manual, system …). The console shows a localized name per enum; an unknown value is shown as-is and flagged as a warning."
+        }
+      },
       "metricsServiceUnavailable": "Metrics service unavailable",
       "metricsNotPriced": "Not priced",
       "metricsUnattributed": "Unattributed",
@@ -4737,6 +4806,7 @@
         "kpiDueSoonNote": "{{count}} will expire within 24h",
         "kpiCaliberLedger": "Caliber: cost ledger",
         "kpiTrendUnavailable": "Trend data unavailable",
+        "kpiCostUnavailable": "Cost data temporarily unavailable",
         "anomalyWindowNote": "Rolling last 7 days",
         "filterAll": "All",
         "filterDept": "Department",
@@ -4868,10 +4938,16 @@
         "scopeMineNoUid": "Identity unavailable; “mine” view is disabled",
         "sourceChip": "Source: {{channel}}",
         "sourceFacetNone": "No source facets on loaded pages",
-        "srcFeishu": "Feishu message",
+        "src": {
+          "feishu": "Feishu message",
+          "chat": "Chat",
+          "manual": "Manual",
+          "system": "Scheduled",
+          "console": "Manual",
+          "other": "Other"
+        },
         "srcFeishuCell": "Feishu",
         "srcNote": "Source filter is a client facet over loaded pages only",
-        "srcOther": "Other",
         "due7d": "Due within 7 days",
         "statusLabel": {
           "open": "To do",
@@ -4894,9 +4970,6 @@
         "colUpdated": "Updated",
         "roleEmployee": "Employee",
         "roleSelf": "Self",
-        "srcChat": "Chat",
-        "srcManual": "Manual",
-        "srcSystem": "Scheduled",
         "priHighChip": "High"
       },
       "met": {

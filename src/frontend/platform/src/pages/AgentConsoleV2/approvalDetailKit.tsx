@@ -187,6 +187,7 @@ export function Field({
   mono,
   faint,
   title,
+  help,
   children,
 }: {
   label: string;
@@ -194,11 +195,16 @@ export function Field({
   mono?: boolean;
   faint?: boolean;
   title?: string;
+  /** Optional help tip rendered inline after the label (P1 batch2). */
+  help?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className={`a2d-mfield${wide ? ' wide' : ''}`} title={title}>
-      <div className="a2d-fl">{label}</div>
+      <div className="a2d-fl">
+        <span>{label}</span>
+        {help}
+      </div>
       <div className={`a2d-fv${mono ? ' a2-mono' : ''}${faint ? ' a2d-faint' : ''}`}>{children}</div>
     </div>
   );

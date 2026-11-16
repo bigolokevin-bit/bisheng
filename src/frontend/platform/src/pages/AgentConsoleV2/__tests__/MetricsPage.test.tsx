@@ -602,3 +602,30 @@ describe('MET-01 export (the single front-end read-only action)', () => {
     clickSpy.mockRestore();
   });
 });
+
+/** Text of the line the tip sits on (its <li> or header row). */
+function closestText(el: HTMLElement): string {
+  const host = el.closest('li') ?? el.closest('.met-fresh') ?? el.parentElement;
+  return host?.textContent ?? '';
+}
+
+describe('MET-01 P1 batch2 — governance terminology help', () => {
+  it('bucketSum rides rule 4 (server-side aggregation) and pendingKpi rides the freshness line', async () => {
+    renderPage();
+    await screen.findByTestId('agent-v2-met-calib');
+    const sum = screen.getByTestId('agent-v2-met-help-bucketsum');
+    const pend = screen.getByTestId('agent-v2-met-help-pendingkpi');
+    // both anchors live inside the copy they explain, never on their own row
+    expect(closestText(sum)).toContain('聚合只认服务端');
+    expect(closestText(pend)).toContain('只读投影');
+    fireEvent.click(sum);
+    const pop = screen.getByRole('tooltip');
+    expect(pop.textContent).toContain('bucketSum');
+    expect(pop.textContent).toContain('聚合');
+    expect(pop.textContent).not.toContain('agentConsole.v2.help');
+    // Escape closes; the panel copy underneath is untouched
+    fireEvent.keyDown(sum, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    expect(screen.getByTestId('agent-v2-met-calib').textContent).toContain('聚合只认服务端');
+  });
+});

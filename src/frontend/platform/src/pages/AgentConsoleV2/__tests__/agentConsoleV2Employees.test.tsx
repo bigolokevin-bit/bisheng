@@ -9,6 +9,8 @@
  * so assertions reference raw keys and unformatted service values.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -454,18 +456,72 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
       );
     });
 
-    it('KPI failures show localized block copy, never run.invalid_query / budget.range_too_large', async () => {
+    it('KPI failures show a localized reason and 「—」, never the HTTP status or a machine code', async () => {
       statsFail = true;
       budgetFail = true;
       renderPage();
       await screen.findByTestId('agent-v2-kpi-onduty-error');
       await screen.findByTestId('agent-v2-kpi-cost-error');
-      expect(screen.getByTestId('agent-v2-kpi-onduty-error').textContent).toContain(
-        'agentConsole.v2.ov.blockUnavailable'
+      // P0-1: reason-only copy (raw-key suite: the key itself is the text)
+      expect(screen.getByTestId('agent-v2-kpi-onduty-error').textContent).toBe(
+        'agentConsole.v2.metricsUnavailable'
       );
+      expect(screen.getByTestId('agent-v2-kpi-cost-error').textContent).toBe(
+        'agentConsole.v2.emp.kpiCostUnavailable'
+      );
+      // the value line keeps the same shape as the healthy card
+      expect(screen.getByTestId('agent-v2-kpi-onduty').textContent).toBe('—');
+      expect(screen.getByTestId('agent-v2-kpi-cost').textContent).toBe('—');
+      // no HTTP status / no parentheses-code anywhere in the page
+      expect(screen.getByTestId('agent-v2-employees-page').textContent).not.toContain('HTTP');
       assertNoLeak(['run.invalid_query', 'budget.range_too_large']);
       // the list itself is healthy — a KPI failure must not fake a page error
       await screen.findByTestId('agent-v2-employees-table');
     });
+  });
+});
+
+describe('EMP-01 P1 round: disabled visuals, 375 scroll hint, name clipping', () => {
+  it('P1-2: create/prev-page are REALLY disabled in the DOM (visual fix only, no functional change)', async () => {
+    renderPage();
+    await screen.findByTestId('agent-v2-employees-table');
+    const create = screen.getByTestId('agent-v2-employees-create') as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    expect(create.getAttribute('disabled')).not.toBeNull();
+    expect(create.title).toBe('agentConsole.v2.emp.createDisabledNote');
+    // first page → no previous page, and the control is disabled (not just dim)
+    const prev = screen.getByText('agentConsole.v2.emp.prevPage') as HTMLButtonElement;
+    expect(prev.disabled).toBe(true);
+    // the visual contract is CSS-side: a disabled .a2-btn must not look clickable
+    const css = readFileSync(resolve(process.cwd(), 'src/pages/AgentConsoleV2/agentConsoleV2.css'), 'utf8');
+    expect(css).toMatch(/\.a2-btn\[disabled\][^{]*\{[^}]*opacity/);
+    expect(css).toMatch(/\.a2-btn\[disabled\][^{]*\{[^}]*cursor:\s*not-allowed/);
+  });
+
+  it('P1-3: scroll hint renders only while the wrapper actually overflows (1440 hidden)', async () => {
+    renderPage();
+    await screen.findByTestId('agent-v2-employees-table');
+    const wrap = screen.getByTestId('agent-v2-employees-table-scroll');
+    // jsdom measures 0/0 → the table "fits", so no hint is claimed
+    expect(screen.queryByTestId('agent-v2-employees-scroll-hint')).toBeNull();
+    Object.defineProperty(wrap, 'scrollWidth', { configurable: true, value: 880 });
+    Object.defineProperty(wrap, 'clientWidth', { configurable: true, value: 343 });
+    fireEvent(window, new Event('resize'));
+    expect(await screen.findByTestId('agent-v2-employees-scroll-hint')).toBeInTheDocument();
+    Object.defineProperty(wrap, 'scrollWidth', { configurable: true, value: 1270 });
+    Object.defineProperty(wrap, 'clientWidth', { configurable: true, value: 1270 });
+    fireEvent(window, new Event('resize'));
+    await waitFor(() => expect(screen.queryByTestId('agent-v2-employees-scroll-hint')).toBeNull());
+  });
+
+  it('OBS: the name cell keeps a readable column and clips instead of breaking per glyph', async () => {
+    renderPage();
+    await screen.findByTestId('agent-v2-employees-table');
+    const cell = screen.getAllByTestId('agent-v2-col-name')[0];
+    expect(cell.className).toContain('a2-col-name');
+    // full name + title stay reachable as title attributes
+    expect(cell.querySelector('[title]')?.getAttribute('title')).toBe(
+      'AgentOS Product Assistant'
+    );
   });
 });

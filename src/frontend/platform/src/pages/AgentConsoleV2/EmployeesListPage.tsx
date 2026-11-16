@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { EmployeesHeatPanel } from './EmployeesHeatPanel';
+import { HelpTip } from './HelpTip';
 import {
   dayWindow,
   fetchActivity,
@@ -23,7 +24,6 @@ import {
   fetchEmployeeStats,
   fetchRunStats,
   fetchWorkstations,
-  fmtId,
   fmtRatio,
   fmtTime,
   fmtUsd,
@@ -117,22 +117,28 @@ function DiagCopyButton({ requestId, testId }: { requestId?: string; testId: str
   );
 }
 
-// Localized KPI-block failure line (OV-01 idiom): "…暂时取不到（HTTP nnn）"
-// plus the copy-diagnostics affordance. No machine code, no inline request id.
+// P0-1 (observer pixel audit): the KPI failure line used to print the HTTP
+// status ("…暂时取不到（HTTP 500）"), so one error state read as three
+// different things (dark: code on screen, light/375: bare "—"). It now keeps
+// the SAME shape as the healthy KPI — value line "—" + one reason line — and
+// the HTTP status / internal code never reach the DOM. Only the requestId
+// stays reachable, behind the copy-diagnostics control.
 function KpiBlockError({
   res,
-  block,
+  reason,
   testIdBase,
 }: {
   res: ApiRes<unknown>;
-  block: string;
+  reason: string;
   testIdBase: string;
 }) {
-  const { t } = useTranslation();
   return (
     <>
+      <span className="a2-kpi-num" data-testid={testIdBase}>
+        —
+      </span>
       <span className="a2-meta" data-testid={`${testIdBase}-error`}>
-        {t('agentConsole.v2.ov.blockUnavailable', { block, code: res.status })}
+        {reason}
       </span>
       <DiagCopyButton requestId={res.requestId} testId={`${testIdBase}-diag`} />
     </>
@@ -151,6 +157,18 @@ function sumCost(body: BudgetBody | null | undefined, ids: string[]): { total: n
     }
   });
   return { total, covered };
+}
+
+/* P0-2 (observer pixel audit): the owner cell printed the bare uid ("1"), so a
+   reviewer could not tell a person from a truncated fragment. The E11
+   projection carries only the userId, so the actor type defaults to `human` —
+   the same convention the detail banner and the approval-stats call already
+   use (`human:${owner}`) — while a value that already carries a type prefix is
+   kept verbatim. The cell prints the full ref (never a bare number) and the
+   title keeps that full value. */
+function ownerRef(ownerUserId?: string | null): string {
+  if (!ownerUserId) return '';
+  return ownerUserId.includes(':') ? ownerUserId : `human:${ownerUserId}`;
 }
 
 export function EmployeesListPage() {
@@ -177,6 +195,8 @@ export function EmployeesListPage() {
   const [heatEmployeeId, setHeatEmployeeId] = useState('');
   const [rowEnrich, setRowEnrich] = useState<Record<string, RowEnrich>>({});
   const [copiedId, setCopiedId] = useState('');
+  const [tableOverflows, setTableOverflows] = useState(false);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const pagesRef = useRef<string[]>(['']);
   const debounceRef = useRef<number | undefined>(undefined);
 
@@ -444,6 +464,19 @@ export function EmployeesListPage() {
     listRes && !listRes.ok && (listRes.code === 'console.forbidden' || listRes.status === 403);
   const isError = listRes && !listRes.ok && !isAuth && !isForbidden;
 
+  /* P1-3: the phone-width table scrolls inside its card; say so ONLY while the
+     wrapper actually overflows (measured), so 1440 — where the table fits —
+     never shows a hint that contradicts reality. */
+  useEffect(() => {
+    const measure = () => {
+      const el = tableScrollRef.current;
+      setTableOverflows(!!el && el.scrollWidth > el.clientWidth);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [displayRows, view, listLoading, listRes]);
+
   return (
     <div className="a2s-page" data-testid="agent-v2-employees-page">
       <div className="a2-card-head">
@@ -474,7 +507,7 @@ export function EmployeesListPage() {
           {kpi.stats && !kpi.stats.ok ? (
             <KpiBlockError
               res={kpi.stats}
-              block={t('agentConsole.v2.emp.kpiOnDuty')}
+              reason={t('agentConsole.v2.metricsUnavailable')}
               testIdBase="agent-v2-kpi-onduty"
             />
           ) : (
@@ -493,7 +526,7 @@ export function EmployeesListPage() {
           {kpi.approvals && !kpi.approvals.ok ? (
             <KpiBlockError
               res={kpi.approvals}
-              block={t('agentConsole.v2.emp.kpiPending')}
+              reason={t('agentConsole.overview.pendingUnavailable')}
               testIdBase="agent-v2-kpi-pending"
             />
           ) : (
@@ -514,7 +547,7 @@ export function EmployeesListPage() {
           {kpi.costNow && !kpi.costNow.ok ? (
             <KpiBlockError
               res={kpi.costNow}
-              block={t('agentConsole.v2.emp.kpiCost')}
+              reason={t('agentConsole.v2.emp.kpiCostUnavailable')}
               testIdBase="agent-v2-kpi-cost"
             />
           ) : (
@@ -536,7 +569,7 @@ export function EmployeesListPage() {
           {kpi.anomalyNow && !kpi.anomalyNow.ok ? (
             <KpiBlockError
               res={kpi.anomalyNow}
-              block={t('agentConsole.v2.emp.kpiAnomaly')}
+              reason={t('agentConsole.v2.ov.anomalyUnavailable')}
               testIdBase="agent-v2-kpi-anomaly"
             />
           ) : (
@@ -705,7 +738,11 @@ export function EmployeesListPage() {
         </div>
       ) : (
         <div className="a2-card">
-          <div className="a2-table-scroll">
+          <div
+            className="a2-table-scroll"
+            ref={tableScrollRef}
+            data-testid="agent-v2-employees-table-scroll"
+          >
           <table className="a2-table" data-testid="agent-v2-employees-table">
             <thead>
               <tr>
@@ -722,7 +759,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'version' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'version' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -748,20 +788,30 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'owner' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-owner"
-                    onClick={() => handleSort('owner')}
-                  >
-                    {t('agentConsole.v2.colOwner')}
-                    <span aria-hidden>
-                      {sortCol === 'owner' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'owner' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
+                  <span className="a2-th-help">
+                    <button
+                      type="button"
+                      className="a2-th-btn"
+                      data-testid="agent-v2-sort-owner"
+                      onClick={() => handleSort('owner')}
+                    >
+                      {t('agentConsole.v2.colOwner')}
+                      <span aria-hidden>
+                        {sortCol === 'owner' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                      </span>
+                    </button>
+                    {/* P1 batch2: the owner cell prints a `human:<id>` ref — say what the prefix is. */}
+                    <HelpTip term="humanPrefix" testId="agent-v2-emp-help-owner" />
+                  </span>
                 </th>
-                <th aria-sort={sortCol === 'workstation' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'workstation' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -774,7 +824,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'pending' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'pending' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -787,7 +840,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'lastRun' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'lastRun' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -800,7 +856,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'success' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'success' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -813,7 +872,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'cost' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'cost' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -846,18 +908,20 @@ export function EmployeesListPage() {
                     : null;
                 return (
                   <tr key={r.employeeId} data-testid="agent-v2-employee-row">
-                    <td>
+                    <td className="a2-col-name" data-testid="agent-v2-col-name">
                       <div className="a2-card-head">
                         <span className="a2-pill" aria-hidden>
                           {(r.name ?? '?').slice(0, 1)}
                         </span>
-                        <span>
-                          {r.name ?? '—'}
-                          <span className="a2-meta">{r.title ? ` · ${r.title}` : ''}</span>
+                        <span className="a2-name-cell">
+                          <span title={r.name ?? undefined}>{r.name ?? '—'}</span>
+                          <span className="a2-meta" title={r.title ?? undefined}>
+                            {r.title ? ` · ${r.title}` : ''}
+                          </span>
                         </span>
                       </div>
                     </td>
-                    <td data-testid="agent-v2-col-version">
+                    <td className="r" data-testid="agent-v2-col-version">
                       {r.enrichment?.currentVersionNo !== undefined ? (
                         <>
                           v{r.enrichment.currentVersionNo}
@@ -873,10 +937,14 @@ export function EmployeesListPage() {
                     <td className="a2-cell-nowrap" data-testid="agent-v2-col-status">
                       {t(`agentConsole.lifecycle.${r.lifecycleState}`, r.lifecycleState)}
                     </td>
-                    <td className="a2-mono a2-cell-nowrap" title={r.ownerUserId}>
-                      {fmtId(r.ownerUserId)}
+                    <td
+                      className="a2-mono a2-cell-nowrap r"
+                      title={ownerRef(r.ownerUserId) || undefined}
+                      data-testid="agent-v2-col-owner"
+                    >
+                      {ownerRef(r.ownerUserId) || '—'}
                     </td>
-                    <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap">
+                    <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap r">
                       {en?.stations
                         ? `${en.stations.groups} · ${en.stations.dms} · ${en.stations.crons}`
                         : r.enrichment?.workstationCount !== undefined
@@ -885,10 +953,10 @@ export function EmployeesListPage() {
                             ? '—'
                             : '…'}
                     </td>
-                    <td data-testid="agent-v2-col-pending">
+                    <td className="r" data-testid="agent-v2-col-pending">
                       {r.enrichment?.pendingApprovalCount ?? (en ? '—' : '…')}
                     </td>
-                    <td data-testid="agent-v2-col-lastrun">
+                    <td className="r" data-testid="agent-v2-col-lastrun">
                       {runs7 && runs7.runs > 0 ? (
                         <>
                           {/* Separator keeps count and timestamp readable as two values. */}
@@ -902,10 +970,10 @@ export function EmployeesListPage() {
                           : t('agentConsole.v2.trendEmpty')
                         : '…'}
                     </td>
-                    <td data-testid="agent-v2-col-success">
+                    <td className="r" data-testid="agent-v2-col-success">
                       {runs7 && runs7.runs > 0 ? fmtRatio(runs7.succeeded / runs7.runs) : '—'}
                     </td>
-                    <td data-testid="agent-v2-col-cost">
+                    <td className="r" data-testid="agent-v2-col-cost">
                       {kpi.costNow && !kpi.costNow.ok
                         ? '—'
                         : typeof monthCost?.costUsd === 'number'
@@ -968,6 +1036,28 @@ export function EmployeesListPage() {
               {t('agentConsole.v2.emp.nextPage')}
             </button>
           </div>
+          {/* P1-3: conditional, measurement-backed — hidden when the table fits */}
+          {tableOverflows && (
+            <p className="a2-scroll-hint" data-testid="agent-v2-employees-scroll-hint">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <polyline points="18 8 22 12 18 16" />
+                <polyline points="6 8 2 12 6 16" />
+                <line x1="2" x2="22" y1="12" y2="12" />
+              </svg>
+              {t('agentConsole.v2.tableScrollHint')}
+            </p>
+          )}
         </div>
       )}
       <span aria-live="polite" data-testid="agent-v2-copy-toast">

@@ -129,6 +129,18 @@ function remainingSecondsOf(r: Approval, receivedAt: number, now: number): numbe
   return remainingFrom(r.expiresAt, now);
 }
 
+/** P1-4: the queue countdown is a DURATION, so it reads hh:mm:ss instead of
+ *  "剩余 3723 秒"; the authoritative server second count stays in the cell
+ *  title (`remainingSeconds=…`) next to the absolute expiry. Hours are never
+ *  folded into days — a 24h SLA reads 24:00:00, not 1d. */
+function fmtHms(total: number): string {
+  const s = Math.max(0, Math.floor(total));
+  const hh = Math.floor(s / 3600);
+  const mm = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  return [hh, mm, ss].map((n) => String(n).padStart(2, '0')).join(':');
+}
+
 export function ApprovalsListPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -164,6 +176,8 @@ export function ApprovalsListPage() {
   // the moment the page payload was received (L6 F-1); no client expiry state
   const [now, setNow] = useState(() => Date.now());
   const [listReceivedAt, setListReceivedAt] = useState(() => Date.now());
+  const [tableOverflows, setTableOverflows] = useState(false);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const pagesRef = useRef<string[]>(['']);
 
   const patchParams = useCallback(
@@ -250,6 +264,17 @@ export function ApprovalsListPage() {
   }, [listRes]);
   const rowIds = useMemo(() => rows.map((r) => r.approvalId), [rows]);
   const allSelected = rows.length > 0 && rowIds.every((id) => selected.has(id));
+
+  /* P1-3: conditional 「表格可左右滑动」 — measured, so 1440 (table fits) hides it. */
+  useEffect(() => {
+    const measure = () => {
+      const el = tableScrollRef.current;
+      setTableOverflows(!!el && el.scrollWidth > el.clientWidth);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [rows, tab, listLoading, listRes]);
 
   const handleToggle = (id: string) => {
     setSelected((prev) => {
@@ -572,25 +597,30 @@ export function ApprovalsListPage() {
 
           {/* ---------- queue table (id links to APR-02 detail) ---------- */}
           <div className="a2-card">
-            <div className="a2-table-scroll">
+            <div
+              className="a2-table-scroll"
+              ref={tableScrollRef}
+              data-testid="agent-v2-approvals-table-scroll"
+            >
               <table className="a2-table" data-testid="agent-v2-approvals-table">
                 <thead>
                   <tr>
                     <th>
                       <input
                         type="checkbox"
+                        className="a2-check"
                         data-testid="agent-v2-approvals-select-all"
                         checked={allSelected}
                         aria-label={t('agentConsole.v2.apr.selectAll')}
                         onChange={handleToggleAll}
                       />
                     </th>
-                    <th>{t('agentConsole.approvals.colId')}</th>
+                    <th className="r">{t('agentConsole.approvals.colId')}</th>
                     <th>{t('agentConsole.approvals.colAction')}</th>
-                    <th>{t('agentConsole.v2.apr.colEmployee')}</th>
+                    <th className="r">{t('agentConsole.v2.apr.colEmployee')}</th>
                     <th>{t('agentConsole.approvals.colRisk')}</th>
-                    <th>{t('agentConsole.approvals.createdAt')}</th>
-                    <th>{t('agentConsole.v2.apr.colDue')}</th>
+                    <th className="r">{t('agentConsole.approvals.createdAt')}</th>
+                    <th className="r">{t('agentConsole.v2.apr.colDue')}</th>
                     <th>{t('agentConsole.approvals.colStatus')}</th>
                   </tr>
                 </thead>
@@ -617,13 +647,14 @@ export function ApprovalsListPage() {
                         <td>
                           <input
                             type="checkbox"
+                            className="a2-check"
                             data-testid="agent-v2-approval-check"
                             checked={selected.has(r.approvalId)}
                             aria-label={r.approvalId}
                             onChange={() => handleToggle(r.approvalId)}
                           />
                         </td>
-                        <td className="a2-mono a2-cell-nowrap" title={r.approvalId}>
+                        <td className="a2-mono a2-cell-nowrap r" title={r.approvalId}>
                           {/* APR-02: the id opens the read-only detail; the list URL
                               (filters/cursor) stays in history so 「返回」 restores it. */}
                           <NavLink
@@ -642,7 +673,7 @@ export function ApprovalsListPage() {
                             {r.binding?.changeKind ?? '—'}
                           </span>
                         </td>
-                        <td className="a2-cell-nowrap" title={employee?.id}>
+                        <td className="a2-cell-nowrap r" title={employee?.id}>
                           {employee?.id ?? '—'}
                         </td>
                         <td className="a2-cell-nowrap" data-testid="agent-v2-approval-risk">
@@ -651,15 +682,20 @@ export function ApprovalsListPage() {
                             {t(`agentConsole.approvals.risk.${r.riskLevel}`, r.riskLevel)}
                           </span>
                         </td>
-                        <td className="a2-cell-nowrap">{fmtTime(r.createdAt)}</td>
+                        <td className="a2-mono a2-cell-nowrap r">{fmtTime(r.createdAt)}</td>
                         <td
-                          className="a2-cell-nowrap"
+                          className="a2-mono a2-cell-nowrap r"
                           data-testid="agent-v2-approval-countdown"
-                          title={r.expiresAt ? fmtTime(r.expiresAt) : undefined}
+                          title={
+                            [
+                              r.expiresAt ? fmtTime(r.expiresAt) : '',
+                              remaining === null ? '' : `remainingSeconds=${remaining}`,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ') || undefined
+                          }
                         >
-                          {remaining === null
-                            ? '—'
-                            : t('agentConsole.approvals.remaining', { seconds: remaining })}
+                          {remaining === null ? '—' : fmtHms(remaining)}
                         </td>
                         <td className="a2-cell-nowrap">
                           {t(`agentConsole.approvals.status.${statusKey(r.status)}`, r.status)}
@@ -696,6 +732,28 @@ export function ApprovalsListPage() {
                 {t('agentConsole.v2.apr.nextPage')}
               </button>
             </div>
+            {/* P1-3: conditional, measurement-backed — hidden when the table fits */}
+            {tableOverflows && (
+              <p className="a2-scroll-hint" data-testid="agent-v2-approvals-scroll-hint">
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <polyline points="18 8 22 12 18 16" />
+                  <polyline points="6 8 2 12 6 16" />
+                  <line x1="2" x2="22" y1="12" y2="12" />
+                </svg>
+                {t('agentConsole.v2.tableScrollHint')}
+              </p>
+            )}
           </div>
         </>
       )}

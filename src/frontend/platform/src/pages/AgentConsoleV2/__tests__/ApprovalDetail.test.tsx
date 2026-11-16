@@ -14,6 +14,8 @@
  * all-disabled M1 ops with zero AP2; four states + retry; countdown authority.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -311,6 +313,45 @@ describe('APR-02 — D-1 binding present-only', () => {
     expect(screen.getByTitle('rn_01M7DF41FG124YHW9PR66CJ7HW')).toBeTruthy();
   });
 
+  it('P1 batch2: targetHash / messageDigest / present-only / caliber each carry a help tip', async () => {
+    detailBody = approval({
+      action: 'message.send',
+      binding: {
+        subjectType: 'employee',
+        subjectId: EMP,
+        changeKind: 'message_send',
+        targetHash: 'th_8b2e5f1a9c4d7e0b3f6a1d8c5e2b9f47',
+        runId: 'rn_01M7DF41FG124YHW9PR66CJ7HW',
+        messageDigest: 'md_5e8b1f4a7c0d3e6f9a2b5c8d1e4f7a0b',
+      },
+      detail: undefined,
+    });
+    renderDetail();
+    await screen.findByTestId('agent-v2-apd-binding');
+    for (const id of [
+      'agent-v2-apd-help-target-hash',
+      'agent-v2-apd-help-message-digest',
+      'agent-v2-apd-help-present-only',
+      'agent-v2-apd-help-caliber',
+    ]) {
+      const btn = screen.getByTestId(id);
+      expect(btn.tagName).toBe('BUTTON');
+      expect(btn.getAttribute('aria-label')).toBeTruthy();
+      expect(btn.getAttribute('aria-label')).not.toContain('agentConsole.v2.help');
+    }
+    // opening one explains the term and hides no data (popover is not interactive)
+    fireEvent.click(screen.getByTestId('agent-v2-apd-help-target-hash'));
+    const pop = screen.getByRole('tooltip');
+    expect(pop.textContent).toContain('targetHash');
+    expect(pop.textContent).toContain('哈希');
+    // the value itself is still on screen
+    expect(screen.getByTestId('agent-v2-apd-binding').textContent).toContain(
+      'th_8b2e5f1a9c4d7e0b3f6a1d8c5e2b9f47'
+    );
+    fireEvent.keyDown(screen.getByTestId('agent-v2-apd-help-target-hash'), { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
   it('version binding renders effectiveFrom when present', async () => {
     renderDetail();
     const binding = await screen.findByTestId('agent-v2-apd-binding');
@@ -465,6 +506,35 @@ describe('APR-03 — write gate off by default (build switch) + leak guard', () 
     expect(methods.some((m) => m !== 'GET')).toBe(false);
     expect(document.querySelector('textarea')).toBeNull();
     expect(screen.getByTestId('agent-v2-apd-ops-note').textContent).toContain('本环境未开放在线决策');
+  });
+
+  it('P0-4: the ops bar always renders the three buttons; 批准 keeps the pri recipe (never white-on-white)', async () => {
+    renderDetail();
+    await screen.findByTestId('agent-v2-apd-ops');
+    const bar = document.querySelector('.a2d-acts') as HTMLElement;
+    const btns = Array.from(bar.querySelectorAll('button'));
+    // same DOM at every theme/breakpoint — the CSS decides visibility, not v-if
+    expect(btns.map((b) => b.getAttribute('data-testid'))).toEqual([
+      'agent-v2-apd-reject',
+      'agent-v2-apd-revise',
+      'agent-v2-apd-approve',
+    ]);
+    const approve = screen.getByTestId('agent-v2-apd-approve') as HTMLButtonElement;
+    expect(approve.className).toContain('a2d-btn');
+    expect(approve.className).toContain('pri');
+    expect((approve.textContent ?? '').trim()).not.toBe('');
+    expect(approve.disabled).toBe(true);
+    // root cause guard: a hex in --primary makes `hsl(var(--primary))` invalid,
+    // dropping the background and leaving #fff text on the white card.
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/pages/AgentConsoleV2/agentConsoleV2.css'),
+      'utf8',
+    );
+    const light = css.slice(css.indexOf(".agent-app[data-theme='light']"));
+    const lightBlock = light.slice(0, light.indexOf('}'));
+    const primary = /--primary:\s*([^;]+);/.exec(lightBlock)?.[1].trim() ?? '';
+    expect(primary).not.toMatch(/^#/);
+    expect(primary).toMatch(/^\d+(\.\d+)?\s+\d+(\.\d+)?%\s+\d+(\.\d+)?%$/);
   });
 
   it('no machine codes / raw action / raw changeKind / undefined / total in visible text', async () => {

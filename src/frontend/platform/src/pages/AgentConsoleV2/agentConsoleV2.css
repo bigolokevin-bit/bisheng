@@ -54,7 +54,12 @@
   --accent: 250 58% 46%;
   --accent-soft: rgba(75, 65, 196, 0.07);
   --accent-border: rgba(75, 65, 196, 0.35);
-  --primary: #18181e;
+  /* P0-4: this token used to be the literal #18181e, so every consumer that
+     wraps it (`hsl(var(--primary))`: primary buttons, incl. APR-02 批准) got an
+     invalid declaration → transparent background with #fff text → the button
+     vanished on light 1440. Same colour, expressed as an HSL triplet like the
+     dark block, so the wrapper resolves in both themes. */
+  --primary: 240 11% 11%;
   --primary-foreground: #ffffff;
   --danger: 357 58% 46%;
   --danger-soft: rgba(191, 51, 61, 0.12);
@@ -215,6 +220,23 @@
 }
 .agent-app .a2-btn:hover { background: var(--hover); }
 .agent-app .a2-btn.is-primary:hover { background: hsl(var(--primary)); opacity: 0.92; }
+/* P1-2 (element audit): several entry points are INTENTIONALLY disabled — 新建员工,
+   batch 批准/驳回, 上一页, the frozen filter selects, 已决 tab — and all of them
+   already carry a real `disabled` attribute (verified, no functional
+   regression). They only lacked the visual contract, so they read as clickable.
+   This changes appearance only; the DOM stays disabled. */
+.agent-app .a2-btn[disabled],
+.agent-app .a2-btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.agent-app .a2-btn[disabled]:hover,
+.agent-app .a2-btn[aria-disabled='true']:hover { background: transparent; }
+.agent-app .a2-btn.is-primary[disabled]:hover,
+.agent-app .a2-btn.is-primary[aria-disabled='true']:hover { background: hsl(var(--primary)); }
+.agent-app .a2-pill[disabled] { opacity: 0.45; cursor: not-allowed; }
+.agent-app .a2-pill[disabled]:hover { background: var(--neutral-pill-bg); }
+.agent-app .a2-input[disabled] { opacity: 0.5; cursor: not-allowed; }
 .agent-app .a2-table { width: 100%; border-collapse: collapse; }
 .agent-app .a2-table th {
   text-align: left;
@@ -739,6 +761,13 @@
 .agent-app .a2-table-scroll { overflow-x: auto; }
 .agent-app .a2-table-scroll table { min-width: 880px; }
 
+/* P1 align (REVIEW-MASTER §1 · EMP-01/APR-01/TSK-01): numeric / date / ID /
+   duration columns align right in the custom console tables. Same `.r`
+   contract as the listkit benchmark (.lk .tbl th.r in listkit.css, driven by
+   RunsSection buildColumns align:'right') — no parallel alignment class. */
+.agent-app .a2-table th.r,
+.agent-app .a2-table td.r { text-align: right; }
+
 /* L6 F-3: at phone widths the queue table scrolls sideways; fade the right
    cut edge as the scroll affordance (same idiom as the EMP-01 rail fix). */
 @media (max-width: 480px) {
@@ -779,6 +808,150 @@
 }
 .agent-app .a2-cell-nowrap {
   white-space: nowrap;
+}
+
+/* OBS (EMP-01 375): with the 880px min table the name column got squeezed and
+   `overflow-wrap:anywhere` broke CJK names one glyph per line, inflating the
+   row height. The name keeps a readable minimum and ellipsizes instead; the
+   full name/title stay in the cell title. */
+.agent-app .a2-col-name {
+  min-width: 180px;
+}
+.agent-app .a2-name-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.agent-app .a2-name-cell > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* P1-3: 「↔ 表格可左右滑动」 only while the wrapper actually overflows (hidden
+   at 1440, where the table fits) — same conditional idiom as TSK/RUN. */
+.agent-app .a2-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 0 0;
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+}
+
+/* P1 batch2 — shared help tip (HelpTip.tsx). The anchor is a 14px circle that
+   sits inside an existing label/header line, so no page layout moves; the
+   popover is a real tooltip (position: fixed + viewport clamp in JS) and never
+   takes pointer events, so it can never block the value it explains. */
+.agent-app .a2-ht {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  flex: none;
+}
+.agent-app .a2-ht-btn {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: transparent;
+  color: hsl(var(--micro-foreground));
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+}
+.agent-app .a2-ht-btn:hover,
+.agent-app .a2-ht-btn[aria-expanded='true'] {
+  border-color: hsl(var(--accent));
+  color: hsl(var(--accent));
+}
+.agent-app .a2-ht-pop {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: hsl(var(--card));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  color: hsl(var(--foreground));
+  font-size: 11.5px;
+  line-height: 16px;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+}
+.agent-app .a2-ht-t {
+  font-weight: 600;
+  font-size: 12px;
+}
+.agent-app .a2-ht-b {
+  color: hsl(var(--muted-foreground));
+}
+/* label + help on one line (table headers, detail field labels, metric notes) */
+.agent-app .a2-th-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.agent-app .met-calib-help,
+.agent-app .met-pfoot-help,
+.agent-app .met-fresh-help { margin-left: 5px; vertical-align: middle; }
+.agent-app .met-fresh .a2-ht { margin-left: 5px; }
+
+/* P0-3 (observer pixel audit): the native checkbox painted a solid white
+   block in dark mode while the bar still said 「已选 0 项」. The control is now
+   drawn from theme tokens only — hollow outline when unchecked, filled with a
+   check when checked — so dark and light are isomorphic (same 16px box, same
+   0 layout shift on toggle). */
+.agent-app .a2-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  flex: none;
+  vertical-align: middle;
+}
+.agent-app .a2-check:hover {
+  border-color: hsl(var(--accent));
+}
+.agent-app .a2-check:checked {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+}
+.agent-app .a2-check:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--primary-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.agent-app .a2-check:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
 }
 /* APR-02: approval id link in the APR-01 queue (detail chunk may not be loaded
    yet, so the link style lives in the always-loaded shell stylesheet). */

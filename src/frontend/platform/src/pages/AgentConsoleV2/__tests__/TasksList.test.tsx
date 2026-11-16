@@ -502,6 +502,37 @@ describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
     expect(dot('blocked').className).toContain('dot-danger');
   });
 
+  it('P1 batch2: 负责人 and 来源 headers carry the human:/source-enum help tips', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-task-row');
+    const owner = screen.getByTestId('agent-v2-tsk-help-owner');
+    const source = screen.getByTestId('agent-v2-tsk-help-source');
+    // inline in the <th> label line: the header text stays readable next to it
+    expect(owner.closest('th')?.textContent).toContain('负责人');
+    expect(source.closest('th')?.textContent).toContain('来源');
+    fireEvent.click(owner);
+    const pop = screen.getByRole('tooltip');
+    expect(pop.textContent).toContain('human:');
+    expect(pop.textContent).toContain('employee:');
+    fireEvent.keyDown(owner, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    // opening a tip never disturbs the table itself
+    expect(screen.getAllByTestId('agent-v2-task-row').length).toBeGreaterThan(0);
+  });
+
+  it('P1-4: unknown contract status renders the RAW enum in a warning pill, never a fabricated label', async () => {
+    tasksBody = { items: [task(T1, { status: 'escalated' })] };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const pill = rows[0].querySelector('[data-testid="agent-v2-task-status"] .a2-pill') as HTMLElement;
+    expect(pill.className).toContain('is-warn');
+    expect(pill.querySelector('.a2-pill-dot')?.className).toContain('dot-warn');
+    // raw enum only — no invented Chinese for a state the contract does not define
+    expect(pill.textContent).toBe('escalated');
+    expect(pill.textContent).not.toMatch(/[\u4e00-\u9fa5]/);
+    expect(rows[0].querySelector('[data-testid="agent-v2-task-status-unknown"]')).not.toBeNull();
+  });
+
   it('FAIL-3: human:self renders avatar initial + identity name + 本人 badge, never uid fragments', async () => {
     renderPage('/agent/tasks', 1, 'opsadmin');
     const rows = await screen.findAllByTestId('agent-v2-task-row');
