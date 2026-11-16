@@ -42,6 +42,7 @@ const ShellOverviewPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages")
 const ShellEmployeesPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.EmployeesPage })));
 const ShellEmployeeDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.EmployeeDetailScreen })));
 const ShellApprovalsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.ApprovalsPage })));
+const ShellApprovalDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.ApprovalDetailScreen })));
 const ShellTasksPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.TasksPage })));
 const ShellRunsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.RunsPage })));
 const ShellMetricsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.MetricsPage })));
@@ -157,6 +158,7 @@ const privateRouter = [
             { path: "employees", element: <ShellEmployeesPage /> },
             { path: "employees/:id", element: <ShellEmployeeDetailPage /> },
             { path: "approvals", element: <ShellApprovalsPage /> },
+            { path: "approvals/:id", element: <ShellApprovalDetailPage /> },
             { path: "tasks", element: <ShellTasksPage /> },
             { path: "runs", element: <ShellRunsPage /> },
             { path: "metrics", element: <ShellMetricsPage /> },

@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
+import { ApprovalDetailPage } from './ApprovalDetailPage';
 import { ApprovalsListPage } from './ApprovalsListPage';
 import { EmployeeDetailPage } from './EmployeeDetailPage';
 import { EmployeesListPage } from './EmployeesListPage';
@@ -54,6 +55,11 @@ export function EmployeeDetailScreen() {
 /* APR-01: real approvals pending list (owned by the APR-01 page lane). */
 export function ApprovalsPage() {
   return <ApprovalsListPage />;
+}
+
+/* APR-02: read-only approval detail screen at /agent/approvals/:id. */
+export function ApprovalDetailScreen() {
+  return <ApprovalDetailPage />;
 }
 
 export function TasksPage() {

@@ -17,7 +17,7 @@
  * param — machine codes (request.missing_filter, …) never reach the screen.
  * Rows are NOT clickable: no detail page exists yet (APR-02). */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { userContext } from '@/contexts/userContext';
@@ -457,7 +457,10 @@ export function ApprovalsListPage() {
                           />
                         </td>
                         <td className="a2-mono a2-cell-nowrap" title={r.approvalId}>
-                          {fmtId(r.approvalId)}
+                          {/* APR-02 entry: the row links to its read-only detail page. */}
+                          <NavLink to={`/agent/approvals/${encodeURIComponent(r.approvalId)}`}>
+                            {fmtId(r.approvalId)}
+                          </NavLink>
                         </td>
                         <td>
                           {r.action}
