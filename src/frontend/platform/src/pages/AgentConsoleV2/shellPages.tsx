@@ -14,6 +14,7 @@ import { OverviewPage as OverviewScreen } from './OverviewPage';
 import { RunDetailPage } from './RunDetailPage';
 import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
+import { TaskDetailPage } from './TaskDetailPage';
 import { TasksListPage } from './TasksListPage';
 
 interface L1PageProps {
@@ -67,6 +68,13 @@ export function ApprovalDetailScreen() {
 /* TSK-01: real read-only task board (was an honest empty shell). */
 export function TasksPage() {
   return <TasksListPage />;
+}
+
+/* TSK-02: read-only task detail at /agent/tasks/:taskId (tsk02-target.html).
+ * Remounts per task id so a related-task jump starts from a clean load. */
+export function TaskDetailScreen() {
+  const { taskId = '' } = useParams();
+  return <TaskDetailPage key={taskId} taskIdOverride={taskId} />;
 }
 
 export function AuditPage() {

@@ -247,12 +247,15 @@ export function CopyText({
   aria,
   testId,
   className = 'b xs gh',
+  icon,
 }: {
   value: string;
   label: string;
   aria: string;
   testId?: string;
   className?: string;
+  /** Optional leading glyph (TSK-02 copy-link button). */
+  icon?: ReactNode;
 }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -280,6 +283,7 @@ export function CopyText({
         data-testid={testId}
         onClick={() => void copy()}
       >
+        {icon}
         {label}
       </button>
       <span className="a2r-tp" role="status">
@@ -303,7 +307,7 @@ export function Field({
   title,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   note?: ReactNode;
   sans?: boolean;
   wide?: boolean;

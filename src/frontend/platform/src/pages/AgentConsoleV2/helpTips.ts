@@ -29,6 +29,14 @@ export const HELP_TERMS = [
   'humanPrefix',
   /** TSK-01: the machine enum behind the 来源 column. */
   'sourceEnum',
+  /** TSK-02: why the task detail has no write control at all. */
+  'tsk02Readonly',
+  /** TSK-02: one task has exactly one assignee; human ids have no name lookup. */
+  'taskAssignee',
+  /** TSK-02: `employeeVersionRef` is copy-only (no lookup-by-ref endpoint). */
+  'taskVersionRef',
+  /** TSK-02: audit requires a filter; `taskId` is the one this page passes. */
+  'taskAuditFilter',
 ] as const;
 
 export type HelpTerm = (typeof HELP_TERMS)[number];
