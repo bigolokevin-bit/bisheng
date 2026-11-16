@@ -568,10 +568,25 @@ describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
     expect(who.textContent).not.toContain('…');
   });
 
-  it('FAIL-4: footer carries the sideways-scroll hint line', async () => {
+  it('FAIL-4/B: scroll hint shows only when the table actually overflows (375 yes, 1440 no)', async () => {
     renderPage();
     await screen.findAllByTestId('agent-v2-task-row');
-    const hint = screen.getByTestId('agent-v2-tsk-scroll-hint');
+    // jsdom measures 0/0 — no overflow, same as the fitting 1440 table:
+    // the hint must NOT render (FAIL-B: no contradiction with reality).
+    expect(screen.queryByTestId('agent-v2-tsk-scroll-hint')).toBeNull();
+    const wrap = screen.getByTestId('agent-v2-tsk-table-scroll');
+    // simulate the 375 case: 880px-min table inside a ~343px card
+    Object.defineProperty(wrap, 'scrollWidth', { configurable: true, value: 880 });
+    Object.defineProperty(wrap, 'clientWidth', { configurable: true, value: 343 });
+    fireEvent(window, new Event('resize'));
+    const hint = await screen.findByTestId('agent-v2-tsk-scroll-hint');
     expect(hint.textContent).toContain('表格可左右滑动');
+    // back to the fitting 1440 case (sw === cw === 1270) → hint disappears
+    Object.defineProperty(wrap, 'scrollWidth', { configurable: true, value: 1270 });
+    Object.defineProperty(wrap, 'clientWidth', { configurable: true, value: 1270 });
+    fireEvent(window, new Event('resize'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('agent-v2-tsk-scroll-hint')).toBeNull();
+    });
   });
 });

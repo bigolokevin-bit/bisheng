@@ -375,6 +375,10 @@ export function TasksListPage() {
   const [copiedKey, setCopiedKey] = useState('');
   const pagesRef = useRef<string[]>(['']);
   const seenRef = useRef<Set<string>>(new Set());
+  /* VG FAIL-B: the sideways-scroll hint is conditional on the table ACTUALLY
+     overflowing its card — measured, never assumed from the viewport. */
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const [tableOverflows, setTableOverflows] = useState(false);
 
   /* E11 display-name resolution (once per session, cached module-side). */
   useEffect(() => {
@@ -589,6 +593,21 @@ export function TasksListPage() {
     [okItems]
   );
 
+  /* VG FAIL-B (observer re-check): 「表格可左右滑动」 must never contradict
+     reality — at 1440 the table fits (scrollWidth === clientWidth) and the
+     hint stays hidden; at 375 the 880px-min table overflows its card and the
+     hint shows. Re-measure whenever the rendered body can change (data,
+     filters, rail, loading/error states) and on window resize. */
+  useEffect(() => {
+    const measure = () => {
+      const el = tableScrollRef.current;
+      setTableOverflows(!!el && el.scrollWidth > el.clientWidth);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [okView, displayRows, sideOpen, listLoading, listRes]);
+
   /* ---------- top-level states (ST-01…05) ---------- */
   const isAuth =
     listRes && !listRes.ok && (listRes.code === 'console.unauthenticated' || listRes.status === 401);
@@ -787,7 +806,7 @@ export function TasksListPage() {
             </button>
           </p>
         )}
-        <div className="a2-table-scroll">
+        <div className="a2-table-scroll" ref={tableScrollRef} data-testid="agent-v2-tsk-table-scroll">
           <table className="a2-table" data-testid="agent-v2-tsk-table">
             <thead>
               <tr>
@@ -1291,16 +1310,19 @@ export function TasksListPage() {
         <span className="a2-sp" />
         <span className="a2-micro">{t('agentConsole.v2.tsk.footerKeys')}</span>
       </div>
-      {/* VG FAIL-4 (375): the table scrolls inside its card while the page
-          stays overflow-free — say so once, under the footer caliber. */}
-      <p
-        className="a2-micro"
-        data-testid="agent-v2-tsk-scroll-hint"
-        style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}
-      >
-        <Icon name="moveH" size={13} />
-        {t('agentConsole.v2.tsk.footerScroll')}
-      </p>
+      {/* VG FAIL-4 (375) + FAIL-B: the table scrolls inside its card while the
+          page stays overflow-free — say so under the footer caliber ONLY when
+          the container actually overflows (hidden at 1440 where it fits). */}
+      {tableOverflows && (
+        <p
+          className="a2-micro"
+          data-testid="agent-v2-tsk-scroll-hint"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}
+        >
+          <Icon name="moveH" size={13} />
+          {t('agentConsole.v2.tsk.footerScroll')}
+        </p>
+      )}
     </div>
   );
 }
