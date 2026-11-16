@@ -128,3 +128,25 @@ R2 轮（main `3d9e547`）观察①「succeeded=13 vs 列表 completed=12+runnin
 整页最终判定：**OV-01 不 PASS（阻断项=8182 部署构建未启用 console-v2；修复 owner=L7/部署：以 VITE_AGENT_CONSOLE_V2=1 重新构建并 lan stop/start，或指向 bisheng-ov01-build 的正确 dist）**。修复重部署后仅需补 C5-E1 冒烟 + C2-F7 served 重放（各 5 分钟），pre-deploy 证据链完整。不计 4/15。
 
 证据：$T/r4-ego.out、r4-mini.mjs/r4-probe2.mjs（ego，opsadmin 现役 cookie，零回显）、r4-entry.js、r4-tenant.js、r4-shell.js（chunk 计数见正文）。
+
+## R5 — 2026-11-16 终局复跑（served 8182 entry index-BBCN4iij.js，V2 壳已上线）
+
+部署同一性 PASS：/agent/ 引用 index-BBCN4iij.js；served sha256=9b0c45134c318e6db2eca07a7a1334d6404840c8f3fd72435019de33b58e2773==卡==磁盘（200 text/javascript）；旧 entry BFU-ZETxXUQ6/BFkTQpt-/BMUzMMBj 均 404；ego landing ovPage=true、KPI 节点=12、stats 资源 200×5。证据 $T/r5-entry.js、r5-ego6.out。
+
+| 判据 | 结果 | 证据（ego DOM 实测，8182 served） |
+|---|---|---|
+| C5-E1 登录态→总览→在岗KPI→列表→详情→返回→刷新 | **MEASURED PASS** | kpiOnduty found=true → /agent/employees?lifecycle=active&src=ov rows=2 → 行内 a 进 /agent/employees/emp_86A81CE8FF6F42E187BCF2B540 detail-testid=true → history.back 回列表 rows=2 → reload 仍 rows=2（$T/r5-ego8.out、r5-c5-chain-1440.png） |
+| C2-F7 served 重放（五步复原+ring 持久） | **MEASURED PASS** | ?range=7d&weeks=12&focus=cost：清除条件按钮在+ring solid/2px+w12 aria-pressed=true；点击后 search 空+28d pressed+clearGone+ringGone；?focus=cost 直达 ring 在；reload 后 ring 仍 solid/2px（$T/r5-ego6.out f7a/f7b/f7c/f7d） |
+| C4 admin | **MEASURED PASS** | 页内 fetch /agent-api/api/approval-stats=200 {"pending":0,"dueSoon":0}（现役 opsadmin 会话；另 r3 先例 18cfa0b 全新 RSA 三页 200） |
+| C4 viewer01 | **MEASURED PASS** | 本轮 RSA 重登 user_id=2，五 API 端点全 403 console.forbidden（$T/c4c5r2/legs-r5.out）；HTML 三页 200 SPA 壳只记现象 |
+| console error 全流 | **MEASURED =0** | errorsFinal []（钩子覆盖 总览/清除/focus/reload/admin腿 各步，$T/r5-ego6.out） |
+
+- 观察（不阻断）：列表两行首行为 emp_0166858D56…，hasTarget(emp_86A8)=false 系脚本只查行文本口径，非页面缺陷。
+- 调试记录（工具侧，非页面）：旧脚本 blank 页 cdp override 与 history.back 无历史导航曾致 'Inspected target navigated or closed'，重写为增量安全包装后全绿；KPI 链接 textContent 为空（文案在父卡片），按 href*=lifecycle=active&src=ov 点击。
+- R4 部署阻断（缺 VITE_AGENT_CONSOLE_V2=1 旧壳）已由重建解除；R4 节判废，以本节为准。
+
+## 最终判词
+
+C1 PASS（369c2fa 审计）；C2–C6 全 PASS 且 served 实测：C3 三方并列（R1b）、C4-P2 矩阵 15 passed（9f50913）、C5-E1 本节点、C6 vitest 137 passed+scoped eslint 0+diff-check 0（R3）。
+
+**OV-01 PASS，可计 4/15。**
