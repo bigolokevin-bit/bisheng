@@ -103,7 +103,7 @@ export function fmtUptime(seconds: number | null | undefined): string {
   const m = Math.floor((seconds % 3600) / 60);
   const pad = (n: number) => String(n).padStart(2, '0');
   if (d > 0) return `${d}d${pad(h)}h`;
-  if (h > 0) return `${h}h${pad(m)}m`;
+  if (h > 0) return `${pad(h)}h${pad(m)}m`;
   return `${m}m`;
 }
 

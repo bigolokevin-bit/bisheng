@@ -265,9 +265,15 @@ function familyCopy(
         body: t('agentConsole.v2.met.errNotFoundBody'),
       };
     default:
+      if (!res.status) {
+        return {
+          title: t('agentConsole.v2.met.errNetwork'),
+          body: t('agentConsole.v2.met.errNetworkBody'),
+        };
+      }
       return {
-        title: t('agentConsole.v2.met.errGenericTitle', { status: res.status || 0 }),
-        body: t('agentConsole.v2.met.errGenericBody', { status: res.status || 0 }),
+        title: t('agentConsole.v2.met.errGenericTitle', { status: res.status }),
+        body: t('agentConsole.v2.met.errGenericBody', { status: res.status }),
       };
   }
 }
@@ -854,7 +860,6 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
           updatedAt={times.usage}
           empNames={empNames}
           onDays={(d) => setParam('win', String(d))}
-          onRetry={refresh}
         />
       )}
 
@@ -1016,7 +1021,7 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
               {t('agentConsole.v2.met.heatSummary', {
                 day: platScaled.peak ? t(HEAT_DAY_KEYS[platScaled.peak.dow - 1]) : '—',
                 hour: platScaled.peak ? pad2(platScaled.peak.hour) : '—',
-                count: platScaled.peak ? fmtInt(platScaled.peak.count) : '0',
+                peakCount: platScaled.peak ? fmtInt(platScaled.peak.count) : '0',
                 night: platScaled.nightAvg !== null ? platScaled.nightAvg.toFixed(1) : '0.0',
                 total: fmtInt(platScaled.total),
               })}
@@ -1595,7 +1600,6 @@ function UsageBlock({
   updatedAt,
   empNames,
   onDays,
-  onRetry,
 }: {
   u: HermesUsage;
   t: ReturnType<typeof useTranslation>['t'];
@@ -1607,7 +1611,6 @@ function UsageBlock({
   updatedAt: string | null;
   empNames: Map<string, string>;
   onDays: (d: 7 | 30) => void;
-  onRetry: () => void;
 }) {
   const [sortKey, setSortKey] = useState<'in' | 'out' | 'total'>('total');
   const [sortDir, setSortDir] = useState<-1 | 1>(-1);
@@ -1714,11 +1717,11 @@ function UsageBlock({
                 <Pill cls="nt xs">{t('agentConsole.v2.met.instancePill')}</Pill>
               </div>
               {!showValue ? (
-                <span className="v na">{t('agentConsole.v2.met.unavailable')}</span>
+                <span className="v na" data-testid={`agent-v2-met-${key}`}>{t('agentConsole.v2.met.unavailable')}</span>
               ) : tokensEmpty ? (
-                <span className="v na">{t('agentConsole.v2.met.tokEmpty', { days })}</span>
+                <span className="v na" data-testid={`agent-v2-met-${key}`}>{t('agentConsole.v2.met.tokEmpty', { days })}</span>
               ) : v === null || v === undefined ? (
-                <span className="v na">{t('agentConsole.v2.met.unavailable')}</span>
+                <span className="v na" data-testid={`agent-v2-met-${key}`}>{t('agentConsole.v2.met.unavailable')}</span>
               ) : (
                 <span className="v" title={t('agentConsole.v2.met.exactValue', { value: fmtInt(v) })} data-testid={`agent-v2-met-${key}`}>
                   {fmtCompact(v)}

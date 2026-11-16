@@ -44,10 +44,10 @@ export interface HeatGridProps {
   hrefFor: (dow: number, hour: number) => string;
   /** role=img overview — the chart's text equivalent (M-AC-30). */
   ariaLabel: string;
-  testId: string;
+  testid: string;
 }
 
-export function HeatGrid({ model, t, now, hrefFor, ariaLabel, testId }: HeatGridProps) {
+export function HeatGrid({ model, t, now, hrefFor, ariaLabel, testid }: HeatGridProps) {
   const { dow: todayDow, hour: focusHour } = beijingNow(now);
   const [tip, setTip] = useState<{ dow: number; hour: number; count: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -91,7 +91,7 @@ export function HeatGrid({ model, t, now, hrefFor, ariaLabel, testId }: HeatGrid
 
   return (
     <div className="met-heat-g-wrap" ref={wrapRef}>
-      <div className="met-heat-g" role="img" aria-label={ariaLabel} data-testid={testId}>
+      <div className="met-heat-g" role="img" aria-label={ariaLabel} data-testid={testid}>
         <div className="met-hcs ax" aria-hidden="true">
           {AXIS_LABELS.map((label) => (
             <i key={label} style={{ gridColumn: 'span 4' }}>
@@ -117,7 +117,7 @@ export function HeatGrid({ model, t, now, hrefFor, ariaLabel, testId }: HeatGrid
                   const common = {
                     className: cls,
                     'aria-label': aria,
-                    'data-testid': `${testId}-cell`,
+                    'data-testid': `${testid}-cell`,
                     'data-dow': dow,
                     'data-hour': hour,
                     'data-count': count,
@@ -170,7 +170,7 @@ export function HeatGrid({ model, t, now, hrefFor, ariaLabel, testId }: HeatGrid
         })}
       </div>
       {tip ? (
-        <div className="met-htip" ref={tipRef} role="status" data-testid={`${testId}-tip`}>
+        <div className="met-htip" ref={tipRef} role="status" data-testid={`${testid}-tip`}>
           <b>
             {t('agentConsole.v2.met.heatTipTitle', {
               day: t(HEAT_DAY_KEYS[tip.dow - 1]),
