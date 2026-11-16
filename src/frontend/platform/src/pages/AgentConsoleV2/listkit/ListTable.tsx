@@ -16,7 +16,8 @@ import { LkIcon } from './icons';
 
 export interface LkColumn {
   key: string;
-  label: string;
+  /** String for plain headers; nodes (e.g. a header HelpTip) are also allowed. */
+  label: ReactNode;
   width?: number;
   align?: 'right';
 }
@@ -64,6 +65,8 @@ export interface CursorFootProps {
   pageRowsText: string;
   /** 「游标分页 · 每页 N 条 · 无总数」 (limit-synced). */
   noteText: string;
+  /** Optional second caliber line (AUD-01: how the last-page verdict is read). */
+  lastPageNote?: string;
   hintText: string;
   nextLabel: string;
   nextTitle: string;
@@ -87,6 +90,7 @@ export interface CursorFootProps {
 export function CursorFoot({
   pageRowsText,
   noteText,
+  lastPageNote,
   hintText,
   nextLabel,
   nextTitle,
@@ -111,6 +115,11 @@ export function CursorFoot({
           {pageRowsText}
         </span>
         <span className="lg">{noteText}</span>
+        {lastPageNote ? (
+          <span className="lg" data-testid="lk-lastpage-note">
+            {lastPageNote}
+          </span>
+        ) : null}
         <span className="tblhint">
           <LkIcon name="moveH" size={13} />
           {hintText}

@@ -10,7 +10,7 @@
  * 「已加载 N 条」 (loaded count only, never 「共 N 条」).
  */
 import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 
 import { LkIcon } from './icons';
 
@@ -148,6 +148,10 @@ export interface FilterBarProps {
     value: string;
     onChange: (value: string) => void;
   };
+  /** Inline search control (rendered right after the seg, target order). */
+  search?: ReactNode;
+  /** Free-form controls between the search and the trailing selects. */
+  mid?: ReactNode;
   /** Trailing selects (e.g. limit, disabled source). */
   selectsAfter?: LkSelectSpec[];
   clear?: {
@@ -165,6 +169,8 @@ export function FilterBar({
   selectsBefore,
   chips,
   seg,
+  search,
+  mid,
   selectsAfter,
   clear,
   count,
@@ -213,6 +219,8 @@ export function FilterBar({
           ))}
         </div>
       ) : null}
+      {search}
+      {mid}
       {selectsAfter?.map((s) => <LkSelect key={s.id} spec={s} />)}
       <div className="sp" aria-hidden="true" />
       {clear ? (

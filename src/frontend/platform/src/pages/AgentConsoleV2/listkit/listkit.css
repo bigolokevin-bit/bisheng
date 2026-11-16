@@ -548,8 +548,12 @@
   white-space: nowrap;
 }
 .agent-app .lk .cp .cc {
+  /* Anchored INSIDE the id box: a control placed at left:100% still counts
+     toward the cell's scrollWidth (AUD-01 measured +24px per cell → fake
+     table overflow). Overlaying the ellipsized tail keeps it focusable
+     (display stays inline-flex) without widening the cell. */
   position: absolute;
-  left: calc(100% + 4px);
+  right: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 20px;
@@ -561,11 +565,10 @@
   opacity: 0;
   color: hsl(var(--micro-foreground));
   transition: opacity 0.12s;
-  background: transparent;
+  background: hsl(var(--card));
   border: none;
   cursor: pointer;
   padding: 0;
-  flex: none;
 }
 .agent-app .lk .cp:hover .cc,
 .agent-app .lk .cp:focus-within .cc {
@@ -579,8 +582,25 @@
   opacity: 1;
   color: hsl(var(--success));
 }
+.agent-app .lk .cp a.vv {
+  color: inherit;
+  text-decoration: none;
+}
+.agent-app .lk .cp a.vv:hover {
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .cp .vv {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .agent-app .lk .cp .tp {
   position: absolute;
+  /* Closed tooltip must be display:none, not opacity:0: an absolutely
+     positioned box still contributes to scrollWidth (measured +11px per
+     cell in the AUD-01 target, which turned into fake table overflow). */
+  display: none;
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
@@ -597,6 +617,7 @@
   transition: opacity 0.15s;
 }
 .agent-app .lk .cp.copied .tp {
+  display: block;
   opacity: 1;
 }
 
