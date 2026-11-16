@@ -3,7 +3,7 @@
  * employees list, W3 approvals, W4 metrics/audit polish). Shared with
  * Shell.tsx via useShellApis() so sections reuse one http adapter instance. */
 import { useTranslation } from 'react-i18next';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useParams } from 'react-router-dom';
 
 import { ApprovalDetailPage } from './ApprovalDetailPage';
 import { ApprovalsListPage } from './ApprovalsListPage';
@@ -11,6 +11,7 @@ import { EmployeeDetailPage } from './EmployeeDetailPage';
 import { EmployeesListPage } from './EmployeesListPage';
 import { MetricsPage as MetricsScreen } from './MetricsPage';
 import { OverviewPage as OverviewScreen } from './OverviewPage';
+import { RunDetailPage } from './RunDetailPage';
 import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
 import { TasksListPage } from './TasksListPage';
@@ -85,6 +86,13 @@ export function RunsPage() {
       <RunsSection api={runsApi} consoleApi={consoleApi} />
     </div>
   );
+}
+
+/* RUN-02: read-only run detail at /agent/runs/:runId (run02-target.html).
+ * Remounts per run id so a prev-run jump starts from a clean poll state. */
+export function RunDetailScreen() {
+  const { runId = '' } = useParams();
+  return <RunDetailPage key={runId} runIdOverride={runId} />;
 }
 
 /* MET-01: the real read-only metrics projection page (met01-target.html).

@@ -1,0 +1,743 @@
+/*
+ * RUN-02 run-detail surface (/agent/runs/:runId) — geometry and vocabulary
+ * ported from run02-target.html (C1 baseline), itself same-family with
+ * run01-target / ov01-target / tsk01-target. Every rule is scoped under
+ * `.agent-app .a2r` so nothing leaks into the platform, and every color
+ * resolves through the agentConsoleV2.css token block (no new 色值):
+ *   target --bg/--card/--surface/--surface-2 → hsl(var(--background/--card/...))
+ *   target --fg/--fg-2/--fg-3 → hsl(var(--foreground/--muted-foreground/--micro-foreground))
+ * Dark/light only swaps tokens (same DOM). The review bar is评审-only and is
+ * not ported (施工删除).
+ */
+
+.agent-app .a2r {
+  min-width: 0;
+}
+.agent-app .a2r > * {
+  min-width: 0;
+}
+.agent-app .a2r .a2r-sp {
+  flex: 1;
+  min-width: 8px;
+}
+.agent-app .a2r .mono-note,
+.agent-app .a2r .mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 返回条 / 页头 ---------- */
+.agent-app .a2r .a2r-backrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-app .a2r .phead {
+  align-items: flex-end;
+}
+.agent-app .a2r .a2r-headmain {
+  min-width: 0;
+}
+.agent-app .a2r .phead .h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.agent-app .a2r .a2r-idline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.agent-app .a2r .a2r-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.agent-app .a2r .a2r-poll {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2r .a2r-poll.is-warn {
+  color: hsl(var(--warning));
+}
+
+/* ---------- 告警条 ---------- */
+.agent-app .a2r .a2r-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-md, 12px);
+  background: var(--warning-soft);
+  border: 1px solid var(--hairline);
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-alert > .lk-i {
+  color: hsl(var(--warning));
+}
+.agent-app .a2r .a2r-atx {
+  color: hsl(var(--muted-foreground));
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+/* ---------- 卡头 / 卡脚 ---------- */
+.agent-app .a2r .a2r-panel {
+  padding: 0;
+}
+.agent-app .a2r .a2r-ch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-cht {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.agent-app .a2r .a2r-chc {
+  font: 500 12px/1 var(--lk-mono, ui-monospace, monospace);
+  color: hsl(var(--micro-foreground));
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: hsl(var(--surface));
+}
+.agent-app .a2r .a2r-chn {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  min-width: 0;
+}
+.agent-app .a2r .a2r-cf {
+  padding: 10px 20px 14px;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 18px;
+}
+.agent-app .a2r .a2r-cf.mono-note {
+  font-family: var(--lk-mono, ui-monospace, monospace);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- HFieldRow (V2.9) ---------- */
+.agent-app .a2r .a2r-hfs {
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-wrap: wrap;
+}
+.agent-app .a2r .a2r-hf {
+  flex: 1 1 25%;
+  padding: 14px 20px;
+  position: relative;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-hf:not(:nth-child(4n + 1))::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15px;
+  bottom: 15px;
+  width: 1px;
+  background: var(--hairline);
+}
+.agent-app .a2r .a2r-hf:nth-child(n + 5) {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2r .a2r-hf.wide {
+  flex: 1 1 100%;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2r .a2r-fl {
+  margin-bottom: 6px;
+}
+.agent-app .a2r .a2r-fv {
+  font: 600 14px/20px var(--lk-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  word-break: break-all;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-fv.t {
+  font: 400 14px/20px var(--sans, inherit);
+  word-break: normal;
+}
+.agent-app .a2r .a2r-fv .a2r-u {
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  font-weight: 400;
+}
+.agent-app .a2r .a2r-fn {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  margin-top: 5px;
+  line-height: 16px;
+  word-break: normal;
+}
+.agent-app .a2r .a2r-grows {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+}
+.agent-app .a2r .a2r-grow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-grow + .a2r-grow {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2r .a2r-gk {
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  min-width: 60px;
+  flex: none;
+}
+.agent-app .a2r .a2r-unk {
+  color: hsl(var(--muted-foreground));
+  font-weight: 400;
+}
+
+/* ---------- 主副栏 ---------- */
+.agent-app .a2r .a2r-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 16px;
+  align-items: start;
+}
+.agent-app .a2r .a2r-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ---------- Trace ---------- */
+.agent-app .a2r .a2r-trlist {
+  padding: 2px 0 6px;
+}
+.agent-app .a2r details.a2r-node {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2r details.a2r-node:first-child {
+  border-top: none;
+}
+.agent-app .a2r details.a2r-node > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.agent-app .a2r details.a2r-node > summary::-webkit-details-marker {
+  display: none;
+}
+.agent-app .a2r .a2r-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  min-height: 36px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-row:hover {
+  background: var(--hover);
+}
+.agent-app .a2r .a2r-chev {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  flex: none;
+  transition: transform 0.12s;
+}
+.agent-app .a2r details[open] > summary .a2r-chev {
+  transform: rotate(90deg);
+}
+.agent-app .a2r .a2r-sd {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  flex: none;
+  background: hsl(var(--micro-foreground));
+}
+.agent-app .a2r .a2r-sd.ok {
+  background: hsl(var(--success));
+}
+.agent-app .a2r .a2r-sd.wr {
+  background: hsl(var(--warning));
+}
+.agent-app .a2r .a2r-sd.dg {
+  background: hsl(var(--danger));
+}
+.agent-app .a2r .a2r-sd.ac {
+  background: hsl(var(--accent));
+}
+.agent-app .a2r .a2r-row > .lk-i {
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .a2r .a2r-nm {
+  font: 500 13px/18px var(--lk-mono, ui-monospace, monospace);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 340px;
+}
+.agent-app .a2r .a2r-nm.a2r-et {
+  font: 400 12px/18px var(--sans, inherit);
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2r .a2r-sq {
+  font: 12px/1 var(--lk-mono, ui-monospace, monospace);
+  color: hsl(var(--micro-foreground));
+  white-space: nowrap;
+}
+.agent-app .a2r .a2r-gap {
+  font: 12px/1 var(--lk-mono, ui-monospace, monospace);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+.agent-app .a2r .a2r-dtl {
+  margin: 0 20px 12px;
+  padding: 12px 14px;
+  background: hsl(var(--surface));
+  border-radius: 10px;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-kv {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+.agent-app .a2r .a2r-kv + .a2r-kv {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2r .a2r-kkv {
+  color: hsl(var(--micro-foreground));
+  min-width: 96px;
+  flex: none;
+}
+.agent-app .a2r .a2r-kvv {
+  font-family: var(--lk-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+  margin-left: auto;
+  text-align: right;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-kvv.sans {
+  font-family: var(--sans, inherit);
+  overflow-wrap: normal;
+  text-align: left;
+  margin-left: 0;
+}
+.agent-app .a2r .a2r-raw {
+  color: hsl(var(--micro-foreground));
+  font-size: 12px;
+}
+.agent-app .a2r .a2r-hint {
+  margin: 10px 0 0;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 17px;
+}
+.agent-app .a2r .a2r-pay {
+  margin-top: 10px;
+}
+.agent-app .a2r .a2r-payh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  margin-bottom: 6px;
+}
+.agent-app .a2r .a2r-json {
+  margin: 0;
+  padding: 10px 12px;
+  background: hsl(var(--surface-2));
+  border-radius: 8px;
+  font: 12px/18px var(--lk-mono, ui-monospace, monospace);
+  overflow-x: auto;
+  white-space: pre;
+  color: hsl(var(--foreground));
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* ---------- copy control / tooltip ---------- */
+.agent-app .a2r .a2r-cp {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-tp {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: hsl(var(--surface-2));
+  border: 1px solid var(--hairline);
+  color: hsl(var(--foreground));
+  font: 400 11.5px/1 var(--sans, inherit);
+  padding: 5px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 3;
+}
+.agent-app .a2r .a2r-cp.copied .a2r-tp {
+  opacity: 1;
+}
+/* ---------- 图例 / 加载更多 ---------- */
+.agent-app .a2r .a2r-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 20px 0;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2r .a2r-lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.agent-app .a2r .a2r-lg:nth-child(1) > .lk-i {
+  color: hsl(var(--success));
+}
+.agent-app .a2r .a2r-lg:nth-child(2) > .lk-i {
+  color: hsl(var(--warning));
+}
+.agent-app .a2r .a2r-lg:nth-child(3) > .lk-i {
+  color: hsl(var(--danger));
+}
+.agent-app .a2r .a2r-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px 14px;
+  border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
+}
+.agent-app .a2r .a2r-moreerr {
+  font-size: 11.5px;
+  color: hsl(var(--warning));
+}
+
+/* ---------- 右栏行 ---------- */
+.agent-app .a2r .a2r-rows {
+  padding: 4px 0 8px;
+}
+.agent-app .a2r .a2r-row2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2r .a2r-row2 + .a2r-row2 {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2r .a2r-k2 {
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+  min-width: 72px;
+  flex: none;
+}
+.agent-app .a2r .a2r-v2 {
+  font-size: 13px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.agent-app .a2r .a2r-wrap {
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 18px;
+}
+
+/* ---------- 状态机（只读） ---------- */
+.agent-app .a2r .a2r-sm {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 20px 8px;
+  flex-wrap: wrap;
+}
+.agent-app .a2r .a2r-smn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  width: 64px;
+  text-align: center;
+}
+.agent-app .a2r .a2r-smc {
+  width: 22px;
+  height: 22px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 10.5px/1 var(--lk-mono, ui-monospace, monospace);
+  color: hsl(var(--micro-foreground));
+  background: hsl(var(--card));
+}
+.agent-app .a2r .a2r-smn.done .a2r-smc {
+  border-color: var(--accent-border, var(--border));
+  color: hsl(var(--accent));
+}
+.agent-app .a2r .a2r-smn.cur .a2r-smc {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+  color: hsl(var(--primary-foreground, 0 0% 100%));
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.agent-app .a2r .a2r-sml {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 15px;
+}
+.agent-app .a2r .a2r-smn.cur .a2r-sml {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+.agent-app .a2r .a2r-sma {
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+  margin: 11px 0 0;
+  min-width: 10px;
+}
+.agent-app .a2r .a2r-sma.ac {
+  background: var(--accent-border, hsl(var(--accent)));
+}
+.agent-app .a2r .a2r-smterms {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 20px 14px;
+}
+.agent-app .a2r .a2r-smterm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2r .a2r-smterm.on {
+  color: hsl(var(--foreground));
+}
+.agent-app .a2r .a2r-smc2 {
+  width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.agent-app .a2r .a2r-smterm.on .a2r-smc2 {
+  border-color: hsl(var(--success));
+  color: hsl(var(--success));
+}
+
+/* ---------- 卡内空 / 错 ---------- */
+.agent-app .a2r .a2r-empty,
+.agent-app .a2r .a2r-inerr {
+  margin: 14px 20px 16px;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  text-align: center;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+}
+.agent-app .a2r .a2r-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: hsl(var(--surface-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  margin-bottom: 3px;
+}
+.agent-app .a2r .a2r-it {
+  font-size: 14px;
+  font-weight: 500;
+}
+.agent-app .a2r .a2r-is {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  max-width: 420px;
+  line-height: 19px;
+}
+.agent-app .a2r .a2r-empty .b,
+.agent-app .a2r .a2r-inerr .b {
+  margin-top: 8px;
+}
+
+/* ---------- 骨架（静态，无动画） ---------- */
+.agent-app .a2r .a2r-sk {
+  display: inline-block;
+  height: 12px;
+  border-radius: 6px;
+  background: hsl(var(--surface-2));
+}
+.agent-app .a2r .a2r-skrows {
+  padding: 4px 0 8px;
+}
+.agent-app .a2r .a2r-skrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 20px;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2r .a2r-skrow:first-child {
+  border-top: none;
+}
+.agent-app .a2r .a2r-skrow .a2r-sk:first-child {
+  border-radius: 99px;
+}
+.agent-app .a2r .a2r-skcard {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.agent-app .a2r .a2r-skn {
+  text-align: center;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+
+/* ---------- 药丸补充（accent / 估算虚线边，V2.11） ---------- */
+.agent-app .a2r .pill.ac {
+  background: var(--accent-soft);
+  color: hsl(var(--accent));
+}
+.agent-app .a2r .pill.est {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2r .pill .dash {
+  font-family: var(--lk-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ---------- 断点 ---------- */
+@media (max-width: 1279px) {
+  .agent-app .a2r .a2r-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .agent-app .a2r .a2r-acts {
+    width: 100%;
+    margin-top: 10px;
+  }
+  .agent-app .a2r .a2r-hf {
+    flex: 1 1 50%;
+  }
+  .agent-app .a2r .a2r-hf:nth-child(odd)::before {
+    display: none;
+  }
+  .agent-app .a2r .a2r-hf:nth-child(n + 3) {
+    border-top: 1px solid var(--hairline);
+  }
+  .agent-app .a2r .a2r-row {
+    padding: 9px 14px;
+  }
+  .agent-app .a2r .a2r-nm {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .agent-app .a2r .a2r-dtl {
+    margin: 0 14px 12px;
+  }
+  .agent-app .a2r .a2r-ch {
+    padding: 14px;
+  }
+  .agent-app .a2r .a2r-cf,
+  .agent-app .a2r .a2r-legend {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .agent-app .a2r .a2r-row2 {
+    padding: 9px 14px;
+  }
+  .agent-app .a2r .a2r-sm {
+    padding: 14px 14px 6px;
+  }
+  .agent-app .a2r .a2r-smterms {
+    padding: 4px 14px 14px;
+  }
+  .agent-app .a2r .a2r-smn {
+    width: 56px;
+  }
+  .agent-app .a2r .a2r-empty,
+  .agent-app .a2r .a2r-inerr {
+    margin: 12px 14px 14px;
+  }
+  .agent-app .a2r .a2r-sma {
+    min-width: 10px;
+  }
+}
+
+@media (max-width: 419px) {
+  .agent-app .a2r .a2r-hf,
+  .agent-app .a2r .a2r-hf.wide {
+    flex: 1 1 100%;
+  }
+  .agent-app .a2r .a2r-hf::before {
+    display: none;
+  }
+  .agent-app .a2r .a2r-hf:nth-child(n + 2) {
+    border-top: 1px solid var(--hairline);
+  }
+  .agent-app .a2r .a2r-sq {
+    white-space: normal;
+  }
+}
