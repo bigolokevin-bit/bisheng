@@ -40,3 +40,5 @@ HEAT: 168 真格(current-cell=1)；小时轴每3时对齐；绝对档位；峰�
 # ---- BLOCK2-ANOMALY r3 — 13:02 实页：chip「1 条」；AL-5 info+规则号+看运行；扫描五规则（0）（0）（0/13）（0/2）（1）；积压 pending==0→(0) 推导；阈值固定声明；无告警中心链接；pair-anomaly-{1440,375}-dark.png
 
 # ---- BLOCK2-ACTIVITY r3 — 13:02 实页：近24h 无审计事件=诚实空态「近 24 小时没有审计事件」+「打开审计中心」链接(go-audit testid)；openAuditCenter 裸 key 已修；无 snake_case 裸奔；pair-activity-{1440,375}-dark.png
+
+# ---- BLOCK2-FOOTER r3 — 13:02 实页：分块新鲜度 审批 13:02 · 运行 13:02 · 成本 11-15 03:25（账本）· 热力 13:02（各自成功时刻，失败保旧）；口径句逐字；键盘提示逐字「⌘K 搜索 · ⌘⇧R 刷新」；⌘K 聚焦搜索(Shell)、⌘⇧R 触发 refresh；>5min stale 细条（当前 fresh 不渲染）；pair-footer-{1440,375}-dark.png + impl raws(13:02 fullPage)

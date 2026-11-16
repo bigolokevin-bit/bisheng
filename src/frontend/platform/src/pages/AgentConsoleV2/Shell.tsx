@@ -239,6 +239,8 @@ export function AgentConsoleShell() {
   /* S-5: user menu — default CLOSED; Esc / outside click dismiss (target §1). */
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLSpanElement | null>(null);
+  /* S-3: ⌘K focuses the global search pill (M1 read-only entry). */
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   const apis = useMemo<ShellApis>(
     () => ({
@@ -276,6 +278,19 @@ export function AgentConsoleShell() {
       window.removeEventListener('mousedown', onDown);
     };
   }, [userMenuOpen]);
+
+  // S-3: ⌘K / Ctrl+K focuses the search pill (no request is ever sent from
+  // it in M1 — there is no search backend endpoint, so no dead request).
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if ((ev.metaKey || ev.ctrlKey) && !ev.shiftKey && ev.key.toLowerCase() === 'k') {
+        ev.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // fix B (G8): on narrow screens the rail scrolls horizontally; bring the
   // active entry into view on mount and on every route change so it is never
@@ -346,6 +361,7 @@ export function AgentConsoleShell() {
               <RailIcon name="search" size={14} />
               <input
                 type="text"
+                ref={searchRef}
                 className="a2s-search-input"
                 placeholder={t('agentConsole.v2.shellSearchPlaceholder')}
                 aria-label={t('agentConsole.v2.shellSearchPlaceholder')}

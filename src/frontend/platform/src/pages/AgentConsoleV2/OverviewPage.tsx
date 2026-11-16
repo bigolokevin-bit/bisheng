@@ -144,6 +144,14 @@ export function OverviewPage() {
   const fetcher = useMemo(() => makeFetcher(), []);
   const [token, setToken] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  /* F-1: per-block last-success timestamps (failures keep the old time). */
+  const [blockTimes, setBlockTimes] = useState<{ approvals: string | null; runs: string | null; heat: string | null }>({
+    approvals: null,
+    runs: null,
+    heat: null,
+  });
+  /* H-4: minute tick so the >5min stale bar can appear without a fetch. */
+  const [nowTick, setNowTick] = useState(0);
   const [stats, setStats] = useState<BlockState<EmployeeStats>>(pendingKpi);
   const [approvals, setApprovals] = useState<BlockState<ApprovalStats>>(pendingKpi);
   const [runs, setRuns] = useState<BlockState<RunStatsBody>>(pendingKpi);
@@ -273,6 +281,12 @@ export function OverviewPage() {
       setHeat({ loading: false, ok: h.ok, status: h.status, code: h.code, data: h.data });
       setQuotaRows(ids.data?.items ?? []);
       setAudit({ loading: false, ok: au.ok, status: au.status, code: au.code, data: au.data });
+      const nowIso = new Date().toISOString();
+      setBlockTimes((prev) => ({
+        approvals: a !== null && a.ok ? nowIso : prev.approvals,
+        runs: r.ok && r7.ok ? nowIso : prev.runs,
+        heat: h.ok ? nowIso : prev.heat,
+      }));
       // P9 requires an explicit employeeId list (BFF contract): resolve ids
       // from E11 first, then one batched month query. No silent "0.00".
       const empIds = (ids.data?.items ?? []).map((e) => e.employeeId);
@@ -291,6 +305,27 @@ export function OverviewPage() {
       alive = false;
     };
   }, [fetcher, token, uid, rangeDays, heatWeeks]);
+
+  // H-4: re-render every minute so the stale bar can appear without a fetch.
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick((v) => v + 1), 60000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // H-3 / F-2: ⌘⇧R (or Ctrl+Shift+R) refreshes every block once.
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if ((ev.metaKey || ev.ctrlKey) && ev.shiftKey && ev.key.toLowerCase() === 'r') {
+        ev.preventDefault();
+        refresh();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [refresh]);
+
+  const stale =
+    updatedAt !== null && Date.now() - new Date(updatedAt).getTime() > 5 * 60000 && nowTick >= 0;
 
   /* ---------------- derived, real-data-only ---------------- */
 
@@ -476,6 +511,11 @@ export function OverviewPage() {
 
   return (
     <div className="a2s-page ov-page" data-testid="agent-v2-ov-page">
+      {stale ? (
+        <div className="ov-stale" data-testid="agent-v2-ov-stale" role="status">
+          {t('agentConsole.v2.ov.staleBar')}
+        </div>
+      ) : null}
       {/* ① page head — no write buttons (OV-02…05) */}
       <div data-testid="agent-v2-ov-block-header">
         <div className="ov-phead">
@@ -827,14 +867,18 @@ export function OverviewPage() {
       <div className="ov-pfoot">
         <span data-testid="agent-v2-ov-footer-fresh">
           {t('agentConsole.v2.ov.footerFreshness', {
-            approvals: updatedAt ? fmtTimeShort(updatedAt) : '—',
-            runs: updatedAt ? fmtTimeShort(updatedAt) : '—',
+            approvals: blockTimes.approvals ? fmtTimeShort(blockTimes.approvals) : '—',
+            runs: blockTimes.runs ? fmtTimeShort(blockTimes.runs) : '—',
             cost: costAt(cost) ? fmtTimeShort(costAt(cost)) : '—',
-            heat: updatedAt ? fmtTimeShort(updatedAt) : '—',
+            heat: blockTimes.heat ? fmtTimeShort(blockTimes.heat) : '—',
           })}
         </span>
         <span className="sp" />
         <span>{t('agentConsole.v2.ov.footerCaliber')}</span>
+        <span className="sp" />
+        <span data-testid="agent-v2-ov-footer-keys">
+          <kbd>⌘K</kbd> {t('agentConsole.v2.ov.kbdSearch')} · <kbd>⌘⇧R</kbd> {t('agentConsole.v2.ov.refresh')}
+        </span>
       </div>
     </div>
   );

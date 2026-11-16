@@ -1033,6 +1033,26 @@
 /* footer */
 .agent-app .ov-pfoot { display: flex; align-items: center; gap: 20px; padding: 6px 4px; flex-wrap: wrap; font-size: 11.5px; color: hsl(var(--micro-foreground)); }
 .agent-app .ov-pfoot .sp { flex: 1; }
+.agent-app .ov-pfoot kbd {
+  font-family: var(--a2-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  padding: 2px 5px;
+  color: hsl(var(--muted-foreground));
+}
+/* H-4: thin stale bar shown when the last successful response is >5min old. */
+.agent-app .ov-stale {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  padding: 2px 12px;
+  border-radius: 8px;
+  background: hsl(var(--warning) / 0.14);
+  color: hsl(var(--warning));
+  font-size: 12px;
+}
 
 /* ---------- responsive (12→6→1; KPI 4→2×2 at 375) ---------- */
 @media (max-width: 1279px) {
