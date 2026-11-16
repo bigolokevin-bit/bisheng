@@ -902,7 +902,14 @@ function QuotaSegmentsThin({
         const cost = dayCosts.get(day) ?? 0;
         const pct = cost > 0 ? (cost / daily) * 100 : 0;
         const cls = cost > 0 ? (pct <= 60 ? 'is-a' : pct <= 85 ? 'is-b' : 'is-c') : '';
-        return <i key={day} className={cls} title={`${String(day).padStart(2, '0')} · ${cost > 0 ? fmtUsd(cost) : day > today ? '—' : '0'}`} />;
+        const label = String(day).padStart(2, '0');
+        const title =
+          cost > 0
+            ? t('agentConsole.v2.ov.quotaCellFoot', { day: label, cost: fmtUsd(cost), daily: fmtUsd(daily), pct: `${Math.round(pct)}%` })
+            : day > today
+              ? t('agentConsole.v2.ov.quotaCellFuture', { day: label })
+              : t('agentConsole.v2.ov.quotaCellIdle', { day: label });
+        return <i key={day} className={cls} title={title} />;
       })}
     </div>
   );

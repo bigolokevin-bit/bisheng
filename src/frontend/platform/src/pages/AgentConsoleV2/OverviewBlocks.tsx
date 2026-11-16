@@ -170,7 +170,10 @@ export function KpiSpark({ points, testId }: { points: number[]; testId: string 
   const lo = Math.min(...points);
   const hi = Math.max(...points);
   const span = hi === lo ? 1 : hi - lo;
-  const X = (i: number) => pad + ((w - 2 * pad) * (n === 1 ? 0.5 : i / (n - 1))).toFixed(1);
+  // C1 P1: pad + <string> used to CONCATENATE ("3"+"18.7"="318.7"), flinging
+  // every point but the first outside the 118-wide viewBox — the visible ink
+  // was a clipped flat stub. Parenthesise before toFixed so X is numeric.
+  const X = (i: number) => (pad + (w - 2 * pad) * (n === 1 ? 0.5 : i / (n - 1))).toFixed(1);
   const Y = (v: number) => (h - pad - (h - 2 * pad) * ((v - lo) / span)).toFixed(1);
   const line = points.map((v, i) => `${i ? 'L' : 'M'}${X(i)} ${Y(v)}`).join('');
   const area = `${line}L${X(n - 1)} ${h - pad}L${X(0)} ${h - pad}Z`;
