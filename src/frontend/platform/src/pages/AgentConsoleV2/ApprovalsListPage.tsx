@@ -421,12 +421,12 @@ export function ApprovalsListPage() {
                         onChange={handleToggleAll}
                       />
                     </th>
-                    <th>{t('agentConsole.approvals.colId')}</th>
+                    <th className="r">{t('agentConsole.approvals.colId')}</th>
                     <th>{t('agentConsole.approvals.colAction')}</th>
-                    <th>{t('agentConsole.v2.apr.colEmployee')}</th>
+                    <th className="r">{t('agentConsole.v2.apr.colEmployee')}</th>
                     <th>{t('agentConsole.approvals.colRisk')}</th>
-                    <th>{t('agentConsole.approvals.createdAt')}</th>
-                    <th>{t('agentConsole.v2.apr.colDue')}</th>
+                    <th className="r">{t('agentConsole.approvals.createdAt')}</th>
+                    <th className="r">{t('agentConsole.v2.apr.colDue')}</th>
                     <th>{t('agentConsole.approvals.colStatus')}</th>
                   </tr>
                 </thead>
@@ -459,7 +459,7 @@ export function ApprovalsListPage() {
                             onChange={() => handleToggle(r.approvalId)}
                           />
                         </td>
-                        <td className="a2-mono a2-cell-nowrap" title={r.approvalId}>
+                        <td className="a2-mono a2-cell-nowrap r" title={r.approvalId}>
                           {/* APR-02: the id opens the read-only detail; the list URL
                               (filters/cursor) stays in history so 「返回」 restores it. */}
                           <NavLink
@@ -478,7 +478,7 @@ export function ApprovalsListPage() {
                             {r.binding?.changeKind ?? '—'}
                           </span>
                         </td>
-                        <td className="a2-cell-nowrap" title={employee?.id}>
+                        <td className="a2-cell-nowrap r" title={employee?.id}>
                           {employee?.id ?? '—'}
                         </td>
                         <td className="a2-cell-nowrap" data-testid="agent-v2-approval-risk">
@@ -487,9 +487,9 @@ export function ApprovalsListPage() {
                             {t(`agentConsole.approvals.risk.${r.riskLevel}`, r.riskLevel)}
                           </span>
                         </td>
-                        <td className="a2-cell-nowrap">{fmtTime(r.createdAt)}</td>
+                        <td className="a2-mono a2-cell-nowrap r">{fmtTime(r.createdAt)}</td>
                         <td
-                          className="a2-cell-nowrap"
+                          className="a2-mono a2-cell-nowrap r"
                           data-testid="agent-v2-approval-countdown"
                           title={r.expiresAt ? fmtTime(r.expiresAt) : undefined}
                         >

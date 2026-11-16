@@ -722,7 +722,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'version' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'version' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -748,7 +751,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'owner' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'owner' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -761,7 +767,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'workstation' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'workstation' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -774,7 +783,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'pending' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'pending' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -787,7 +799,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'lastRun' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'lastRun' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -800,7 +815,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'success' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'success' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -813,7 +831,10 @@ export function EmployeesListPage() {
                     </span>
                   </button>
                 </th>
-                <th aria-sort={sortCol === 'cost' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                <th
+                  className="r"
+                  aria-sort={sortCol === 'cost' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                >
                   <button
                     type="button"
                     className="a2-th-btn"
@@ -857,7 +878,7 @@ export function EmployeesListPage() {
                         </span>
                       </div>
                     </td>
-                    <td data-testid="agent-v2-col-version">
+                    <td className="r" data-testid="agent-v2-col-version">
                       {r.enrichment?.currentVersionNo !== undefined ? (
                         <>
                           v{r.enrichment.currentVersionNo}
@@ -873,10 +894,10 @@ export function EmployeesListPage() {
                     <td className="a2-cell-nowrap" data-testid="agent-v2-col-status">
                       {t(`agentConsole.lifecycle.${r.lifecycleState}`, r.lifecycleState)}
                     </td>
-                    <td className="a2-mono a2-cell-nowrap" title={r.ownerUserId}>
+                    <td className="a2-mono a2-cell-nowrap r" title={r.ownerUserId}>
                       {fmtId(r.ownerUserId)}
                     </td>
-                    <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap">
+                    <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap r">
                       {en?.stations
                         ? `${en.stations.groups} · ${en.stations.dms} · ${en.stations.crons}`
                         : r.enrichment?.workstationCount !== undefined
@@ -885,10 +906,10 @@ export function EmployeesListPage() {
                             ? '—'
                             : '…'}
                     </td>
-                    <td data-testid="agent-v2-col-pending">
+                    <td className="r" data-testid="agent-v2-col-pending">
                       {r.enrichment?.pendingApprovalCount ?? (en ? '—' : '…')}
                     </td>
-                    <td data-testid="agent-v2-col-lastrun">
+                    <td className="r" data-testid="agent-v2-col-lastrun">
                       {runs7 && runs7.runs > 0 ? (
                         <>
                           {/* Separator keeps count and timestamp readable as two values. */}
@@ -902,10 +923,10 @@ export function EmployeesListPage() {
                           : t('agentConsole.v2.trendEmpty')
                         : '…'}
                     </td>
-                    <td data-testid="agent-v2-col-success">
+                    <td className="r" data-testid="agent-v2-col-success">
                       {runs7 && runs7.runs > 0 ? fmtRatio(runs7.succeeded / runs7.runs) : '—'}
                     </td>
-                    <td data-testid="agent-v2-col-cost">
+                    <td className="r" data-testid="agent-v2-col-cost">
                       {kpi.costNow && !kpi.costNow.ok
                         ? '—'
                         : typeof monthCost?.costUsd === 'number'

@@ -814,8 +814,8 @@ export function TasksListPage() {
                 <th>{t('agentConsole.v2.colStatus')}</th>
                 <th>{t('agentConsole.v2.colOwner')}</th>
                 <th>{t('agentConsole.v2.tsk.filterSource')}</th>
-                <th>{t('agentConsole.tasks.colDueAt')}</th>
-                <th>{t('agentConsole.v2.tsk.colUpdated')}</th>
+                <th className="r">{t('agentConsole.tasks.colDueAt')}</th>
+                <th className="r">{t('agentConsole.v2.tsk.colUpdated')}</th>
                 <th>{t('agentConsole.v2.tsk.colProgress')}</th>
                 <th>{t('agentConsole.v2.tsk.colAction')}</th>
               </tr>
@@ -1504,7 +1504,7 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
           )}
         </td>
         {/* T-05 due */}
-        <td className="a2-cell-nowrap" data-testid="agent-v2-task-due" title={r.dueAt ?? undefined}>
+        <td className="a2-cell-nowrap r" data-testid="agent-v2-task-due" title={r.dueAt ?? undefined}>
           {r.dueAt ? (
             <>
               <span className={`a2-mono${overdue ? ' a2-danger-text' : ''}`}>{fmtTime(r.dueAt)}</span>
@@ -1520,7 +1520,7 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
         </td>
         {/* G1 FAIL 3: 最近更新 — baseline column, Asia/Shanghai MM-DD HH:mm */}
         <td
-          className="a2-cell-nowrap"
+          className="a2-cell-nowrap r"
           data-testid="agent-v2-task-updated"
           title={r.updatedAt ?? undefined}
         >

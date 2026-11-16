@@ -739,6 +739,13 @@
 .agent-app .a2-table-scroll { overflow-x: auto; }
 .agent-app .a2-table-scroll table { min-width: 880px; }
 
+/* P1 align (REVIEW-MASTER §1 · EMP-01/APR-01/TSK-01): numeric / date / ID /
+   duration columns align right in the custom console tables. Same `.r`
+   contract as the listkit benchmark (.lk .tbl th.r in listkit.css, driven by
+   RunsSection buildColumns align:'right') — no parallel alignment class. */
+.agent-app .a2-table th.r,
+.agent-app .a2-table td.r { text-align: right; }
+
 /* L6 F-3: at phone widths the queue table scrolls sideways; fade the right
    cut edge as the scroll affordance (same idiom as the EMP-01 rail fix). */
 @media (max-width: 480px) {
