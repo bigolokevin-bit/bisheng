@@ -1128,3 +1128,321 @@
   .agent-app .ov-scan { padding: 12px 14px 14px; }
   .agent-app .ov-empty-line { padding: 12px 14px; }
 }
+
+/* ============================================================
+   MET-01 `/agent/metrics` (met01-target.html + MET01-TARGET-SPEC).
+   Same token discipline as the ov-* block: every color references
+   the .agent-app theme tokens; heat/bar/shadow tokens are added per
+   theme with the TARGET values (ov01 heat scale) — no inline hex
+   theme forks, no new hues. Read-only page vocabulary: pills, kv
+   rows, meters, mini tables, number cards, model table, heat grid.
+   ============================================================ */
+.agent-app {
+  --met-heat-0: rgba(255, 255, 255, 0.05);
+  --met-heat-1: rgba(129, 118, 247, 0.18);
+  --met-heat-2: rgba(129, 118, 247, 0.34);
+  --met-heat-3: rgba(129, 118, 247, 0.55);
+  --met-heat-4: rgba(129, 118, 247, 0.78);
+  --met-heat-5: hsl(var(--accent));
+  --met-bar: rgba(255, 255, 255, 0.1);
+  --met-bar-fill: rgba(255, 255, 255, 0.34);
+  --met-shadow: none;
+  --met-radius: 10px;
+}
+.agent-app[data-theme='light'] {
+  --met-heat-0: #eef0f3;
+  --met-heat-1: rgba(75, 65, 196, 0.16);
+  --met-heat-2: rgba(75, 65, 196, 0.32);
+  --met-heat-3: rgba(75, 65, 196, 0.5);
+  --met-heat-4: rgba(75, 65, 196, 0.72);
+  --met-heat-5: hsl(var(--accent));
+  --met-bar: rgba(24, 24, 30, 0.08);
+  --met-bar-fill: rgba(24, 24, 30, 0.3);
+  --met-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.agent-app .met-page { position: relative; }
+.agent-app .met-page::before { content: ''; position: absolute; top: -28px; left: 0; right: 0; height: 306px; background: var(--ov-wash); pointer-events: none; }
+.agent-app .met-page > * { position: relative; z-index: 0; min-width: 0; }
+
+/* ---------- page head ---------- */
+.agent-app .met-phead { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.agent-app .met-phead .sp { flex: 1; }
+.agent-app .met-sub { font-size: 13.5px; color: hsl(var(--muted-foreground)); margin: 6px 0 0; }
+.agent-app .met-fresh { display: flex; align-items: center; gap: 8px; font-size: 12px; color: hsl(var(--micro-foreground)); flex-wrap: wrap; }
+.agent-app .met-fresh .a2-mono { color: hsl(var(--muted-foreground)); }
+.agent-app .met-fresh .faint { opacity: 0.6; }
+.agent-app .met-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.agent-app .met-b { height: 36px; padding: 0 14px; border-radius: 8px; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; border: 1px solid transparent; background: none; color: hsl(var(--foreground)); cursor: pointer; white-space: nowrap; text-decoration: none; transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.agent-app .met-b.out { border-color: var(--border); }
+.agent-app .met-b.out:hover { background: var(--hover); }
+.agent-app .met-b.gh { color: hsl(var(--muted-foreground)); }
+.agent-app .met-b.gh:hover { background: var(--hover); color: hsl(var(--foreground)); }
+.agent-app .met-b.sm { height: 32px; padding: 0 10px; font-size: 12.5px; }
+.agent-app .met-b[disabled] { opacity: 0.4; cursor: not-allowed; }
+.agent-app .met-b[disabled]:hover { background: transparent; }
+.agent-app .met-ops { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: none; display: inline-flex; align-items: center; justify-content: center; color: hsl(var(--muted-foreground)); cursor: pointer; flex: none; }
+.agent-app .met-ops:hover { background: var(--hover); color: hsl(var(--foreground)); }
+.agent-app .met-spin { animation: met-rot 1.2s linear infinite; }
+@keyframes met-rot { to { transform: rotate(360deg); } }
+.agent-app .met-linkbtn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.agent-app .met-updating { font-size: 12px; color: hsl(var(--micro-foreground)); }
+
+/* ---------- caliber panel (five iron rules on screen) ---------- */
+.agent-app .met-calib { background: hsl(var(--surface)); border: 1px solid var(--hairline); border-radius: var(--met-radius); padding: 14px 18px; }
+.agent-app .met-calib .ct { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: hsl(var(--muted-foreground)); }
+.agent-app .met-calib ol { margin: 8px 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: hsl(var(--muted-foreground)); line-height: 18px; }
+.agent-app .met-calib ol b { color: hsl(var(--foreground)); font-weight: 600; }
+.agent-app .met-calib .cm { display: flex; gap: 8px 14px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline); font-size: 11.5px; color: hsl(var(--micro-foreground)); align-items: center; }
+.agent-app .met-calib .cm .a2-mono { color: hsl(var(--muted-foreground)); }
+.agent-app .met-calib-states { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* ---------- A0 strip + degradation strip ---------- */
+.agent-app .met-a0 { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 9px 16px; border-radius: var(--met-radius); background: hsl(var(--surface)); border: 1px solid var(--hairline); font-size: 12.5px; }
+.agent-app .met-a0 .st { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; }
+.agent-app .met-a0 .st .dot { width: 8px; height: 8px; border-radius: 99px; background: currentColor; }
+.agent-app .met-a0 .st.ok { color: hsl(var(--success)); }
+.agent-app .met-a0 .st.wr { color: hsl(var(--warning)); }
+.agent-app .met-a0 .st.dg { color: hsl(var(--danger)); }
+.agent-app .met-a0 .st.nt { color: hsl(var(--neutral-pill-fg)); }
+.agent-app .met-a0 .srcs { display: flex; gap: 6px; flex-wrap: wrap; }
+.agent-app .met-a0 .sp { flex: 1; }
+.agent-app .met-a0 .up { font-size: 11.5px; color: hsl(var(--micro-foreground)); }
+.agent-app .met-degstrip { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: var(--met-radius); background: var(--warning-soft); color: hsl(var(--warning)); font-size: 12.5px; font-weight: 500; }
+
+/* ---------- A grid + card internals ---------- */
+.agent-app .met-agrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+.agent-app .met-agrid > .ov-card:nth-child(-n+3) { grid-column: span 2; }
+.agent-app .met-agrid > .ov-card:nth-child(n+4) { grid-column: span 3; }
+.agent-app .met-card-ft { padding: 10px 20px 14px; font-size: 11.5px; color: hsl(var(--micro-foreground)); border-top: 1px solid var(--hairline); line-height: 17px; }
+.agent-app .met-card-ft.wr { color: hsl(var(--warning)); }
+.agent-app .met-kv { padding: 4px 20px 12px; }
+.agent-app .met-kv .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--hairline); font-size: 12.5px; }
+.agent-app .met-kv .row:last-child { border-bottom: none; }
+.agent-app .met-kv .k { color: hsl(var(--muted-foreground)); min-width: 0; }
+.agent-app .met-kv .v { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; font-size: 13px; text-align: right; white-space: nowrap; }
+.agent-app .met-kv .v.ok { color: hsl(var(--success)); }
+.agent-app .met-kv .v.wr { color: hsl(var(--warning)); }
+.agent-app .met-kv .v.dg { color: hsl(var(--danger)); }
+.agent-app .met-kv .v.ac { color: hsl(var(--accent)); }
+.agent-app .met-kv .v.nt { color: hsl(var(--neutral-pill-fg)); }
+.agent-app .met-kv .v.sans, .agent-app .met-kv .v .sans { font-family: inherit; }
+.agent-app .met-kv .v .faint { color: hsl(var(--micro-foreground)); font-size: 11.5px; }
+.agent-app .met-kv .v.muted { color: hsl(var(--muted-foreground)); }
+.agent-app .met-mrow { padding: 8px 0; border-bottom: 1px solid var(--hairline); }
+.agent-app .met-mrow:last-child { border-bottom: none; }
+.agent-app .met-mrow .t { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12.5px; }
+.agent-app .met-mrow .t .k { color: hsl(var(--muted-foreground)); }
+.agent-app .met-mrow .t .v { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-weight: 600; font-size: 13px; line-height: 18px; font-variant-numeric: tabular-nums; }
+.agent-app .met-mrow .t .v.wr, .agent-app .met-load.wr { color: hsl(var(--warning)); }
+.agent-app .met-mrow .t .v.dg, .agent-app .met-load.dg { color: hsl(var(--danger)); }
+.agent-app .met-meter { height: 4px; border-radius: 2px; background: var(--met-bar); overflow: hidden; margin-top: 6px; }
+.agent-app .met-meter i { display: block; height: 100%; background: var(--met-bar-fill); border-radius: 2px; }
+.agent-app .met-meter i.wr { background: hsl(var(--warning)); }
+.agent-app .met-meter i.dg { background: hsl(var(--danger)); }
+.agent-app .met-mrow .fn { font-size: 11px; color: hsl(var(--micro-foreground)); margin-top: 4px; }
+.agent-app .met-mini { width: 100%; border-collapse: collapse; font-size: 12px; }
+.agent-app .met-mini td { padding: 5px 0; border-bottom: 1px solid var(--hairline); vertical-align: middle; }
+.agent-app .met-mini tr:last-child td { border-bottom: none; }
+.agent-app .met-mini td:last-child { text-align: right; }
+.agent-app .met-mini .pn { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+.agent-app .met-mini .mono { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.agent-app .met-mini .faint { color: hsl(var(--micro-foreground)); }
+.agent-app .met-emp-tail { font-size: 11px; }
+.agent-app .met-notfound-note { font-size: 11px; color: hsl(var(--micro-foreground)); }
+.agent-app .nt-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--neutral-pill-bg); color: hsl(var(--neutral-pill-fg)); font-size: 11px; font-family: inherit; }
+
+/* ---------- number cards (A2 / B tokens; NO sparkline slot) ---------- */
+.agent-app .met-mgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 0 20px 16px; }
+.agent-app .met-mgrid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 4px; }
+.agent-app .met-mcard { background: hsl(var(--surface)); border-radius: var(--met-radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.agent-app .met-mcard .lr { display: flex; align-items: center; gap: 8px; }
+.agent-app .met-mcard .lr .sp { flex: 1; }
+.agent-app .met-mcard .v { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-weight: 600; font-size: 28px; line-height: 34px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; text-decoration: none; color: hsl(var(--foreground)); display: block; }
+.agent-app .met-mcard .v .u { font-size: 14px; color: hsl(var(--micro-foreground)); font-weight: 500; margin-left: 2px; }
+.agent-app .met-mcard .v.ok { color: hsl(var(--success)); }
+.agent-app .met-mcard .v.wr { color: hsl(var(--warning)); }
+.agent-app .met-mcard .v.dg { color: hsl(var(--danger)); }
+.agent-app .met-mcard .v.na { font-family: inherit; font-weight: 500; font-size: 14px; line-height: 34px; color: hsl(var(--muted-foreground)); }
+.agent-app .met-mcard .fn { font-size: 11px; color: hsl(var(--micro-foreground)); line-height: 15px; }
+.agent-app .met-mcard a.v:hover, .agent-app .met-mcard button.v:hover { color: hsl(var(--accent)); }
+.agent-app .met-btok-note { padding: 0 20px 12px; }
+.agent-app .met-btok-note .wr { color: hsl(var(--warning)); }
+
+/* ---------- B block ---------- */
+.agent-app .met-bcols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 0 20px 16px; align-items: start; }
+.agent-app .met-bcol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.agent-app .met-panel { background: hsl(var(--surface)); border-radius: var(--met-radius); padding: 0; min-width: 0; }
+.agent-app .met-panel.clip { overflow: hidden; }
+.agent-app .met-subhd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px 8px; }
+.agent-app .met-subhd .t { font-size: 13px; font-weight: 600; }
+.agent-app .met-subhd .sp { flex: 1; }
+.agent-app .met-tblwrap { overflow: auto; max-height: 528px; }
+.agent-app .met-tbl { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; min-width: 460px; }
+.agent-app .met-tbl th { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; color: hsl(var(--micro-foreground)); text-align: left; padding: 10px 16px; height: 36px; border-bottom: 1px solid var(--hairline); background: hsl(var(--surface)); white-space: nowrap; position: sticky; top: 0; z-index: 5; }
+.agent-app .met-tbl th.r { text-align: right; }
+.agent-app .met-tbl th button { font: inherit; color: inherit; letter-spacing: inherit; background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.agent-app .met-tbl th button:hover { color: hsl(var(--foreground)); }
+.agent-app .met-tbl td { height: 44px; padding: 0 16px; border-bottom: 1px solid var(--hairline); font-size: 12.5px; vertical-align: middle; }
+.agent-app .met-tbl tbody tr:last-child td { border-bottom: none; }
+.agent-app .met-tbl td.num { text-align: right; white-space: nowrap; font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.agent-app .met-tbl td.mono { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agent-app .met-share { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.agent-app .met-share .p { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-weight: 500; font-size: 12px; line-height: 14px; }
+.agent-app .met-share .bar { width: 64px; height: 4px; border-radius: 2px; background: var(--met-bar); overflow: hidden; }
+.agent-app .met-share .bar i { display: block; height: 100%; background: var(--met-bar-fill); }
+.agent-app .met-bigv { display: flex; align-items: baseline; gap: 10px; padding: 2px 16px 8px; flex-wrap: wrap; }
+.agent-app .met-bigv .v { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-weight: 600; font-size: 32px; line-height: 38px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.agent-app .met-bigv .v .u { font-size: 16px; color: hsl(var(--micro-foreground)); font-weight: 500; margin-right: 4px; }
+.agent-app .met-toolnote { margin: 0 20px 16px; padding: 10px 14px; border-radius: var(--met-radius); background: hsl(var(--surface)); font-size: 12px; color: hsl(var(--muted-foreground)); line-height: 18px; }
+.agent-app .met-attr-tok { font-size: 11.5px; }
+.agent-app .met-attr-detail { padding: 4px 0 8px; font-size: 11.5px; color: hsl(var(--muted-foreground)); }
+.agent-app .met-attr-note { padding: 6px 0 2px; font-size: 11.5px; color: hsl(var(--micro-foreground)); line-height: 16px; }
+
+/* ---------- A4 source stack + legend ---------- */
+.agent-app .met-stack { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 4px 16px 8px; }
+.agent-app .met-stack i { height: 100%; border-radius: 2px; }
+.agent-app .met-slegend { display: flex; flex-direction: column; gap: 5px; padding: 0 16px 12px; font-size: 11.5px; }
+.agent-app .met-slegend .lr { display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; width: 100%; text-align: left; }
+.agent-app .met-slegend .lr i { width: 9px; height: 9px; border-radius: 2.5px; flex: none; }
+.agent-app .met-slegend .lr .nm { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; color: hsl(var(--muted-foreground)); }
+.agent-app .met-slegend .lr .sp { flex: 1; }
+.agent-app .met-slegend .lr .n { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; color: hsl(var(--muted-foreground)); }
+.agent-app .met-slegend .lr .pc { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; color: hsl(var(--micro-foreground)); width: 44px; text-align: right; }
+.agent-app .met-slegend .note { color: hsl(var(--micro-foreground)); font-size: 11px; }
+.agent-app .met-empty-line { padding: 14px 20px; font-size: 13px; color: hsl(var(--muted-foreground)); margin: 0; }
+
+/* ---------- C heat (375: 24 fr columns, NEVER horizontal scroll) ---------- */
+.agent-app .met-heat { display: flex; gap: 28px; padding: 10px 20px 14px; align-items: flex-start; }
+.agent-app .met-dual-grids { display: contents; }
+.agent-app .met-heat-g-wrap { position: relative; flex: none; min-width: 0; }
+.agent-app .met-heat-g { min-width: 0; }
+.agent-app .met-hrow { display: flex; align-items: center; gap: 8px; }
+.agent-app .met-hrow + .met-hrow { margin-top: 3px; }
+.agent-app .met-hl { width: 38px; flex: none; font-size: 10.5px; letter-spacing: 0.04em; color: hsl(var(--micro-foreground)); text-align: right; position: relative; }
+.agent-app .met-hrow.now .met-hl { color: hsl(var(--foreground)); font-weight: 600; }
+.agent-app .met-hrow.now .met-hl::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 2px; height: 14px; border-radius: 2px; background: hsl(var(--accent)); }
+.agent-app .met-hcs { display: grid; grid-template-columns: repeat(24, 28px); gap: 3px; }
+.agent-app .met-hcs.ax { margin-bottom: 5px; }
+.agent-app .met-hcs.ax i { grid-column: span 4; font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-weight: 400; font-size: 9.5px; line-height: 1; color: hsl(var(--micro-foreground)); text-align: center; font-style: normal; }
+.agent-app .met-hc { width: 28px; height: 28px; border-radius: 3px; background: var(--met-heat-0); transition: box-shadow 0.12s; cursor: default; position: relative; display: block; }
+.agent-app .met-hc.l1 { background: var(--met-heat-1); }
+.agent-app .met-hc.l2 { background: var(--met-heat-2); }
+.agent-app .met-hc.l3 { background: var(--met-heat-3); }
+.agent-app .met-hc.l4 { background: var(--met-heat-4); }
+.agent-app .met-hc.l5 { background: var(--met-heat-5); }
+.agent-app .met-hc:hover { box-shadow: 0 0 0 2px hsl(var(--foreground)), 0 0 0 3px hsl(var(--card)); }
+.agent-app .met-hc.nw { box-shadow: inset 0 0 0 1px hsl(var(--foreground)); }
+.agent-app .met-hc.nw:hover { box-shadow: inset 0 0 0 1px hsl(var(--foreground)), 0 0 0 2px hsl(var(--foreground)), 0 0 0 3px hsl(var(--card)); }
+.agent-app a.met-hc { cursor: pointer; }
+.agent-app .met-htip { position: absolute; z-index: 20; min-width: 150px; max-width: 220px; padding: 8px 10px; border-radius: 8px; background: hsl(var(--surface-2)); border: 1px solid var(--hairline); font-size: 11.5px; line-height: 16px; color: hsl(var(--muted-foreground)); pointer-events: none; box-shadow: var(--met-shadow); }
+.agent-app .met-htip b { display: block; color: hsl(var(--foreground)); font-weight: 600; font-size: 12px; }
+.agent-app .met-htip .n { color: hsl(var(--foreground)); }
+.agent-app .met-heat-side { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 14px; padding-top: 2px; }
+.agent-app .met-hs { display: flex; flex-direction: column; gap: 6px; padding-bottom: 13px; border-bottom: 1px solid var(--hairline); }
+.agent-app .met-hs:last-child { border-bottom: none; padding-bottom: 0; }
+.agent-app .met-hs .l { display: flex; align-items: baseline; gap: 8px; }
+.agent-app .met-hs .l .sp { flex: 1; }
+.agent-app .met-hs .l b { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-weight: 600; font-size: 20px; line-height: 26px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.agent-app .met-hs .l b.wr { color: hsl(var(--warning)); }
+.agent-app .met-hs .l .u { font-size: 11.5px; color: hsl(var(--micro-foreground)); font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; }
+.agent-app .met-hs .d { font-size: 11.5px; color: hsl(var(--micro-foreground)); line-height: 16px; }
+.agent-app .met-hfoot { display: flex; align-items: center; gap: 16px; padding: 12px 20px 16px; flex-wrap: wrap; }
+.agent-app .met-hscale { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: hsl(var(--micro-foreground)); }
+.agent-app .met-hscale .met-hc { width: 12px; height: 12px; }
+.agent-app .met-hsum { padding: 0 20px 14px; font-size: 11.5px; color: hsl(var(--micro-foreground)); }
+.agent-app .met-empbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 0 20px 8px; }
+.agent-app .met-emp-select { display: inline-flex; align-items: center; gap: 8px; }
+.agent-app .met-emp-select select { height: 28px; border: 1px solid var(--hairline); border-radius: 6px; background: hsl(var(--surface)); color: hsl(var(--foreground)); padding: 0 8px; font-size: 12px; max-width: 260px; }
+.agent-app .met-emp-loading { padding: 20px; min-width: 0; }
+/* employee comparison: two grids share ONE color denominator */
+.agent-app .met-heat.dual { flex-direction: column; gap: 16px; }
+.agent-app .met-heat.dual .met-dual-grids { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; width: 100%; }
+.agent-app .met-heat.dual .met-heat-g-wrap { width: 100%; }
+.agent-app .met-heat.dual .met-hcs { grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; }
+.agent-app .met-heat.dual .met-hc { width: auto; height: auto; aspect-ratio: 1; }
+.agent-app .met-heat.dual .met-heat-side { width: 100%; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.agent-app .met-heat.dual .met-hs { border-bottom: none; padding-bottom: 0; }
+
+/* ---------- empty / degraded / error / skeleton ---------- */
+.agent-app .met-empty { margin: 14px 20px 16px; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center; border-radius: var(--met-radius); background: hsl(var(--surface)); }
+.agent-app .met-empty .ic { width: 40px; height: 40px; border-radius: 50%; background: hsl(var(--surface-2)); display: flex; align-items: center; justify-content: center; color: hsl(var(--micro-foreground)); margin-bottom: 3px; }
+.agent-app .met-empty .t { font-size: 14px; font-weight: 500; }
+.agent-app .met-empty .s { font-size: 13px; color: hsl(var(--muted-foreground)); max-width: 420px; line-height: 19px; }
+.agent-app .met-empty .met-b { margin-top: 8px; }
+.agent-app .met-empty.sm { margin: 10px 16px 14px; padding: 20px 14px; }
+.agent-app .met-deg { margin: 12px 20px 16px; padding: 18px 16px; border-radius: var(--met-radius); background: hsl(var(--surface)); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.agent-app .met-deg .t { font-size: 13.5px; font-weight: 600; color: hsl(var(--warning)); }
+.agent-app .met-deg .t.plain { color: hsl(var(--foreground)); }
+.agent-app .met-deg .s { font-size: 12.5px; color: hsl(var(--muted-foreground)); line-height: 18px; }
+.agent-app .met-deg .tech { font-size: 11px; color: hsl(var(--micro-foreground)); font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; }
+.agent-app .met-deg.center { align-items: center; text-align: center; }
+.agent-app .met-stage { padding: 48px 24px 56px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; position: relative; overflow: hidden; }
+.agent-app .met-stage::before { content: ''; position: absolute; inset: 0; background: var(--ov-wash); opacity: 0.4; pointer-events: none; }
+.agent-app .met-stage .ic { width: 44px; height: 44px; border-radius: 50%; background: hsl(var(--surface)); border: 1px solid var(--hairline); display: flex; align-items: center; justify-content: center; color: hsl(var(--micro-foreground)); margin-bottom: 6px; position: relative; }
+.agent-app .met-stage .t { font-size: 15px; font-weight: 600; position: relative; }
+.agent-app .met-stage .s { font-size: 13px; color: hsl(var(--muted-foreground)); max-width: 460px; line-height: 19px; position: relative; }
+.agent-app .met-stage .s .a2-mono { color: hsl(var(--foreground)); font-size: 12px; }
+.agent-app .met-stage .acts2 { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; position: relative; }
+.agent-app .met-stage .req { font-size: 11px; color: hsl(var(--micro-foreground)); font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; position: relative; }
+.agent-app .met-skel { display: flex; flex-direction: column; gap: 16px; }
+.agent-app .met-skel-card { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.agent-app .met-bar { height: 12px; border-radius: 6px; background: hsl(var(--surface-2)); }
+.agent-app .met-bar.h { height: 16px; width: 40%; }
+.agent-app .met-loading-note { text-align: center; }
+
+/* ---------- footer / toast ---------- */
+.agent-app .met-pfoot { display: flex; align-items: center; gap: 20px; padding: 6px 4px; flex-wrap: wrap; font-size: 11.5px; color: hsl(var(--micro-foreground)); }
+.agent-app .met-pfoot .sp { flex: 1; }
+.agent-app .met-pfoot kbd { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-size: 11px; border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 5px; color: hsl(var(--muted-foreground)); }
+.agent-app .met-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 90; padding: 9px 16px; border-radius: var(--met-radius); background: hsl(var(--surface-2)); border: 1px solid var(--border); color: hsl(var(--foreground)); font-size: 12.5px; box-shadow: var(--met-shadow); }
+
+/* ---------- responsive: 1280 / 1024 / 768-375 (target §4.2) ---------- */
+@media (max-width: 1279px) {
+  .agent-app .met-mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .agent-app .met-heat { flex-direction: column; gap: 16px; }
+  .agent-app .met-heat-side { min-width: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .agent-app .met-hs { border-bottom: none; padding-bottom: 0; }
+  .agent-app .met-hs:last-child { grid-column: 1 / -1; }
+  .agent-app .met-heat.dual .met-heat-side { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 1023px) {
+  .agent-app .met-agrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .agent-app .met-agrid > .ov-card:nth-child(-n+3) { grid-column: span 1; }
+  .agent-app .met-agrid > .ov-card:nth-child(n+4) { grid-column: span 1; }
+  .agent-app .met-agrid > .ov-card:last-child { grid-column: 1 / -1; }
+  .agent-app .met-bcols { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .met-hcs { grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; }
+  /* .met-hcs inside .met-hrow is a flex item: without a grow basis it sizes to
+     its max-content (0 with 1fr tracks) and the 24 cells collapse. Fill the row. */
+  .agent-app .met-hrow > .met-hcs { flex: 1 1 auto; min-width: 0; }
+  .agent-app .met-hc { width: auto; height: auto; aspect-ratio: 1; }
+  .agent-app .met-hcs.ax i { font-size: 8.5px; }
+  .agent-app .met-heat-g-wrap { width: 100%; flex: 1 1 auto; }
+  .agent-app .met-heat.dual .met-dual-grids { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .met-heat.dual .met-heat-side { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .agent-app .met-phead .a2-h1 { font-size: 24px; line-height: 32px; }
+  .agent-app .met-agrid { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .met-agrid > .ov-card:last-child { grid-column: auto; }
+  .agent-app .met-mgrid { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .met-heat { padding: 10px 14px 12px; gap: 14px; }
+  .agent-app .met-hl { width: 30px; font-size: 9.5px; }
+  .agent-app .met-heat-side { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .met-hs { border-bottom: 1px solid var(--hairline); padding-bottom: 10px; }
+  .agent-app .met-hs:last-child { border-bottom: none; padding-bottom: 0; grid-column: auto; }
+  .agent-app .met-kv, .agent-app .met-mgrid, .agent-app .met-bcols { padding-left: 14px; padding-right: 14px; }
+  .agent-app .met-card-ft, .agent-app .met-hfoot, .agent-app .met-hsum { padding-left: 14px; padding-right: 14px; }
+  .agent-app .met-stack, .agent-app .met-slegend { margin-left: 14px; margin-right: 14px; padding-left: 0; padding-right: 0; }
+  .agent-app .met-slegend { padding: 0 0 12px; }
+  .agent-app .met-subhd, .agent-app .met-bigv { padding-left: 14px; padding-right: 14px; }
+  .agent-app .met-toolnote { margin: 0 14px 14px; }
+  .agent-app .met-empty { margin: 12px 14px 14px; }
+  .agent-app .met-deg { margin: 10px 14px 14px; }
+  .agent-app .met-stage { padding: 36px 16px 44px; }
+  .agent-app .met-btok-note { padding-left: 14px; padding-right: 14px; }
+  .agent-app .met-empbar { padding-left: 14px; padding-right: 14px; }
+  .agent-app .met-calib { padding: 12px 14px; }
+}

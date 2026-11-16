@@ -9,7 +9,7 @@ import { ApprovalDetailPage } from './ApprovalDetailPage';
 import { ApprovalsListPage } from './ApprovalsListPage';
 import { EmployeeDetailPage } from './EmployeeDetailPage';
 import { EmployeesListPage } from './EmployeesListPage';
-import { HermesMetricsSection } from './HermesMetricsSection';
+import { MetricsPage as MetricsScreen } from './MetricsPage';
 import { OverviewPage as OverviewScreen } from './OverviewPage';
 import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
@@ -87,13 +87,10 @@ export function RunsPage() {
   );
 }
 
+/* MET-01: the real read-only metrics projection page (met01-target.html).
+ * The legacy embedded HermesMetricsSection stays on the old v2 page. */
 export function MetricsPage() {
-  const { hermesApi, trendsApi } = useShellApis();
-  return (
-    <div className="a2s-page" data-testid="agent-v2-page-metrics">
-      <HermesMetricsSection hermesApi={hermesApi} trendsApi={trendsApi} />
-    </div>
-  );
+  return <MetricsScreen />;
 }
 
 export function SettingsPage() {
