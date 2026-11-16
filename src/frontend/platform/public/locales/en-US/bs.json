@@ -4791,7 +4791,7 @@
         "detailDisabledNote": "Detail page not launched yet",
         "prevPage": "Previous page",
         "nextPage": "Next page",
-        "pageInfo": "Page {{page}} · {{count}} rows on this page",
+        "pageInfo": "{{count}} on this page",
         "blockName": "Task list",
         "filterSummary": "Active filters: {{filters}}",
         "dueBeforeValue": "due before {{value}}",
@@ -4884,7 +4884,8 @@
         "sideEmpty": "No blocked or overdue tasks in the current list",
         "sideOnlyBlocked": "Blocked only",
         "sideOnlyOverdue": "Overdue only",
-        "noProgress": "No progress note · last change {{time}}"
+        "noProgress": "No progress note · last change {{time}}",
+        "dueBeforeLabel": "Due before"
       },
       "apr": {
         "desc": "Approval to-do queue: review pending approvals; selection covers this page (read-only in this wave).",

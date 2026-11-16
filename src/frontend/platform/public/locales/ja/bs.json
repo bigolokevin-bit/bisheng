@@ -4619,7 +4619,7 @@
         "detailDisabledNote": "詳細ページは未公開です",
         "prevPage": "前のページ",
         "nextPage": "次のページ",
-        "pageInfo": "{{page}} ページ目 · 本ページ {{count}} 件",
+        "pageInfo": "本ページ {{count}} 件",
         "blockName": "タスク一覧",
         "filterSummary": "現在の絞り込み：{{filters}}",
         "dueBeforeValue": "期限 {{value}} 以前",
@@ -4712,7 +4712,8 @@
         "sideEmpty": "現在のリストに阻止・期限超過のタスクはありません",
         "sideOnlyBlocked": "阻止のみ",
         "sideOnlyOverdue": "期限超過のみ",
-        "noProgress": "進捗記録なし · 最終変更 {{time}}"
+        "noProgress": "進捗記録なし · 最終変更 {{time}}",
+        "dueBeforeLabel": "期限前"
       },
       "apr": {
         "desc": "承認の未処理キュー：保留中の承認を確認します。本波は読み取り専用（このページの選択のみ）。",

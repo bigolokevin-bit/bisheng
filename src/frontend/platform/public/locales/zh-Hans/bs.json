@@ -4736,7 +4736,7 @@
         "detailDisabledNote": "详情页未上线",
         "prevPage": "上一页",
         "nextPage": "下一页",
-        "pageInfo": "第 {{page}} 页 · 本页 {{count}} 条",
+        "pageInfo": "本页 {{count}} 条",
         "blockName": "任务列表",
         "filterSummary": "当前筛选：{{filters}}",
         "dueBeforeValue": "截止早于 {{value}}",
@@ -4829,7 +4829,8 @@
         "sideEmpty": "当前列表没有受阻或逾期的任务",
         "sideOnlyBlocked": "只看受阻",
         "sideOnlyOverdue": "只看逾期",
-        "noProgress": "暂无进展记录 · 最后变更 {{time}}"
+        "noProgress": "暂无进展记录 · 最后变更 {{time}}",
+        "dueBeforeLabel": "截止早于"
       },
       "apr": {
         "desc": "审批待办队列：查看待处理的审批单，可按本页选择（本波只读）。",
