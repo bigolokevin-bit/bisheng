@@ -38,7 +38,7 @@ vi.mock('react-i18next', async () => {
 import { EmployeeDetailPage } from '../EmployeeDetailPage';
 import { userContext } from '@/contexts/userContext';
 
-type Mode = 'ok' | 'stale' | 'missing';
+type Mode = 'ok' | 'stale' | 'missing' | 'seq0';
 let mode: Mode = 'ok';
 
 const ISO = '2026-11-15T03:27:58.000Z';
@@ -131,10 +131,17 @@ function bodyFor(url: string): unknown {
     return { items: [{ employeeId: 'emp_1', costUsd: 0.121198 }], missingEmployeeIds: [] };
   if (url.includes('/api/approval-stats')) return { pending: 0, dueSoon: 0 };
   if (url.includes('/api/tasks')) return { items: [] };
-  if (url.includes('/api/run-detail'))
-    return url.includes('id=rn_A') ? { runId: 'rn_A', lastEventSeq: 7 } : { runId: 'rn_B', lastEventSeq: null };
-  if (url.includes('/api/run-events'))
-    return { items: [{ seq: 7, payload: { output: '最终回复' } }] };
+  if (url.includes('/api/run-detail')) {
+    if (mode === 'seq0') return { runId: 'rn_A', status: 'completed', lastEventSeq: 0 };
+    if (url.includes('id=rn_A')) return { runId: 'rn_A', status: 'completed', lastEventSeq: 7 };
+    if (url.includes('id=rn_C')) return { runId: 'rn_C', status: 'failed', lastEventSeq: 2 };
+    return { runId: 'rn_B', status: 'running', lastEventSeq: null };
+  }
+  if (url.includes('/api/run-events')) {
+    return url.includes('runId=rn_C')
+      ? { items: [{ seq: 2, eventType: 'failed', payload: { reasonCode: 'run.upstream_failed' } }] }
+      : { items: [{ seq: 7, eventType: 'completed', payload: { output: '最终回复' } }] };
+  }
   if (url.includes('/api/runs'))
     return url.includes('cursor=c2')
       ? mode === 'stale'
@@ -226,6 +233,36 @@ describe('EMP-03 runs tab (RUN-TAB-DATA)', () => {
         .map((el) => el.textContent);
       expect(texts.some((x) => (x ?? '').includes('不可得'))).toBe(true);
     });
+  });
+
+  it('non-completed terminal tail shows payload.reasonCode (card 481)', async () => {
+    mode = 'ok';
+    stubFetch();
+    renderDetail();
+    await openRunsTab();
+    fireEvent.click(screen.getByTestId('agent-v2-ed-runs-more'));
+    await waitFor(() => expect(screen.getAllByTestId('agent-v2-ed-run-row')).toHaveLength(3));
+    const expands = screen.getAllByTestId('agent-v2-ed-run-expand-btn');
+    fireEvent.click(expands[2]);
+    await waitFor(() => {
+      const texts = screen
+        .getAllByTestId('agent-v2-ed-run-summary')
+        .map((el) => el.textContent);
+      expect(texts.some((x) => (x ?? '').includes('run.upstream_failed'))).toBe(true);
+    });
+  });
+
+  it('lastEventSeq 0 with no events shows the status copy', async () => {
+    mode = 'seq0';
+    stubFetch();
+    renderDetail();
+    await openRunsTab();
+    fireEvent.click(screen.getAllByTestId('agent-v2-ed-run-expand-btn')[0]);
+    await waitFor(() =>
+      expect(screen.getAllByTestId('agent-v2-ed-run-summary')[0].textContent).toContain(
+        'completed'
+      )
+    );
   });
 
   it('load-more consumes nextCursor, hides when done, never shows a total', async () => {

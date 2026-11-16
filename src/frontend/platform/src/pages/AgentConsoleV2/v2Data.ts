@@ -361,10 +361,17 @@ export function fetchRunDetail(
 }
 
 /* R3 run-events: the summary lane reads ONLY the tail event
- * (sinceSeq = lastEventSeq - 1, limit 1) and shows payload.output;
- * anything else stays 不可得 (RUN-TAB-DATA: never invent a summary). */
+ * (sinceSeq = lastEventSeq - 1 — strictly-greater anchor per the supported
+ * L2 recipe — limit 1). Tail eventType `completed` → payload.output; a
+ * non-completed terminal tail → payload.reasonCode; anything else stays
+ * 不可得 (RUN-TAB-DATA: never invent a summary). eventsTruncated is not
+ * returned by any layer, so no truncation badge is ever shown. */
 export interface RunEventsBody {
-  items?: Array<{ payload?: unknown; seq?: number | string | null }>;
+  items?: Array<{
+    payload?: unknown;
+    seq?: number | string | null;
+    eventType?: string | null;
+  }>;
 }
 
 export function fetchRunEventsSummary(

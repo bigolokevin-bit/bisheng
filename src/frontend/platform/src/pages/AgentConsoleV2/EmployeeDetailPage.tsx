@@ -160,14 +160,20 @@ export function EmployeeDetailPage() {
 
   const runList = [...(runRows.data?.items ?? []), ...runExtra];
 
-  /* RUN-TAB-DATA lazy summary: R2 lastEventSeq → /api/run-events with
-   * sinceSeq = lastEventSeq - 1, limit 1; only the tail event's
-   * payload.output is shown. Anything missing renders 不可得 — the summary
-   * is never fabricated. */
+  /* Supported tail-event recipe (L2, card @481): R2 lastEventSeq →
+   * /api/run-events with sinceSeq = lastEventSeq - 1 (strictly-greater
+   * anchor), limit 1. lastEventSeq == 0 means no events — the summary slot
+   * shows the status copy instead. Tail eventType completed → payload.output
+   * (the key is `output`); a non-completed terminal tail → reasonCode from
+   * the tail payload; running → 运行中 with no summary. Anything missing
+   * renders 不可得 — the summary is never fabricated. */
   const expandRunSummary = async (runId: string) => {
     if (!runId) return;
     setRunSummary((prev) => ({ ...prev, [runId]: { state: 'loading' } }));
     const d = await fetchRunDetail(fetch, runId);
+    const runStatus = d.ok ? str(d.data as unknown as UnknownRecord, ['status']) : null;
+    const statusCopy =
+      runStatus === 'running' ? t('agentConsole.v2.ed.running') : runStatus || null;
     const rawSeq = d.ok ? d.data?.lastEventSeq : null;
     const seq =
       rawSeq != null && Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : null;
@@ -175,16 +181,38 @@ export function EmployeeDetailPage() {
       setRunSummary((prev) => ({ ...prev, [runId]: { state: 'na' } }));
       return;
     }
+    if (seq === 0) {
+      /* No events at all: show the status copy, never an empty fake. */
+      setRunSummary((prev) => ({
+        ...prev,
+        [runId]: statusCopy ? { state: 'text', text: statusCopy } : { state: 'na' },
+      }));
+      return;
+    }
     const e = await fetchRunEventsSummary(fetch, runId, seq - 1);
     const items = e.ok ? (e.data?.items ?? []) : [];
     const last = items.length > 0 ? items[items.length - 1] : null;
-    const payload = (last && typeof last.payload === 'object' && last.payload !== null
+    if (!last) {
+      setRunSummary((prev) => ({ ...prev, [runId]: { state: 'na' } }));
+      return;
+    }
+    const payload = (typeof last.payload === 'object' && last.payload !== null
       ? last.payload
       : {}) as UnknownRecord;
-    const out = str(payload, ['output', 'text']);
+    const eventType = typeof last.eventType === 'string' ? last.eventType : '';
+    let text: string | null = null;
+    if (eventType === 'completed') {
+      const out = str(payload, ['output']);
+      /* Frontend truncates for display; the full text stays server-side. */
+      text = out ? `${out.slice(0, 200)}${out.length > 200 ? '…' : ''}` : null;
+    } else if (runStatus === 'running') {
+      text = t('agentConsole.v2.ed.running');
+    } else {
+      text = str(payload, ['reasonCode']);
+    }
     setRunSummary((prev) => ({
       ...prev,
-      [runId]: out ? { state: 'text', text: out } : { state: 'na' },
+      [runId]: text ? { state: 'text', text } : { state: 'na' },
     }));
   };
 
