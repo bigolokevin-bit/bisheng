@@ -28,6 +28,8 @@ import {
   fmtApprovalId, durationParts, ttlParts, grantParts,
 } from './approvalDetailKit';
 
+import { useConsoleCrumbTail } from './Shell';
+
 import './approvalDetail.css';
 
 type View =
@@ -71,6 +73,7 @@ export function ApprovalDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const fetchApi: Fetcher = useMemo(() => makeFetcher(), []);
+  useConsoleCrumbTail(id ? fmtApprovalId(id) : null, id || undefined);
   const [token, setToken] = useState(0);
   const [view, setView] = useState<View>({ kind: 'loading' });
   const [now, setNow] = useState(() => Date.now());
@@ -456,7 +459,7 @@ export function ApprovalDetailPage() {
         <div className="a2d-card-hd">
           <span className="a2d-t">{apd('bindTitle')}</span>
           <span className="a2d-sp" />
-          <span className="a2d-hd-note">{kind === 'message_send' ? apd('bindNoteMessage') : apd('bindNote')}</span>
+          <span className="a2d-hd-note">{apd('bindNote')}</span>
         </div>
         <div className="a2d-rule" />
         <div className="a2d-meta">
@@ -585,6 +588,13 @@ export function ApprovalDetailPage() {
             <span>{isTerminal ? apd('opnoteTerminal') : apd('opnote')}</span>
           </div>
         </div>
+      </div>
+
+      {/* footer caliber (target .pfoot) */}
+      <div className="a2d-pfoot" data-testid="agent-v2-apd-footer">
+        <span>{apd('footSource')}</span>
+        <span>{apd('footCaliber')}</span>
+        <span><kbd className="a2-mono">⌘K</kbd> {apd('footSearch')}</span>
       </div>
     </div>
   );

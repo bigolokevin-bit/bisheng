@@ -5041,7 +5041,10 @@
         "errorDesc": "The approval service did not respond (HTTP {{code}}). To avoid misleading you, no cached data is shown; retry, and if it keeps failing contact the IT service desk (just say \"approval detail\").",
         "errorTimeoutDesc": "The approval service timed out. To avoid misleading you, no cached data is shown; retry, and if it keeps failing contact the IT service desk (just say \"approval detail\").",
         "reload": "Reload",
-        "refreshTry": "Granted access — refresh"
+        "refreshTry": "Granted access — refresh",
+        "footSource": "Source: AP3 approval detail (sole source) · CR-043 detail projection · write path in a later wave",
+        "footCaliber": "Caliber: times in Beijing time · remaining time trusts server remainingSeconds only · missing shows —/unavailable, never 0 · no totals",
+        "footSearch": "Search"
       },
       "ed": {
         "back": "Back to employee list",

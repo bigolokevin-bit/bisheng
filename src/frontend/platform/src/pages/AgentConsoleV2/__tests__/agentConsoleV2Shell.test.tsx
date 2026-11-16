@@ -27,7 +27,7 @@ vi.mock('@/controllers/API/agentConsoleTrends', () => ({
   createHttpAgentConsoleTrendsApi: () => ({}),
 }));
 
-import { AgentConsoleShell, ShellBoundary } from '../Shell';
+import { AgentConsoleShell, ShellBoundary, useConsoleCrumbTail } from '../Shell';
 
 const stub = (testid: string) => <div data-testid={testid} />;
 
@@ -100,6 +100,42 @@ describe('AgentConsoleShell (W1)', () => {
     // outcomes are honest; assert only that a label is present.
     const account = screen.getByTestId('agent-v2-account');
     expect(account.textContent).toBeTruthy();
+  });
+
+  it('keeps the default two-segment crumb and only appends an opted-in detail tail', () => {
+    function CrumbTailStub() {
+      useConsoleCrumbTail('ap_9D21…F2E3', 'ap_9D21F4A67B3E4C05D8A1F2E3');
+      return <div data-testid="page-crumb-tail" />;
+    }
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/agent/approvals']}>
+        <Routes>
+          <Route path="/agent" element={<AgentConsoleShell />}>
+            <Route path="approvals" element={stub('page-approvals')} />
+            <Route path="approvals/:id" element={<CrumbTailStub />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByLabelText('breadcrumb').textContent).toBe(
+      'agentConsole.v2.titleagentConsole.v2.navApprovals',
+    );
+    expect(screen.queryByTestId('agent-v2-crumb-tail')).toBeNull();
+    unmount();
+
+    render(
+      <MemoryRouter initialEntries={['/agent/approvals/ap_9D21F4A67B3E4C05D8A1F2E3']}>
+        <Routes>
+          <Route path="/agent" element={<AgentConsoleShell />}>
+            <Route path="approvals" element={stub('page-approvals')} />
+            <Route path="approvals/:id" element={<CrumbTailStub />} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+    const tail = screen.getByTestId('agent-v2-crumb-tail');
+    expect(tail.textContent).toBe('ap_9D21…F2E3');
+    expect(tail.getAttribute('title')).toBe('ap_9D21F4A67B3E4C05D8A1F2E3');
   });
 });
 

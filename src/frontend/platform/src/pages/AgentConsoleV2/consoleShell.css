@@ -166,6 +166,20 @@
 .agent-app .a2s-crumb-current {
   color: hsl(var(--foreground));
   font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Optional detail tail (APR-02 id): visual truncation only, title carries the
+ * full value; list/overview pages never render this third segment. */
+.agent-app .a2s-crumb-tail {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: hsl(var(--foreground));
 }
 
 /* search pill: surface base + kbd, focusable placeholder only */
@@ -432,6 +446,10 @@
   .agent-app .a2s-search input,
   .agent-app .a2s-search-kbd {
     display: none;
+  }
+
+  .agent-app .a2s-crumb-tail {
+    max-width: 96px;
   }
 
   .agent-app .a2s-ume-nm {

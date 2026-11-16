@@ -22,7 +22,7 @@
  * 'agentConsole.v2.theme' (same key as the v2 page, zero layout shift, the
  * first frame is painted with the stored theme — no flash).
  */
-import { Component, Suspense, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, Suspense, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -50,6 +50,25 @@ import './agentConsoleV2.css';
 import './consoleShell.css';
 
 const THEME_KEY = 'agentConsole.v2.theme';
+
+/* Optional third breadcrumb segment (APR-02 detail id). List/overview pages
+ * never call this hook, so the default breadcrumb stays two segments; only a
+ * detail page opts in by passing its localized short id + full title value. */
+interface CrumbTail {
+  label: string;
+  title: string;
+}
+type CrumbTailSetter = (tail: CrumbTail | null) => void;
+const CrumbTailContext = createContext<CrumbTailSetter | null>(null);
+
+export function useConsoleCrumbTail(label: string | null, title?: string) {
+  const setTail = useContext(CrumbTailContext);
+  useEffect(() => {
+    if (!setTail) return undefined;
+    setTail(label ? { label, title: title || label } : null);
+    return () => setTail(null);
+  }, [setTail, label, title]);
+}
 
 function initialTheme(): 'dark' | 'light' {
   try {
@@ -241,6 +260,8 @@ export function AgentConsoleShell() {
   const userMenuRef = useRef<HTMLSpanElement | null>(null);
   /* S-3: ⌘K focuses the global search pill (M1 read-only entry). */
   const searchRef = useRef<HTMLInputElement | null>(null);
+  /* Optional detail-page breadcrumb tail; null = the default two segments. */
+  const [crumbTail, setCrumbTail] = useState<CrumbTail | null>(null);
 
   const apis = useMemo<ShellApis>(
     () => ({
@@ -355,6 +376,18 @@ export function AgentConsoleShell() {
               <span className="a2s-crumb-root">{t('agentConsole.v2.title')}</span>
               <RailIcon name="chevR" size={14} />
               <span className="a2s-crumb-current">{t(`agentConsole.v2.${activeKey}`)}</span>
+              {crumbTail ? (
+                <>
+                  <RailIcon name="chevR" size={14} />
+                  <span
+                    className="a2s-crumb-tail a2-mono"
+                    title={crumbTail.title}
+                    data-testid="agent-v2-crumb-tail"
+                  >
+                    {crumbTail.label}
+                  </span>
+                </>
+              ) : null}
             </nav>
             <span className="a2s-sp" aria-hidden="true" />
             <label className="a2s-search">
@@ -404,21 +437,23 @@ export function AgentConsoleShell() {
             failedHint={t('agentConsole.v2.shellPageErrorHint')}
             retryCopy={t('agentConsole.v2.retry')}
           >
-            <Suspense
-              fallback={
-                <div
-                  className="a2s-skeleton"
-                  data-testid="agent-v2-route-skeleton"
-                  aria-hidden="true"
-                >
-                  <span className="a2s-sk-row" />
-                  <span className="a2s-sk-row is-short" />
-                  <span className="a2s-sk-row" />
-                </div>
-              }
-            >
-              <Outlet context={apis} />
-            </Suspense>
+            <CrumbTailContext.Provider value={setCrumbTail}>
+              <Suspense
+                fallback={
+                  <div
+                    className="a2s-skeleton"
+                    data-testid="agent-v2-route-skeleton"
+                    aria-hidden="true"
+                  >
+                    <span className="a2s-sk-row" />
+                    <span className="a2s-sk-row is-short" />
+                    <span className="a2s-sk-row" />
+                  </div>
+                }
+              >
+                <Outlet context={apis} />
+              </Suspense>
+            </CrumbTailContext.Provider>
           </ShellBoundary>
         </div>
       </div>

@@ -137,3 +137,11 @@
   .agent-app .a2d-stage { padding: 36px 16px 44px; }
   .agent-app .a2d-kvt td.k { width: 88px; }
 }
+/* footer caliber row (target .pfoot): three statements + flex spacers,
+ * wraps at 375 without horizontal overflow; the kbd is decorative. */
+.agent-app .a2d-pfoot { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 6px 4px; flex-wrap: wrap; font-size: 11.5px; line-height: 18px; color: hsl(var(--micro-foreground)); }
+.agent-app .a2d-pfoot kbd { font-family: var(--a2-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 11px; border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 5px; color: hsl(var(--muted-foreground)); }
+
+@media (max-width: 767px) {
+  .agent-app .a2d-pfoot { flex-direction: column; align-items: flex-start; gap: 4px; }
+}

@@ -41,6 +41,7 @@ vi.mock('react-i18next', async () => {
 });
 
 import { ApprovalDetailPage } from '../ApprovalDetailPage';
+import { AgentConsoleShell } from '../Shell';
 
 const A1 = 'ap_9D21F4A67B3E4C05D8A1F2E3';
 const EMP = 'emp_86A81CE8FF6F42E187BCF2B540';
@@ -172,6 +173,47 @@ function renderDetail(entry = `/agent/approvals/${A1}`) {
   );
 }
 
+function renderDetailInShell(entry = `/agent/approvals/${A1}`) {
+  return render(
+    <MemoryRouter initialEntries={[entry]}>
+      <Routes>
+        <Route path="/agent" element={<AgentConsoleShell />}>
+          <Route path="approvals" element={<div data-testid="list-stub">list</div>} />
+          <Route path="approvals/:id" element={<ApprovalDetailPage />} />
+        </Route>
+      </Routes>
+      <LocationProbe />
+    </MemoryRouter>,
+  );
+}
+
+describe('APR-02 — page footer & shell breadcrumb', () => {
+  it('renders the footer caliber row after the ops card', async () => {
+    renderDetail();
+    await screen.findByTestId('agent-v2-apd-ops');
+    const foot = screen.getByTestId('agent-v2-apd-footer');
+    expect(foot.textContent).toContain('数据源：AP3 审批详情（唯一）· 明细投影 CR-043 · 写路径归后续波');
+    expect(foot.textContent).toContain('时间北京时间');
+    expect(foot.textContent).toContain('剩余时间只认服务端 remainingSeconds');
+    expect(foot.textContent).toContain('缺失显示 —/不可得');
+    expect(foot.textContent).toContain('不造 0');
+    expect(foot.textContent).toContain('无总数');
+    expect(foot.textContent).toContain('⌘K');
+    expect(foot.textContent).toContain('搜索');
+  });
+
+  it('shell breadcrumb adds 「控制台 › 审批 › 截断 id」 with the full id in title', async () => {
+    renderDetailInShell();
+    await screen.findByTestId('agent-v2-apd-meta');
+    const crumb = screen.getByLabelText('breadcrumb');
+    expect(crumb.textContent).toContain('控制台');
+    expect(crumb.textContent).toContain('审批');
+    const tail = screen.getByTestId('agent-v2-crumb-tail');
+    expect(tail.textContent).toBe('ap_9D21…F2E3');
+    expect(tail.getAttribute('title')).toBe(A1);
+  });
+});
+
 describe('APR-02 approval detail — data plane & routing', () => {
   it('GETs AP3 /api/approval?id= from the URL param (direct entry)', async () => {
     renderDetail();
@@ -239,6 +281,9 @@ describe('APR-02 — D-1 binding present-only', () => {
     expect(binding.textContent).toContain('关联运行');
     expect(binding.textContent).toContain('消息摘要');
     expect(binding.textContent).toContain('md_5e8b1f4a7c0d3e6f9a2b5c8d1e4f7a0b');
+    // O1: the caliber statement stays present on message_send too.
+    expect(binding.textContent).toContain('present-only：响应没有的键不显示、不造值');
+    expect(binding.textContent).not.toContain('消息发送单另含运行引用与消息摘要');
     expect(binding.textContent).not.toContain('生效时间');
     expect(screen.getByTitle('rn_01M7DF41FG124YHW9PR66CJ7HW')).toBeTruthy();
   });
