@@ -1337,7 +1337,7 @@ function HeatCard({
                           return (
                             <span
                               key={hour}
-                              data-testid="agent-v2-ov-heat-cell"
+                              data-testid={now ? 'agent-v2-ov-current-cell' : 'agent-v2-ov-heat-cell'}
                               className={`ov-hc${cls ? ` ${cls}` : ''}${now ? ' nw' : ''}`}
                               title={`${t(dayKey)} ${String(hour).padStart(2, '0')}:00 · ${
                                 cell.count > 0

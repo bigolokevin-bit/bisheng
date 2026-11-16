@@ -234,7 +234,12 @@ describe('OV-01 redo', () => {
     renderOverview();
     await screen.findByTestId('agent-v2-ov-heat-grid');
     expect(screen.getAllByTestId('agent-v2-ov-heat-row-label')).toHaveLength(7);
-    expect(screen.getAllByTestId('agent-v2-ov-heat-cell')).toHaveLength(7 * 24);
+    // HE06: the current Beijing hour keeps its own testid; total cells stay 7×24.
+    expect(
+      screen.getAllByTestId('agent-v2-ov-heat-cell').length +
+        screen.getAllByTestId('agent-v2-ov-current-cell').length
+    ).toBe(7 * 24);
+    expect(screen.getAllByTestId('agent-v2-ov-current-cell')).toHaveLength(1);
     const foot = screen.getByTestId('agent-v2-ov-heat-foot');
     expect(foot.textContent).toContain('不画异常档');
   });
