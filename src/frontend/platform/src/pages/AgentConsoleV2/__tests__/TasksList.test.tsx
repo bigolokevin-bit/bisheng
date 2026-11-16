@@ -343,14 +343,16 @@ describe('TSK-01 read-only task board (reconciled)', () => {
    * which is the actual contract of the search box, and additionally
    * asserts the box is wired and typing never fires a server request. */
   it('client search narrows rows without any extra request', async () => {
-    /* jsdom limitation, honestly declared: typing into the controlled box
-     * (onChange -> setSearchParams) does not re-render under this harness,
-     * while a real browser filters live (before=5, after=1, zero extra
-     * /api/tasks requests; see readout.txt SEARCHLIVE). The assertions here
-     * therefore drive the SAME client-side filter through its URL state
-     * (?q=), scoped to this render's own container, and assert the search
-     * never triggers a server round-trip. */
-    const view = renderPage('/agent/tasks?q=周报');
+    /* The search box is a pure client-side filter over the loaded page and
+     * its state lives in the URL (?q=), so the case drives that URL state
+     * directly and asserts no extra server round-trip. Typing into the
+     * controlled input (onChange -> setSearchParams) does not reliably
+     * re-render under this jsdom harness; live typing is therefore proven in
+     * a real browser (transcript: readout.txt, SEARCHLIVE). Query '审批回调'
+     * matches exactly one fixture row - the shared default title means
+     * '周报' legitimately matches 4 of 5 rows, which was the old wrong
+     * expectation. */
+    const view = renderPage('/agent/tasks?q=审批回调');
     const rows = await waitFor(() => {
       const r = view.queryAllByTestId('agent-v2-task-row');
       expect(r.length).toBe(1);
@@ -359,7 +361,7 @@ describe('TSK-01 read-only task board (reconciled)', () => {
     expect(rows).toHaveLength(1);
     for (const u of t5()) expect(u).not.toContain('q=');
     const input = view.getByTestId('agent-v2-tsk-search') as HTMLInputElement;
-    expect(input.value).toBe('周报');
+    expect(input.value).toBe('审批回调');
     const before = t5().length;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
     setter?.call(input, '审批');
