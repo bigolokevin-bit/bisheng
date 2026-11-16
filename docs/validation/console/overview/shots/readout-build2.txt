@@ -28,12 +28,8 @@ QUEUE: 计数 0 项=三源 actionable 和；审批腿「组织级待办未接入
 # ---- block2 TREND — 2026-11-16 12:5x (dev 5399 + BFF 8092, dark) ----
 TREND: trendSvg=1 rects=32（useElementWidth 回调 ref，趋势图体实际绘制）；C1-r2 P1 修复：相邻事件日标签 y 阶梯（实测 3 标签 3 档、水平簇=1、无叠字、不溢出卡缘，右缘翻转锚点保留）；每日子标签仍 ≤2 动作 slice(0,2) join ' · '；P3：图例「P95 时长（样本不足（<20），未绘制）」；摘要 14·13·0·1条运行中/未知·100.0%·P95—；卡脚与 KPI 闭环；现网桶漂移不硬编码；今日虚线框在
 
-# ---- block2 HEAT — 2026-11-16 12:5x (dev 5399 + BFF 8092, dark) ----
-HEAT: 168 真格(current-cell=1)；小时轴每3时对齐；绝对档位；峰值 4 次/时(现网 R7 max=4，不硬编码 8)；夜间 0.4 与均值同源；合计 14 闭环；图例仅 count 无异常档
 
-# ---- BLOCK2-HEAT r3 — 13:02 实页（dev 5399）：cells=168(current-cell=1)；小时轴 00/03/…/21 grid span3 对齐；绝对档位 1→l1/5→l2/8→l3；峰值 4 次/时（周日00:00–00:59，现网 R7 max=4，上游分布漂移按既有豁免、不硬编码 8）；夜间 0.4 次/时与「0–6 点均值」同源；合计 14 与 KPI/趋势闭环；图例仅 count 无异常档；pair-heat-{1440,375}-dark.png 背景填充重拍
 
-# ---- BLOCK2-HEAT r3 — 13:02 实页（dev 5399, 前向修正 1dde982 的 pair 内容为 13:02 重拍版）：cells=168(current-cell=1)；小时轴 00/03/…/21 grid span3 对齐；绝对档位 1→l1/5→l2/8→l3；峰值 4 次/时（周日00:00–00:59，现网 R7 max=4，分布漂移按既有豁免、不硬编码 8）；夜间 0.4 次/时与「0–6 点均值」同源；合计 14 闭环；图例仅 count 无异常档；pair-heat-{1440,375}-dark.png
 
 # ---- BLOCK2-COST r3 — 13:02 实页：非 loading 真数据 USD 0.13 / 20.00 · 0.7% · 剩余 19.87 · 外推现网值（当月已过16天）；30 格 title 三态；每员工 f2b540 1.2% USD0.12/10.00、a22649 0.1% USD0.01/10.00；无假 0；pair-cost-{1440,375}-dark.png
 
@@ -42,3 +38,7 @@ HEAT: 168 真格(current-cell=1)；小时轴每3时对齐；绝对档位；峰�
 # ---- BLOCK2-ACTIVITY r3 — 13:02 实页：近24h 无审计事件=诚实空态「近 24 小时没有审计事件」+「打开审计中心」链接(go-audit testid)；openAuditCenter 裸 key 已修；无 snake_case 裸奔；pair-activity-{1440,375}-dark.png
 
 # ---- BLOCK2-FOOTER r3 — 13:02 实页：分块新鲜度 审批 13:02 · 运行 13:02 · 成本 11-15 03:25（账本）· 热力 13:02（各自成功时刻，失败保旧）；口径句逐字；键盘提示逐字「⌘K 搜索 · ⌘⇧R 刷新」；⌘K 聚焦搜索(Shell)、⌘⇧R 触发 refresh；>5min stale 细条（当前 fresh 不渲染）；pair-footer-{1440,375}-dark.png + impl raws(13:02 fullPage)
+
+# ---- BLOCK2-HEAT r3 — 13:02 实页（dev 5399 + BFF 8092, dark；本段为唯一 HEAT 读数段，合并原 12:5x 旧段与两条 r3 重复段）：cells=168(current-cell=1)；小时轴 00/03/…/21 grid span3 对齐；绝对档位 1→l1/5→l2/8→l3；峰值 4 次/时（周日00:00–00:59，现网 R7 max=4，上游分布漂移按既有豁免、不硬编码 8）；夜间 0.4 次/时与「0–6 点均值」同源；合计 14 与 KPI/趋势闭环；图例仅 count 无异常档；pair-heat-{1440,375}-dark.png 前向修正说明：1dde982 曾带 12:3x 裁剪（渲染一致），8e94c23 已替换为 13:02 重拍版，不改写已推 hash
+
+# ---- BLOCK2-FULL r3 — final 整页构图：impl 与 pair-full 同批 13:30:32/13:30:33（8f5a6bf 树，dev 5399，dark fullPage）；impl-1440-dark.png 1440x1874、impl-375-dark.png 375x3795（宽精确）；pair-full-1440-dark.png 2880x2202、pair-full-375-dark.png 750x4100（左=target 同宽渲染，右=impl，#0A0A0C 背景填充）；右半 vs impl(同底画布) MAE=0 且 raw-pixel md5 一致（1440: 6085d150…c742；375: 1a761649…d854）；solid-white 像素占比=0；GEOM1440 sw=iw=1440 cw=1425（滚动条豁免）；GEOM375 sw=cw=375；无横向溢出；无 {{/undefined/NaN/裸 key
