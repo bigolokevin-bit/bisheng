@@ -108,3 +108,23 @@ R2 轮（main `3d9e547`）观察①「succeeded=13 vs 列表 completed=12+runnin
 ### 整页口径
 
 **C2–C6 pre-deploy PASS，部署后仅补 C5 冒烟（8182 served entry 对账 + 登录→总览→列表→详情腿在 8182 重放）。** C1 视觉门已由 R3 审计件 PASS（main 369c2fa）。本轮未改代码/BFF/契约，未部署 8182，未合并 main。
+
+## R4 部署后终局（8182 served）— 2026-11-16 14:3x — C5-E1 FAIL(部署门未满足)
+
+卡基线对账：/agent/ 引用 assets/js/index-BFU-ZETxXUQ6.js，served sha256=cbc34f89…ef7c8==卡（200 text/javascript，1514B）；旧 entry BMUzMMBj/4d_yEKwU/DOA918V3 全 404。表面上 served 同一性 PASS。
+
+**但 8182 现服务的是未启用 console-v2 的 Bisheng 构建，OV-01 未上屏：**
+- 该 entry 的引导代码 `import("./TenantSelect-*.js")`（Bisheng 主前端入口，非 V2 壳）。
+- ego 实测（r4-mini/r4-probe2，opsadmin cookie 有效）：/agent/ 渲染 Bisheng 旧壳（title=BISHENG，导航=看板/构建/知识/…/数字员工控制台，无任何 agent-v2-* testid）；/agent/employees 与 /agent/employees/emp_86A8… → 重定向 /404；/agent/approvals → 停留但无 V2 渲染。
+- 产物旁证：懒 chunk shellPages-DY61EQ2r.js 内含 agent-v2-ov-page/agent-v2-ov-clear-filters/ov-focus-ring（OV-01 修复代码在此构建里），但路由门未开——典型症状=构建缺 VITE_AGENT_CONSOLE_V2=1（5399 的 .env 有此 flag；先例『评审自起 vite 必须带 VITE_AGENT_CONSOLE_V2=1』同源）。
+
+判定（五值）：
+- 部署同一性（entry/sha/旧产物404）：PASS
+- C5-E1 8182 登录→总览→列表→详情→返回→刷新：**FAIL（部署门未满足：/agent 不落 V2，链路起点即不可达）**——非页面代码缺陷，代码腿在 pre-deploy 5401/5399 已 PASS（R3 节）
+- C2-F7 served 重放：NOT MEASURED（V2 未上屏）
+- C4 复核：admin 会话存在（Bisheng 导航显 opsadmin）但 V2 入口 404 无从复核页面腿；API 腿沿用 18cfa0b/a1833d1 先例（admin 200/viewer 403，BFF pid 65008 重启后未重测）= NOT MEASURED(本轮)
+- console error：不适用（V2 未加载）
+
+整页最终判定：**OV-01 不 PASS（阻断项=8182 部署构建未启用 console-v2；修复 owner=L7/部署：以 VITE_AGENT_CONSOLE_V2=1 重新构建并 lan stop/start，或指向 bisheng-ov01-build 的正确 dist）**。修复重部署后仅需补 C5-E1 冒烟 + C2-F7 served 重放（各 5 分钟），pre-deploy 证据链完整。不计 4/15。
+
+证据：$T/r4-ego.out、r4-mini.mjs/r4-probe2.mjs（ego，opsadmin 现役 cookie，零回显）、r4-entry.js、r4-tenant.js、r4-shell.js（chunk 计数见正文）。
