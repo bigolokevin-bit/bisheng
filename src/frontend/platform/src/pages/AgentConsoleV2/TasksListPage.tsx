@@ -320,6 +320,8 @@ export function TasksListPage() {
   /* F-05 来源 facet lives in the URL but is client-side only (A-14). */
   const sourceFacet = searchParams.get('source') ?? '';
   const cursor = searchParams.get('cursor') ?? '';
+  /* fix C1b: q is a client-side filter over loaded rows only (never sent). */
+  const q = searchParams.get('q') ?? '';
 
   const effAssignee = assigneeFilter || (scope === 'mine' && uid ? `human:${uid}` : '');
 
@@ -333,6 +335,8 @@ export function TasksListPage() {
   const [cursorStale, setCursorStale] = useState(false);
   const [freshAt, setFreshAt] = useState('');
   const [names, setNames] = useState<Record<string, string>>({});
+  /* fix C1b (L0 ruling 3): the follow-up rail is optional, default collapsed. */
+  const [sideOpen, setSideOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [copiedKey, setCopiedKey] = useState('');
   const pagesRef = useRef<string[]>(['']);
@@ -400,7 +404,15 @@ export function TasksListPage() {
      never touches identity or theme. */
   const handleClear = () => {
     resetWalk();
-    patchParams({ scope: null, status: null, assignee: null, due: null, source: null, cursor: null });
+    patchParams({
+      scope: null,
+      status: null,
+      assignee: null,
+      due: null,
+      source: null,
+      q: null,
+      cursor: null,
+    });
   };
 
   /* H-03/A-08: refresh re-sends the current filters + cursor stack home page. */
@@ -520,9 +532,25 @@ export function TasksListPage() {
     return Array.from(set).sort();
   }, [okItems]);
 
-  const displayRows = useMemo(
-    () => (sourceFacet ? okItems.filter((r) => r.source?.channel === sourceFacet) : okItems),
-    [okItems, sourceFacet]
+  /* fix C1b: source facet first, then the client-only q search (title/id). */
+  const displayRows = useMemo(() => {
+    const bySource = sourceFacet
+      ? okItems.filter((r) => r.source?.channel === sourceFacet)
+      : okItems;
+    const needle = q.trim().toLowerCase();
+    return needle
+      ? bySource.filter(
+          (r) =>
+            (r.title ?? '').toLowerCase().includes(needle) ||
+            (r.taskId ?? '').toLowerCase().includes(needle)
+        )
+      : bySource;
+  }, [okItems, sourceFacet, q]);
+
+  /* fix C1b (L0 ruling 3): rail rows derive from loaded data only. */
+  const sideRows = useMemo(
+    () => okItems.filter((r) => r.status === 'blocked' || isOverdue(r)),
+    [okItems]
   );
 
   /* ---------- top-level states (ST-01…05) ---------- */
@@ -537,7 +565,9 @@ export function TasksListPage() {
   const refreshKeep =
     !!listRes && !listRes.ok && !isAuth && !isForbidden && notUpdated && okView !== null && curSig === okView.sig;
 
-  const hasAnyFilter = Boolean(status || assigneeFilter || dueKey || sourceFacet);
+  const hasAnyFilter = Boolean(
+    status || assigneeFilter || dueKey || sourceFacet || q.trim()
+  );
 
   /* ST-02 条件行: the active server filters + facet, name = value pairs. */
   const conditionText = useMemo(() => {
@@ -669,7 +699,7 @@ export function TasksListPage() {
   } else if (okView || refreshKeep) {
     const shown = refreshKeep ? (okView?.items ?? []) : displayRows;
     const shownNext = refreshKeep ? okView?.nextCursor : okView?.nextCursor;
-    body = (
+    const tableCard = (
       <div className="a2-card" data-testid="agent-v2-tsk-table-card">
         <div className="a2-card-head">
           <span className="a2-h2">{t('agentConsole.v2.tsk.hdTitle')}</span>
@@ -770,6 +800,93 @@ export function TasksListPage() {
         </div>
       </div>
     );
+    /* fix C1b (L0 ruling 3): optional follow-up rail, derived from loaded rows
+     * only, default collapsed, never fabricating a cross-page total. */
+    body = (
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 480px', minWidth: 0 }}>{tableCard}</div>
+        {sideOpen ? (
+          <aside
+            className="a2-card"
+            data-testid="agent-v2-tsk-side"
+            style={{
+              flex: '0 1 256px',
+              width: 256,
+              minWidth: 220,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            <div>
+              <span className="a2-h2">{t('agentConsole.v2.tsk.sideToggle')}</span>{' '}
+              <span className="a2-micro">
+                {t('agentConsole.v2.tsk.sideCount', { count: sideRows.length })}
+              </span>
+            </div>
+            <p className="a2-micro">
+              {t('agentConsole.v2.tsk.sideNote')} · {t('agentConsole.v2.tsk.loadedNote')}
+            </p>
+            {sideRows.length === 0 ? (
+              <p className="a2-micro">{t('agentConsole.v2.tsk.sideEmpty')}</p>
+            ) : (
+              sideRows.map((r) => (
+                <div
+                  key={r.taskId}
+                  data-testid="agent-v2-tsk-side-row"
+                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                >
+                  <span>
+                    <span className="a2-pill">{statusText(r.status ?? '') ?? r.status ?? '—'}</span>
+                  </span>
+                  <span
+                    title={r.taskId}
+                    style={{
+                      maxWidth: 220,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {r.title}
+                  </span>
+                  <span className="a2-micro">
+                    {r.statusReason
+                      || r.progressNote
+                      || (r.updatedAt
+                        ? t('agentConsole.v2.tsk.noProgress', { time: fmtTime(r.updatedAt) })
+                        : '—')}
+                  </span>
+                  {r.dueAt ? (
+                    <span className={isOverdue(r) ? 'a2-mono a2-danger' : 'a2-mono'}>
+                      {t('agentConsole.v2.tsk.due')} {fmtTime(r.dueAt)}
+                    </span>
+                  ) : null}
+                </div>
+              ))
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-tsk-side-only-blocked"
+                onClick={() => handleStatus('blocked')}
+              >
+                {t('agentConsole.v2.tsk.sideOnlyBlocked')}
+              </button>
+              <button
+                type="button"
+                className="a2-btn"
+                data-testid="agent-v2-tsk-side-only-overdue"
+                onClick={() => handleDue('overdue')}
+              >
+                {t('agentConsole.v2.tsk.sideOnlyOverdue')}
+              </button>
+            </div>
+          </aside>
+        ) : null}
+      </div>
+    );
   } else {
     /* initial load with nothing rendered yet */
     body = (
@@ -814,6 +931,16 @@ export function TasksListPage() {
           <p className="a2-meta">{t('agentConsole.v2.tsk.desc')}</p>
         </div>
         <span className="a2-sp" />
+        {/* fix C1b (L0 ruling 3): the follow-up rail is optional and default-collapsed. */}
+        <button
+          type="button"
+          className="a2-btn"
+          data-testid="agent-v2-tsk-side-toggle"
+          aria-expanded={sideOpen}
+          onClick={() => setSideOpen((v) => !v)}
+        >
+          {t('agentConsole.v2.tsk.sideToggle')}
+        </button>
         <button type="button" className="a2-btn" data-testid="agent-v2-tsk-refresh" onClick={handleRetry}>
           <Icon name="refresh" size={14} /> {t('agentConsole.v2.tsk.refresh')}
         </button>
@@ -854,6 +981,33 @@ export function TasksListPage() {
             >
               {t('agentConsole.v2.tsk.scopeAll')}
             </button>
+          </div>
+
+          {/* fix C1b (target §1.4): single-choice status chips mirror the T5 status param. */}
+          <div
+            className="a2-chips"
+            role="group"
+            aria-label={t('agentConsole.v2.tsk.filterStatus')}
+            data-testid="agent-v2-tsk-status-chips"
+          >
+            {TASK_STATUSES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`a2-pill${status === s ? ' active' : ''}`}
+                aria-pressed={status === s}
+                data-testid={`agent-v2-tsk-chip-${s}`}
+                onClick={() => handleStatus(status === s ? '' : s)}
+              >
+                {s === 'cancelled' ? (
+                  <span className="a2-mono">—</span>
+                ) : (
+                  <span className="a2-pill-dot" aria-hidden />
+                )}
+                {t(`agentConsole.v2.tsk.statusLabel.${s}`, s)}{' '}
+                <b>{okItems.filter((r) => r.status === s).length}</b>
+              </button>
+            ))}
           </div>
 
           {/* F-02 status */}
@@ -1010,6 +1164,18 @@ export function TasksListPage() {
             ))
           )}
 
+          {/* fix C1b (target §1.4): client-only search over loaded rows. */}
+          <input
+            type="search"
+            className="a2-input"
+            style={{ width: 260, maxWidth: '100%' }}
+            data-testid="agent-v2-tsk-search"
+            placeholder={t('agentConsole.v2.tsk.searchPh')}
+            aria-label={t('agentConsole.v2.tsk.searchPh')}
+            value={q}
+            onChange={(e) => patchParams({ q: e.target.value || null })}
+          />
+
           <span className="a2-sp" />
           {/* F-06 clear */}
           <button
@@ -1023,6 +1189,12 @@ export function TasksListPage() {
             {t('agentConsole.v2.tsk.clear')}
           </button>
         </div>
+        <p className="a2-micro" data-testid="agent-v2-tsk-result-count">
+          {t('agentConsole.v2.tsk.resultCount', {
+            shown: displayRows.length,
+            loaded: okItems.length,
+          })}
+        </p>
         <p className="a2-micro" data-testid="agent-v2-tsk-caliber">
           {caliberLine}
         </p>

@@ -4719,7 +4719,7 @@
         "emptyEmployees": "还没有数字员工"
       },
       "tsk": {
-        "desc": "只读任务板：查看任务状态、负责人与进展摘要；新建、编辑与状态变更不在本页。",
+        "desc": "谁在做什么、做到哪了、为什么卡住——状态以任务契约为准，同一条来源消息只建一个任务，完成必须有交代",
         "scopeMine": "我的",
         "scopeAll": "全部",
         "filterStatus": "状态",
@@ -4819,7 +4819,17 @@
           "blocked": "受阻",
           "done": "已完成",
           "cancelled": "已取消"
-        }
+        },
+        "searchPh": "搜索任务标题或编号",
+        "resultCount": "命中 {{shown}} / 已加载 {{loaded}} 条",
+        "sideToggle": "待处理跟进",
+        "sideNote": "受阻 · 逾期，来自当前列表",
+        "loadedNote": "仅本页已加载",
+        "sideCount": "{{count}} 项",
+        "sideEmpty": "当前列表没有受阻或逾期的任务",
+        "sideOnlyBlocked": "只看受阻",
+        "sideOnlyOverdue": "只看逾期",
+        "noProgress": "暂无进展记录 · 最后变更 {{time}}"
       },
       "apr": {
         "desc": "审批待办队列：查看待处理的审批单，可按本页选择（本波只读）。",

@@ -4774,7 +4774,7 @@
         "emptyEmployees": "No digital employees yet"
       },
       "tsk": {
-        "desc": "Read-only task board: review status, assignees and progress notes; create, edit and status transitions are not on this page.",
+        "desc": "Who is doing what, how far along, and why it is stuck — status follows the task contract; one source message creates exactly one task; completion must be accounted for",
         "scopeMine": "Mine",
         "scopeAll": "All",
         "filterStatus": "Status",
@@ -4874,7 +4874,17 @@
           "blocked": "Blocked",
           "done": "Done",
           "cancelled": "Cancelled"
-        }
+        },
+        "searchPh": "Search task title or id",
+        "resultCount": "{{shown}} matched / {{loaded}} loaded",
+        "sideToggle": "Follow-ups",
+        "sideNote": "Blocked · overdue, from the current list",
+        "loadedNote": "loaded page only",
+        "sideCount": "{{count}} items",
+        "sideEmpty": "No blocked or overdue tasks in the current list",
+        "sideOnlyBlocked": "Blocked only",
+        "sideOnlyOverdue": "Overdue only",
+        "noProgress": "No progress note · last change {{time}}"
       },
       "apr": {
         "desc": "Approval to-do queue: review pending approvals; selection covers this page (read-only in this wave).",
