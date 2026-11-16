@@ -1023,9 +1023,11 @@ function TrendCard({
       }
       const ev = events.get(d.day);
       if (ev) {
-        /* C1 item 6: anchor the label INSIDE the canvas — flip to 'end'
-         * near the right edge and centre-clamp when even that overflows,
-         * so labels never pile up into gibberish at the margin. */
+        /* C1 item 6 + r2 P1: anchor INSIDE the canvas (flip at the right
+         * edge, centre-clamp as fallback) AND stagger vertically — adjacent
+         * event days previously drew overlapping labels into gibberish.
+         * Each label keeps its own dashed line; labels step down one tier
+         * (12px) whenever the x-range collides with an already-placed label. */
         const est = ev.length * 10.5 + 10;
         const minX = pl + 4;
         const maxX = W - pr - 4;

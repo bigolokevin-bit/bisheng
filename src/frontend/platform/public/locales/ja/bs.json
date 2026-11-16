@@ -4527,7 +4527,13 @@
         "blockUnavailable": "{{block}}を一時的に取得できません（HTTP {{code}}）",
         "heatEmpty": "直近{{count}}週間の活動はありません",
         "heatCaliber": "色は実行回数のみ反映（タイムゾーン Asia/Shanghai）",
-        "queueCountUnit": "{{count}} 件"
+        "queueCountUnit": "{{count}} 件",
+        "queueGapOrgTodos": "組織レベルの未処理は未接続（M2）",
+        "staleBar": "一部データが古い：最終成功応答から5分以上経過",
+        "kbdSearch": "検索",
+        "openAuditCenter": "監査センターを開く",
+        "anomalyCountUnit": "{{count}} 件",
+        "p95NotDrawn": "未描画"
       },
       "shell": {
         "gOverview": "概要",

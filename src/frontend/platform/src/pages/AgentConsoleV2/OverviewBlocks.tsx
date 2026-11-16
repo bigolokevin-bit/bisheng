@@ -7,7 +7,7 @@
  * real aggregates already fetched (window failures, AP8 dueSoon, runs
  * without a ledger row). Activity is a table with localized action names
  * plus the mono raw value, exactly like the target. */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
@@ -156,8 +156,8 @@ export function useElementWidth<T extends HTMLElement>(): [React.RefObject<T | n
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  return [ref, width];
+  }, [el]);
+  return [setEl, width];
 }
 
 /* ---------- KPI spark slots (V2.1: slot always exists; no fake curve) ---------- */
@@ -399,6 +399,12 @@ function QueueRow({ src, onRetry }: { src: QueueSource; onRetry: () => void }) {
         ) : items.length === 0 ? (
           <div className="qs2" data-testid={`agent-v2-ov-queue-${src.id}-empty`}>
             {t(`agentConsole.v2.ov.${src.hintKey}`)}
+            {src.id === 'approvals' ? (
+              <>
+                {' · '}
+                <span data-testid="agent-v2-ov-queue-gap-org">{t('agentConsole.v2.ov.queueGapOrgTodos')}</span>
+              </>
+            ) : null}
             {src.truthCount != null && src.truthCount > 0 ? (
               <span className="ov-warn" data-testid={`agent-v2-ov-queue-${src.id}-mismatch`}>
                 {' '}· {t('agentConsole.v2.ov.queueMismatch')}

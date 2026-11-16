@@ -21,3 +21,6 @@ NOTE=trend 图体在本组 fullPage 中仍空白（useElementWidth bug，修复�
 
 # ---- block2 KPI — 2026-11-16 12:5x (dev 5399 + BFF 8092, dark) ----
 KPI: [2 在岗(共2在册·点阵14) | 0 待审批(今天没有到期单·点阵14) | 14 近7天运行(+14·上期0·13/0/1·area spark) | USD 0.13(0.7% of 20.00·thin 30格 title 三态)]；C1-r2 P1 修复：KpiSpark X 数字加括号（原 pad+字符串拼接致点飞出 viewBox、屏显 89×2 平线）——实测 runsSpark area bbox 112×40 d=M3.0 43.0L21.7 43.0L40.3 39.9...（真实日桶）、costSpark 112×40 累计 0→0.13、面积填充 rgba(129,118,247,.15)>0；375 spark 换行占满卡宽
+
+# ---- block2 QUEUE — 2026-11-16 12:5x (dev 5399 + BFF 8092, dark) ----
+QUEUE: 计数 0 项=三源 actionable 和；审批腿「组织级待办未接入（M2）」(GAP-OV-03)；三源空态逐字+去向链接；truthCount 一致性挂起；locale 本笔含后续区块共用键（queueGapOrgTodos/staleBar/kbdSearch/openAuditCenter/anomalyCountUnit/activityEmpty/p95NotDrawn）

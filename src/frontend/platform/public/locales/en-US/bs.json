@@ -4701,7 +4701,13 @@
           "run_failed": "Run failed",
           "run_finished": "Run finished"
         },
-        "queueCountUnit": "{{count}} items"
+        "queueCountUnit": "{{count}} items",
+        "queueGapOrgTodos": "Org-wide pending queue not wired (M2)",
+        "staleBar": "Some data is stale: last successful response is over 5 minutes old",
+        "kbdSearch": "search",
+        "openAuditCenter": "Open audit center",
+        "anomalyCountUnit": "{{count}} item(s)",
+        "p95NotDrawn": "not plotted"
       },
       "shell": {
         "gOverview": "Overview",

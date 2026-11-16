@@ -4646,7 +4646,13 @@
           "run_failed": "运行失败",
           "run_finished": "运行结束"
         },
-        "queueCountUnit": "{{count}} 项"
+        "queueCountUnit": "{{count}} 项",
+        "queueGapOrgTodos": "组织级待办未接入（M2）",
+        "staleBar": "部分数据较旧：最近一次成功响应已超过 5 分钟",
+        "kbdSearch": "搜索",
+        "openAuditCenter": "打开审计中心",
+        "anomalyCountUnit": "{{count}} 条",
+        "p95NotDrawn": "未绘制"
       },
       "shell": {
         "gOverview": "概览",
