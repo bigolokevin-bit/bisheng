@@ -3,7 +3,9 @@
  * 待办/已决 tabs, batch selection with DISABLED decide buttons (no AP2
  * wiring this wave), URL state (?status, ?focus, ?cursor, ?limit).
  * Data plane ONLY: AP4 /api/approvals?status=pending&limit=&cursor= and
- * AP8 /api/approval-stats?assignee= via the same-origin /agent-api fetch.
+ * AP8 /api/approval-stats?assignee=&dueWithinSeconds=86400 via the
+ * same-origin /agent-api fetch — the dueSoon figure on screen is the SERVER
+ * count for exactly 24h, never a client derivation (L6 F-2).
  * Verified live (l4wae-probe, 2026-11-16): AP4 REQUIRES a canonical assignee
  * (400 request.invalid_query without it — this BFF build does not inject it,
  * so the page passes the CURRENT user's own `human:<user_id>` from
@@ -22,7 +24,6 @@ import { userContext } from '@/contexts/userContext';
 import type { Approval } from '@/controllers/API/agentConsoleApprovals';
 
 import {
-  fetchApprovalStats,
   fmtId,
   fmtTime,
   makeFetcher,
@@ -73,13 +74,46 @@ function fetchApprovalsPage(
   });
 }
 
-/** Countdown whole-seconds derived ONLY from the real absolute expiresAt.
- *  null = service gave no expiry → render an em-dash, never a fake time. */
+// L6 F-2 fix: AP8 is requested with the contract's dueWithinSeconds=86400 so
+// the dueSoon figure on screen is the SERVER's own 24 h count — no client
+// estimation anywhere (ACCEPTANCE §2 AP8 ?assignee=&dueWithinSeconds=).
+function fetchApprovalStatsDue(
+  fetchApi: Fetcher,
+  assignee: string
+): Promise<ApiRes<ApprovalStats>> {
+  return fetchApi<ApprovalStats>('/api/approval-stats', {
+    assignee,
+    dueWithinSeconds: 86400,
+  });
+}
+
+// DESIGN-SYSTEM risk tones for the dot+text pill (L6 F-3): one accent per
+// level, neutral fallback for unknown enums.
+function riskTone(riskLevel: string): string {
+  if (riskLevel === 'high') return 'is-danger';
+  if (riskLevel === 'medium') return 'is-warn';
+  return 'is-accent';
+}
+
+/** Fallback derivation when a payload omits remainingSeconds (older rows):
+ *  whole seconds from the absolute expiresAt. null → em-dash, never fake. */
 function remainingFrom(expiresAt: string | null | undefined, now: number): number | null {
   if (!expiresAt) return null;
   const target = Date.parse(expiresAt);
   if (Number.isNaN(target)) return null;
   return Math.max(0, Math.floor((target - now) / 1000));
+}
+
+/** L6 F-1 fix: the contract's items[].remainingSeconds is the AUTHORITATIVE
+ *  countdown (deep 03 E24). The 1 s tick only interpolates the label between
+ *  fetches; client clock math never decides an expired state. expiresAt is
+ *  kept for display (tooltip) only. */
+function remainingSecondsOf(r: Approval, receivedAt: number, now: number): number | null {
+  if (typeof r.remainingSeconds === 'number' && Number.isFinite(r.remainingSeconds)) {
+    const elapsed = Math.max(0, Math.floor((now - receivedAt) / 1000));
+    return Math.max(0, r.remainingSeconds - elapsed);
+  }
+  return remainingFrom(r.expiresAt, now);
 }
 
 export function ApprovalsListPage() {
@@ -104,9 +138,10 @@ export function ApprovalsListPage() {
   const [listLoading, setListLoading] = useState(true);
   const [statsRes, setStatsRes] = useState<ApiRes<ApprovalStats> | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  // one-second re-derive of countdowns from absolute expiresAt only — the
-  // clock never fabricates a remaining time for rows without an expiry.
+  // display tick only: labels interpolate the server's remainingSeconds from
+  // the moment the page payload was received (L6 F-1); no client expiry state
   const [now, setNow] = useState(() => Date.now());
+  const [listReceivedAt, setListReceivedAt] = useState(() => Date.now());
   const pagesRef = useRef<string[]>(['']);
 
   const patchParams = useCallback(
@@ -141,6 +176,7 @@ export function ApprovalsListPage() {
       (res) => {
         if (alive) {
           setListRes(res);
+          if (res.ok) setListReceivedAt(Date.now());
           setListLoading(false);
         }
       }
@@ -154,7 +190,7 @@ export function ApprovalsListPage() {
   useEffect(() => {
     if (!assignee) return undefined;
     let alive = true;
-    fetchApprovalStats(fetchApi, assignee).then((res) => {
+    fetchApprovalStatsDue(fetchApi, assignee).then((res) => {
       if (alive) setStatsRes(res);
     });
     return () => {
@@ -393,7 +429,7 @@ export function ApprovalsListPage() {
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const remaining = remainingFrom(r.expiresAt, now);
+                    const remaining = remainingSecondsOf(r, listReceivedAt, now);
                     const isFocus = focus !== '' && r.approvalId === focus;
                     const employee = r.onBehalfOf ?? r.requestedBy;
                     return (
@@ -434,10 +470,17 @@ export function ApprovalsListPage() {
                           {employee?.id ?? '—'}
                         </td>
                         <td className="a2-cell-nowrap" data-testid="agent-v2-approval-risk">
-                          {t(`agentConsole.approvals.risk.${r.riskLevel}`, r.riskLevel)}
+                          <span className={`a2-pill ${riskTone(r.riskLevel)}`}>
+                            <span className="a2-pill-dot" aria-hidden />
+                            {t(`agentConsole.approvals.risk.${r.riskLevel}`, r.riskLevel)}
+                          </span>
                         </td>
                         <td className="a2-cell-nowrap">{fmtTime(r.createdAt)}</td>
-                        <td className="a2-cell-nowrap" data-testid="agent-v2-approval-countdown">
+                        <td
+                          className="a2-cell-nowrap"
+                          data-testid="agent-v2-approval-countdown"
+                          title={r.expiresAt ? fmtTime(r.expiresAt) : undefined}
+                        >
                           {remaining === null
                             ? '—'
                             : t('agentConsole.approvals.remaining', { seconds: remaining })}

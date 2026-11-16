@@ -244,6 +244,18 @@
 .agent-app .a2-pill.is-warn { background: var(--warning-soft); color: hsl(var(--warning)); }
 .agent-app .a2-pill.is-danger { background: var(--danger-soft); color: hsl(var(--danger)); }
 .agent-app .a2-pill.is-accent { background: var(--accent-soft); color: hsl(var(--accent)); }
+
+/* L6 F-3: DESIGN-SYSTEM status pills are dot + text; the dot inherits the
+   pill's single accent so tones stay consistent across risk levels. */
+.agent-app .a2-pill-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
 /* Lifecycle filter chips use `.active` (L6 round 4: the selected tab had no
  * visual state, so url/search shots rendered pixel-identical). */
 .agent-app .a2-pill.active {
@@ -704,6 +716,25 @@
    narrow-viewport text; KPI explanatory lines get their own row. */
 .agent-app .a2-table-scroll { overflow-x: auto; }
 .agent-app .a2-table-scroll table { min-width: 880px; }
+
+/* L6 F-3: at phone widths the queue table scrolls sideways; fade the right
+   cut edge as the scroll affordance (same idiom as the EMP-01 rail fix). */
+@media (max-width: 480px) {
+  .agent-app .a2-table-scroll {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 0,
+      #000 calc(100% - 32px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 0,
+      #000 calc(100% - 32px),
+      transparent 100%
+    );
+  }
+}
 .agent-app .a2-table th { white-space: nowrap; }
 .agent-app .a2-kpi .a2-meta { display: block; }
 

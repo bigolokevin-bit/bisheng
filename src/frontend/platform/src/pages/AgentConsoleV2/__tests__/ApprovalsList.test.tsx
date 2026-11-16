@@ -177,6 +177,43 @@ describe('APR-01 approvals pending list', () => {
     expect(screen.getByTestId('agent-v2-approvals-due-soon').textContent).toContain('1');
   });
 
+  it('countdown follows contract remainingSeconds when it disagrees with expiresAt (L6 F-1)', async () => {
+    approvalsBody = {
+      items: [
+        approval(A1, 'business_action', {
+          expiresAt: futureIso(7200),
+          remainingSeconds: 60,
+        }),
+      ],
+    };
+    renderPage();
+    const row = await screen.findByTestId('agent-v2-approval-row');
+    const cd = row.querySelector('[data-testid="agent-v2-approval-countdown"]');
+    expect(cd?.textContent).toMatch(/剩余 (60|59) 秒/);
+    expect(cd?.textContent).not.toContain('7200');
+  });
+
+  it('requests AP8 with dueWithinSeconds=86400 (L6 F-2)', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    expect(
+      urls.some(
+        (u) => u.includes('/api/approval-stats') && u.includes('dueWithinSeconds=86400')
+      )
+    ).toBe(true);
+  });
+
+  it('renders risk as a dot+text pill (L6 F-3)', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const pill = document.querySelector(
+      '[data-testid="agent-v2-approval-risk"] .a2-pill'
+    );
+    expect(pill).not.toBeNull();
+    expect(pill?.querySelector('.a2-pill-dot')).not.toBeNull();
+    expect(pill?.className).toContain('is-danger');
+  });
+
   it('hides the badge when AP8 fails — never a fake zero', async () => {
     statsStatus = 500;
     renderPage();
