@@ -4770,7 +4770,10 @@
         "nextPage": "Next",
         "pageInfo": "Page {{page}} · {{count}} rows on this page",
         "authExpired": "Session expired",
+        "authHint": "Your session has expired. Sign in again and retry.",
         "noPermission": "No console admin permission",
+        "forbiddenHint": "This account cannot manage digital employees. Ask an administrator to grant console access, then retry.",
+        "copyDiag": "Copy diagnostics",
         "emptyEmployees": "No digital employees yet"
       },
       "apr": {

@@ -4715,7 +4715,10 @@
         "nextPage": "下一页",
         "pageInfo": "第 {{page}} 页 · 本页 {{count}} 条",
         "authExpired": "登录已失效",
+        "authHint": "登录状态已失效，请重新登录后重试。",
         "noPermission": "没有管理控制台权限",
+        "forbiddenHint": "当前账号没有管理数字员工的权限，请联系管理员开通后重试。",
+        "copyDiag": "复制诊断",
         "emptyEmployees": "还没有数字员工"
       },
       "apr": {
