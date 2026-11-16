@@ -26,6 +26,8 @@ import { useTranslation } from 'react-i18next';
 
 import { userContext } from '@/contexts/userContext';
 
+import { HelpTip } from './HelpTip';
+
 import {
   fetchEmployeesPage,
   fetchTasksPage,
@@ -824,8 +826,18 @@ export function TasksListPage() {
               <tr>
                 <th>{t('agentConsole.v2.tsk.colTask')}</th>
                 <th>{t('agentConsole.v2.colStatus')}</th>
-                <th>{t('agentConsole.v2.colOwner')}</th>
-                <th>{t('agentConsole.v2.tsk.filterSource')}</th>
+                <th>
+                  <span className="a2-th-help">
+                    {t('agentConsole.v2.colOwner')}
+                    <HelpTip term="humanPrefix" testId="agent-v2-tsk-help-owner" />
+                  </span>
+                </th>
+                <th>
+                  <span className="a2-th-help">
+                    {t('agentConsole.v2.tsk.filterSource')}
+                    <HelpTip term="sourceEnum" testId="agent-v2-tsk-help-source" />
+                  </span>
+                </th>
                 <th className="r">{t('agentConsole.tasks.colDueAt')}</th>
                 <th className="r">{t('agentConsole.v2.tsk.colUpdated')}</th>
                 <th>{t('agentConsole.v2.tsk.colProgress')}</th>
@@ -1318,6 +1330,8 @@ export function TasksListPage() {
       <div className="a2-card-head">
         <span className="a2-micro" data-testid="agent-v2-tsk-footer">
           {t('agentConsole.v2.tsk.footerCaliber')}
+          {/* P1 batch2: the footer line IS the caliber statement — explain the word. */}
+          <HelpTip term="caliber" testId="agent-v2-tsk-help-caliber" className="a2d-pfoot-help" />
         </span>
         <span className="a2-sp" />
         <span className="a2-micro">{t('agentConsole.v2.tsk.footerKeys')}</span>

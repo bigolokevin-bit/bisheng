@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { EmployeesHeatPanel } from './EmployeesHeatPanel';
+import { HelpTip } from './HelpTip';
 import {
   dayWindow,
   fetchActivity,
@@ -791,17 +792,21 @@ export function EmployeesListPage() {
                   className="r"
                   aria-sort={sortCol === 'owner' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                 >
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-owner"
-                    onClick={() => handleSort('owner')}
-                  >
-                    {t('agentConsole.v2.colOwner')}
-                    <span aria-hidden>
-                      {sortCol === 'owner' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
+                  <span className="a2-th-help">
+                    <button
+                      type="button"
+                      className="a2-th-btn"
+                      data-testid="agent-v2-sort-owner"
+                      onClick={() => handleSort('owner')}
+                    >
+                      {t('agentConsole.v2.colOwner')}
+                      <span aria-hidden>
+                        {sortCol === 'owner' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                      </span>
+                    </button>
+                    {/* P1 batch2: the owner cell prints a `human:<id>` ref — say what the prefix is. */}
+                    <HelpTip term="humanPrefix" testId="agent-v2-emp-help-owner" />
+                  </span>
                 </th>
                 <th
                   className="r"

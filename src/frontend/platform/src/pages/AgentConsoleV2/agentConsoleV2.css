@@ -840,6 +840,77 @@
   color: hsl(var(--micro-foreground));
 }
 
+/* P1 batch2 — shared help tip (HelpTip.tsx). The anchor is a 14px circle that
+   sits inside an existing label/header line, so no page layout moves; the
+   popover is a real tooltip (position: fixed + viewport clamp in JS) and never
+   takes pointer events, so it can never block the value it explains. */
+.agent-app .a2-ht {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  flex: none;
+}
+.agent-app .a2-ht-btn {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: transparent;
+  color: hsl(var(--micro-foreground));
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+}
+.agent-app .a2-ht-btn:hover,
+.agent-app .a2-ht-btn[aria-expanded='true'] {
+  border-color: hsl(var(--accent));
+  color: hsl(var(--accent));
+}
+.agent-app .a2-ht-pop {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: hsl(var(--card));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  color: hsl(var(--foreground));
+  font-size: 11.5px;
+  line-height: 16px;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+}
+.agent-app .a2-ht-t {
+  font-weight: 600;
+  font-size: 12px;
+}
+.agent-app .a2-ht-b {
+  color: hsl(var(--muted-foreground));
+}
+/* label + help on one line (table headers, detail field labels, metric notes) */
+.agent-app .a2-th-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.agent-app .met-calib-help,
+.agent-app .met-pfoot-help,
+.agent-app .met-fresh-help { margin-left: 5px; vertical-align: middle; }
+.agent-app .met-fresh .a2-ht { margin-left: 5px; }
+
 /* P0-3 (observer pixel audit): the native checkbox painted a solid white
    block in dark mode while the bar still said 「已选 0 项」. The control is now
    drawn from theme tokens only — hollow outline when unchecked, filled with a

@@ -4277,6 +4277,40 @@
   },
   "agentConsole": {
     "v2": {
+      "help": {
+        "targetHash": {
+          "title": "目标哈希",
+          "body": "审批绑定的目标摘要：服务端对本次变更目标算出的哈希，用来确认这张审批单对应的正是当前这个对象。"
+        },
+        "messageDigest": {
+          "title": "消息摘要",
+          "body": "消息正文摘要：服务端只给摘要、不给明文，用来确认待发送内容与审批时一致。"
+        },
+        "presentOnly": {
+          "title": "仅展示已提供字段",
+          "body": "响应里没有的字段直接不显示，不用占位符或 0 补齐，也不展示内部错误码。"
+        },
+        "bucketSum": {
+          "title": "分桶合计",
+          "body": "服务端已经按日或按小时聚合好的桶相加得到的合计，不逐页累加、也不反推。"
+        },
+        "pendingKpi": {
+          "title": "待处理指标",
+          "body": "请求还没返回时该指标保持待处理，既不显示 0，也不沿用上一次的旧值。"
+        },
+        "caliber": {
+          "title": "口径",
+          "body": "口径说明这组数字的统计范围与来源；不同口径的数值不能直接比较或换算。"
+        },
+        "humanPrefix": {
+          "title": "人工身份引用",
+          "body": "human: 前缀表示这是人工账号的身份引用（如 human:9）；employee: 才是数字员工。"
+        },
+        "sourceEnum": {
+          "title": "任务来源",
+          "body": "任务是按哪条渠道消息建出来的；界面按渠道名显示，原始枚举只放在悬停标题里。"
+        }
+      },
       "title": "控制台",
       "navEmployees": "数字员工",
       "navApprovals": "审批",
@@ -4373,6 +4407,40 @@
       "metricsDegradedPlain": "降级",
       "metricsUnavailable": "暂不可用",
       "tableScrollHint": "表格可左右滑动",
+      "help": {
+        "targetHash": {
+          "title": "targetHash（变更目标指纹）",
+          "body": "服务端为这次变更的目标算出的哈希，用来比对审批针对的目标是否仍是当前版本。只作比对依据，不参与判定，也不含金额或人员信息。"
+        },
+        "messageDigest": {
+          "title": "messageDigest（消息摘要）",
+          "body": "待发送消息正文的摘要；审批覆盖的正是这条消息。字段随服务端载荷返回，没有返回就代表这条审批不针对某条消息。"
+        },
+        "presentOnly": {
+          "title": "present-only（只展示已返回字段）",
+          "body": "响应里没有的键不渲染、不补默认值。字段缺失是\"这项没有\"，不等于空字符串、0 或\"未填写\"。"
+        },
+        "bucketSum": {
+          "title": "bucketSum（桶求和）",
+          "body": "把服务端已经按日或按小时聚合好的桶相加，得到区间合计；不遍历分页或原始记录累加，因此不会因翻页重复计数。"
+        },
+        "pendingKpi": {
+          "title": "pendingKpi（待回源 KPI）",
+          "body": "KPI 请求还没返回时是 pending 状态，界面显示骨架或「—」，不显示 0。出现数字才代表服务端已经返回这个值。"
+        },
+        "caliber": {
+          "title": "口径",
+          "body": "一组数字的计算范围和来源说明（时间窗、数据源、单位、实例级或租户级）。口径不同的数字不能直接相减或相比。"
+        },
+        "humanPrefix": {
+          "title": "human: 前缀",
+          "body": "人员 ID 的类型前缀：human: 是自然人账号，employee: 是数字员工；冒号后面才是各自的 ID。"
+        },
+        "sourceEnum": {
+          "title": "source（来源枚举）",
+          "body": "任务来自哪个渠道的机器枚举（如 feishu、chat、manual、system）。界面按枚举显示中文名，未知值原样显示并标为警告。"
+        }
+      },
       "metricsServiceUnavailable": "服务指标暂不可用",
       "metricsNotPriced": "未计价",
       "metricsUnattributed": "未归属",

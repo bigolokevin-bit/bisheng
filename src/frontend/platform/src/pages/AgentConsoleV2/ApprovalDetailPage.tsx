@@ -28,6 +28,7 @@ import {
   fmtApprovalId, durationParts, ttlParts, grantParts,
 } from './approvalDetailKit';
 
+import { HelpTip } from './HelpTip';
 import { useConsoleCrumbTail } from './Shell';
 
 import './approvalDetail.css';
@@ -459,7 +460,10 @@ export function ApprovalDetailPage() {
         <div className="a2d-card-hd">
           <span className="a2d-t">{apd('bindTitle')}</span>
           <span className="a2d-sp" />
-          <span className="a2d-hd-note">{apd('bindNote')}</span>
+          <span className="a2d-hd-note">
+            {apd('bindNote')}
+            <HelpTip term="presentOnly" testId="agent-v2-apd-help-present-only" className="a2d-hd-help" />
+          </span>
         </div>
         <div className="a2d-rule" />
         <div className="a2d-meta">
@@ -487,11 +491,25 @@ export function ApprovalDetailPage() {
             </Field>
           ) : null}
           {binding.messageDigest ? (
-            <Field label={apd('fMessageDigest')} wide mono title="binding.messageDigest">
+            <Field
+              label={apd('fMessageDigest')}
+              wide
+              mono
+              title="binding.messageDigest"
+              help={<HelpTip term="messageDigest" testId="agent-v2-apd-help-message-digest" />}
+            >
               {binding.messageDigest}
             </Field>
           ) : null}
-          <Field label={apd('fTargetHash')} wide mono title="binding.targetHash">{binding.targetHash}</Field>
+          <Field
+            label={apd('fTargetHash')}
+            wide
+            mono
+            title="binding.targetHash"
+            help={<HelpTip term="targetHash" testId="agent-v2-apd-help-target-hash" />}
+          >
+            {binding.targetHash}
+          </Field>
         </div>
       </div>
 
@@ -593,7 +611,11 @@ export function ApprovalDetailPage() {
       {/* footer caliber (target .pfoot) */}
       <div className="a2d-pfoot" data-testid="agent-v2-apd-footer">
         <span>{apd('footSource')}</span>
-        <span>{apd('footCaliber')}</span>
+        <span>
+          {apd('footCaliber')}
+          {/* P1 batch2: the footer line IS the caliber statement — explain it here. */}
+          <HelpTip term="caliber" testId="agent-v2-apd-help-caliber" className="a2d-pfoot-help" />
+        </span>
         <span><kbd className="a2-mono">⌘K</kbd> {apd('footSearch')}</span>
       </div>
     </div>

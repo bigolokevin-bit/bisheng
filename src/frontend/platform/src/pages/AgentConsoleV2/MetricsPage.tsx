@@ -37,6 +37,7 @@ import type {
   HermesUsage,
 } from '@/controllers/API/agentConsoleHermes';
 
+import { HelpTip } from './HelpTip';
 import { MetIcon } from './metIcons';
 import { HeatGrid, HeatSideStats, HEAT_DAY_KEYS } from './MetricsHeat';
 import {
@@ -698,7 +699,11 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
           {t('agentConsole.v2.met.updatedAt')} <span className="a2-mono">{fmtBeijing(times.summary ?? times.heat, now)}</span>
         </span>
         <span className="faint">·</span>
-        <span>{t('agentConsole.v2.met.readonlyNote')}</span>
+        <span>
+          {t('agentConsole.v2.met.readonlyNote')}
+          {/* P1 batch2: skeleton/「—」 above is a pending KPI, not a zero. */}
+          <HelpTip term="pendingKpi" testId="agent-v2-met-help-pendingkpi" className="met-fresh-help" />
+        </span>
       </div>
 
       {/* ================= caliber panel (five iron rules, default open) ================= */}
@@ -713,6 +718,11 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
               <li key={i}>
                 <b>{t(`agentConsole.v2.met.rule${i}t`)}</b>
                 {t(`agentConsole.v2.met.rule${i}d`)}
+                {/* P1 batch2: rule 4 is exactly "only sum server buckets" — the
+                    place a reader meets bucketSum and needs it explained. */}
+                {i === 4 ? (
+                  <HelpTip term="bucketSum" testId="agent-v2-met-help-bucketsum" className="met-calib-help" />
+                ) : null}
               </li>
             ))}
           </ol>
@@ -1064,7 +1074,11 @@ function PageFooter({ t, winFallback }: { t: ReturnType<typeof useTranslation>['
     <div className="met-pfoot" data-testid="agent-v2-met-footer">
       <span>{t('agentConsole.v2.met.footRule3')}</span>
       <span className="sp" />
-      <span>{t('agentConsole.v2.met.footCaliber')}</span>
+      <span>
+        {t('agentConsole.v2.met.footCaliber')}
+        {/* P1 batch2: the footer line IS the caliber statement — explain the word. */}
+        <HelpTip term="caliber" testId="agent-v2-met-help-caliber" className="met-pfoot-help" />
+      </span>
       <span className="sp" />
       {winFallback ? <span data-testid="agent-v2-met-win-fallback">{t('agentConsole.v2.met.winFallback')}</span> : null}
       <span>

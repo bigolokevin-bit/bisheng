@@ -290,6 +290,45 @@ describe('APR-02 — D-1 binding present-only', () => {
     expect(screen.getByTitle('rn_01M7DF41FG124YHW9PR66CJ7HW')).toBeTruthy();
   });
 
+  it('P1 batch2: targetHash / messageDigest / present-only / caliber each carry a help tip', async () => {
+    detailBody = approval({
+      action: 'message.send',
+      binding: {
+        subjectType: 'employee',
+        subjectId: EMP,
+        changeKind: 'message_send',
+        targetHash: 'th_8b2e5f1a9c4d7e0b3f6a1d8c5e2b9f47',
+        runId: 'rn_01M7DF41FG124YHW9PR66CJ7HW',
+        messageDigest: 'md_5e8b1f4a7c0d3e6f9a2b5c8d1e4f7a0b',
+      },
+      detail: undefined,
+    });
+    renderDetail();
+    await screen.findByTestId('agent-v2-apd-binding');
+    for (const id of [
+      'agent-v2-apd-help-target-hash',
+      'agent-v2-apd-help-message-digest',
+      'agent-v2-apd-help-present-only',
+      'agent-v2-apd-help-caliber',
+    ]) {
+      const btn = screen.getByTestId(id);
+      expect(btn.tagName).toBe('BUTTON');
+      expect(btn.getAttribute('aria-label')).toBeTruthy();
+      expect(btn.getAttribute('aria-label')).not.toContain('agentConsole.v2.help');
+    }
+    // opening one explains the term and hides no data (popover is not interactive)
+    fireEvent.click(screen.getByTestId('agent-v2-apd-help-target-hash'));
+    const pop = screen.getByRole('tooltip');
+    expect(pop.textContent).toContain('targetHash');
+    expect(pop.textContent).toContain('哈希');
+    // the value itself is still on screen
+    expect(screen.getByTestId('agent-v2-apd-binding').textContent).toContain(
+      'th_8b2e5f1a9c4d7e0b3f6a1d8c5e2b9f47'
+    );
+    fireEvent.keyDown(screen.getByTestId('agent-v2-apd-help-target-hash'), { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
   it('version binding renders effectiveFrom when present', async () => {
     renderDetail();
     const binding = await screen.findByTestId('agent-v2-apd-binding');
