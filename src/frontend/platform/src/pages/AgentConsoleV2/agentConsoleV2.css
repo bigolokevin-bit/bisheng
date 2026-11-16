@@ -1410,6 +1410,9 @@
   .agent-app .met-agrid > .ov-card:last-child { grid-column: 1 / -1; }
   .agent-app .met-bcols { grid-template-columns: minmax(0, 1fr); }
   .agent-app .met-hcs { grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 2px; }
+  /* .met-hcs inside .met-hrow is a flex item: without a grow basis it sizes to
+     its max-content (0 with 1fr tracks) and the 24 cells collapse. Fill the row. */
+  .agent-app .met-hrow > .met-hcs { flex: 1 1 auto; min-width: 0; }
   .agent-app .met-hc { width: auto; height: auto; aspect-ratio: 1; }
   .agent-app .met-hcs.ax i { font-size: 8.5px; }
   .agent-app .met-heat-g-wrap { width: 100%; flex: 1 1 auto; }
