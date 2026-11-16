@@ -71,3 +71,16 @@
 - 已决列表数据源能力缺失（§3.2）如卡 §6 属「AP4 缺能力」类，处置口径=禁用+原因，是否拆给 L7/L1 归 L0。
 - 本卡不实现 AP2 决策写路径、不实现详情（APR-02）；未动 BFF/契约/主仓/8182 部署。
 - 交付 commit（fork `lane/L4-w1-w2-ui`）：`e903dc6`（页面+locale，编排器按 10 分钟规则代提交）、`a1f03cb`（测试）、`f68db4d`（徽标可见性/原因可见性修复）；本证据目录随下一提交。
+
+## APR-01 G-E1/G-E2：served 8182 重拍（558e911 部署后，L0 卡 440）
+
+- 部署对账：L7 已部署修复码 `558e911eb89ff79b723355ab664525933d9bba19`；served entry=`assets/js/index-B-Tedd6W.js`，本拍 curl 下载体实测 sha256=`c19ce008d34af7de2f7596466cf0caffc9dfbcc7ef63a2461ccc217964ac1f1e` **与卡面一致**；caddy pid 60447 为 L0 转述（本拍未自验进程）。
+- 取证通道（G13 口径）：本节全部证据来自 **served 8182**（非本车道先前 dev 5399 过程预览腿）；opsadmin 既有登录态直接可用（URL0=http://127.0.0.1:8182/agent/approvals，未触发重登，口令零回显）。深色=localStorage `agentConsole.v2.theme=dark`。截图为 CDP 真视口**单屏非 fullPage**（G-E2 合规）。
+- DOM 读数（原文）：
+  - 1440×900 mobile:false：`{"url":"/agent/approvals","listShown":true,"loadingShown":false,"countText":"0","dueSoonText":null,"tabs":["待办 0","已决"],"rows":0,"emptyShown":true,"tableShown":false,"tableScrollEl":false,"selectAll":false,"errorShown":false,"leaks":{"rawKey":false,"mustache":false,"codeish":[]},"sw":1440,"iw":1440,"cw":1440,"mask":"no-el"}`
+  - 375×812 mobile:true：同结构，`sw=375 iw=375 cw=375`，rows=0、emptyShown=true、tableShown=false、mask=no-el。
+- **375 表格容器与 F-3 渐隐视觉 = NOT MEASURED**：线上待办 rowCount=0（AP8 实测 pending=0），页面按设计渲染空态，无 `.a2-table-scroll` 元素可测——如实记录，不造行。F-1（remainingSeconds 倒计时）/F-2（dueWithinSeconds=86400）/F-3（dot+text pill+375 渐隐）的**代码上线**由 entry/sha 对账 + `558e911` 提交面证明；其**行为断言**由随码 3 新用例锁定（countdown 契约字段优先 / AP8 参数 / pill DOM），有行数据时的 served 视觉待后续自然回归或 L6 注入腿复跑。
+- 泄漏扫描：rawKey/mustache/机器码串（/[a-z]+\.[a-z_]+/）全 false/空；`countText=0` 为服务端字段直显非假 0。
+- 截图（sips 实测，单屏）：`apr01-served-1440x900-dark.png` 120561B 1440×900；`apr01-served-375x812-dark.png` 56063B 375×812。
+- 探针原文=本拍脚本 `$T/l4wd-aprfx2.sh`（ego-browser CDP），out=l4wd-aprfx2.out。
+- 边界：本拍零代码改动、未动 BFF/契约/部署/受管服务；EMP-03/RUN-01 冻结文件未触碰。不判 PASS，交 L6 r2 复审。
