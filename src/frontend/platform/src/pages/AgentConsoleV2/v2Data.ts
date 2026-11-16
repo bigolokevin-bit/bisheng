@@ -8,6 +8,8 @@
  * as '—' (never 0.00, never a fake curve, never an internal placeholder).
  */
 
+import type { HermesSummary, HermesUsage } from '@/controllers/API/agentConsoleHermes';
+
 export interface ApiRes<T> {
   ok: boolean;
   status: number;
@@ -288,6 +290,17 @@ export function fetchActivity(
     tz: args.tz ?? 'Asia/Shanghai',
     employeeId: args.employeeId,
   });
+}
+
+// MET-01: Hermes summary/usage through the same envelope fetcher (code +
+// requestId preserved for the §2 error-code triage; shapes are the frozen
+// runtime contracts re-exported by the P0-14 adapter — type-only import).
+export function fetchHermesSummary(fetch: Fetcher): Promise<ApiRes<HermesSummary>> {
+  return fetch<HermesSummary>('/api/hermes-summary');
+}
+
+export function fetchHermesUsage(fetch: Fetcher, days: number): Promise<ApiRes<HermesUsage>> {
+  return fetch<HermesUsage>('/api/hermes-usage', { days });
 }
 
 export function fetchBudgetMonth(
