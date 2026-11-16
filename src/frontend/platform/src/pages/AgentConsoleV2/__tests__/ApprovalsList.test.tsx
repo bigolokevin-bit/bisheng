@@ -11,6 +11,8 @@
  * status as interpolation param.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -166,8 +168,9 @@ describe('APR-01 approvals pending list', () => {
     expect(rows[0].textContent).toContain('human:7');
     expect(rows[0].textContent).toContain('高风险');
     expect(rows[0].textContent).toContain('待处理');
-    // real countdown from expiresAt, localized via approvals.remaining
-    expect(rows[0].textContent).toMatch(/剩余 \d+ 秒/);
+    // P1-4: countdown reads as a duration (hh:mm:ss), not a raw second count
+    expect(rows[0].textContent).toMatch(/\d{2}:\d{2}:\d{2}/);
+    expect(rows[0].textContent).not.toMatch(/剩余 \d+ 秒/);
   });
 
   it('shows the AP8 badge on the pending tab', async () => {
@@ -189,8 +192,22 @@ describe('APR-01 approvals pending list', () => {
     renderPage();
     const row = await screen.findByTestId('agent-v2-approval-row');
     const cd = row.querySelector('[data-testid="agent-v2-approval-countdown"]');
-    expect(cd?.textContent).toMatch(/剩余 (60|59) 秒/);
+    // 60s → hh:mm:ss; the raw second count is the title, never the label
+    expect(cd?.textContent).toBe('00:01:00');
     expect(cd?.textContent).not.toContain('7200');
+    expect(cd?.getAttribute('title')).toContain('remainingSeconds=60');
+  });
+
+  it('P1-4: countdown title keeps the raw seconds next to the absolute expiry, hh:mm:ss never folds hours into days', async () => {
+    approvalsBody = {
+      items: [approval(A1, 'business_action', { expiresAt: futureIso(90000), remainingSeconds: 90061 })],
+    };
+    renderPage();
+    const row = await screen.findByTestId('agent-v2-approval-row');
+    const cd = row.querySelector('[data-testid="agent-v2-approval-countdown"]');
+    // 25h1m1s stays 25:01:01 — no 1d, no rounding
+    expect(cd?.textContent).toBe('25:01:01');
+    expect(cd?.getAttribute('title')).toContain('remainingSeconds=90061');
   });
 
   it('requests AP8 with dueWithinSeconds=86400 (L6 F-2)', async () => {
@@ -324,5 +341,43 @@ describe('APR-01 approvals pending list', () => {
     const card = await screen.findByTestId('agent-v2-approvals-no-identity');
     expect(card.textContent).toContain('无法获取当前用户身份');
     expect(urls.some((u) => u.includes('/api/approvals'))).toBe(false);
+  });
+});
+
+describe('APR-01 P1 round: disabled visuals, specific disable reason, hh:mm:ss, scroll hint', () => {
+  it('P1-2: batch approve/reject stay DISABLED and carry a concrete reason (not the generic note)', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    for (const id of ['agent-v2-approvals-decide-approve', 'agent-v2-approvals-decide-reject']) {
+      const btn = screen.getByTestId(id) as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+      expect(btn.getAttribute('disabled')).not.toBeNull();
+      // specific: names AP2 + M1 read-only instead of the long batch note
+      expect(btn.title).toContain('M1 只读');
+      expect(btn.title).toContain('AP2');
+      expect(btn.title).not.toBe(
+        screen.getByTestId('agent-v2-approvals-batch-note').textContent
+      );
+    }
+    // the visual contract lives in the shared CSS (appearance only)
+    const css = readFileSync(resolve(process.cwd(), 'src/pages/AgentConsoleV2/agentConsoleV2.css'), 'utf8');
+    expect(css).toMatch(/\.a2-btn\[disabled\][^{]*\{[^}]*opacity/);
+    expect(css).toMatch(/\.a2-pill\[disabled\]/);
+  });
+
+  it('P1-3: 「表格可左右滑动」 only when the wrapper actually overflows', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const wrap = screen.getByTestId('agent-v2-approvals-table-scroll');
+    expect(screen.queryByTestId('agent-v2-approvals-scroll-hint')).toBeNull();
+    Object.defineProperty(wrap, 'scrollWidth', { configurable: true, value: 880 });
+    Object.defineProperty(wrap, 'clientWidth', { configurable: true, value: 343 });
+    fireEvent(window, new Event('resize'));
+    const hint = await screen.findByTestId('agent-v2-approvals-scroll-hint');
+    expect(hint.textContent).toContain('表格可左右滑动');
+    Object.defineProperty(wrap, 'scrollWidth', { configurable: true, value: 1270 });
+    Object.defineProperty(wrap, 'clientWidth', { configurable: true, value: 1270 });
+    fireEvent(window, new Event('resize'));
+    await waitFor(() => expect(screen.queryByTestId('agent-v2-approvals-scroll-hint')).toBeNull());
   });
 });

@@ -502,6 +502,19 @@ describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
     expect(dot('blocked').className).toContain('dot-danger');
   });
 
+  it('P1-4: unknown contract status renders the RAW enum in a warning pill, never a fabricated label', async () => {
+    tasksBody = { items: [task(T1, { status: 'escalated' })] };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const pill = rows[0].querySelector('[data-testid="agent-v2-task-status"] .a2-pill') as HTMLElement;
+    expect(pill.className).toContain('is-warn');
+    expect(pill.querySelector('.a2-pill-dot')?.className).toContain('dot-warn');
+    // raw enum only — no invented Chinese for a state the contract does not define
+    expect(pill.textContent).toBe('escalated');
+    expect(pill.textContent).not.toMatch(/[\u4e00-\u9fa5]/);
+    expect(rows[0].querySelector('[data-testid="agent-v2-task-status-unknown"]')).not.toBeNull();
+  });
+
   it('FAIL-3: human:self renders avatar initial + identity name + 本人 badge, never uid fragments', async () => {
     renderPage('/agent/tasks', 1, 'opsadmin');
     const rows = await screen.findAllByTestId('agent-v2-task-row');

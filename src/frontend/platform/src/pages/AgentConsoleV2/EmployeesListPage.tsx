@@ -194,6 +194,8 @@ export function EmployeesListPage() {
   const [heatEmployeeId, setHeatEmployeeId] = useState('');
   const [rowEnrich, setRowEnrich] = useState<Record<string, RowEnrich>>({});
   const [copiedId, setCopiedId] = useState('');
+  const [tableOverflows, setTableOverflows] = useState(false);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const pagesRef = useRef<string[]>(['']);
   const debounceRef = useRef<number | undefined>(undefined);
 
@@ -461,6 +463,19 @@ export function EmployeesListPage() {
     listRes && !listRes.ok && (listRes.code === 'console.forbidden' || listRes.status === 403);
   const isError = listRes && !listRes.ok && !isAuth && !isForbidden;
 
+  /* P1-3: the phone-width table scrolls inside its card; say so ONLY while the
+     wrapper actually overflows (measured), so 1440 — where the table fits —
+     never shows a hint that contradicts reality. */
+  useEffect(() => {
+    const measure = () => {
+      const el = tableScrollRef.current;
+      setTableOverflows(!!el && el.scrollWidth > el.clientWidth);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [displayRows, view, listLoading, listRes]);
+
   return (
     <div className="a2s-page" data-testid="agent-v2-employees-page">
       <div className="a2-card-head">
@@ -722,7 +737,11 @@ export function EmployeesListPage() {
         </div>
       ) : (
         <div className="a2-card">
-          <div className="a2-table-scroll">
+          <div
+            className="a2-table-scroll"
+            ref={tableScrollRef}
+            data-testid="agent-v2-employees-table-scroll"
+          >
           <table className="a2-table" data-testid="agent-v2-employees-table">
             <thead>
               <tr>
@@ -884,14 +903,16 @@ export function EmployeesListPage() {
                     : null;
                 return (
                   <tr key={r.employeeId} data-testid="agent-v2-employee-row">
-                    <td>
+                    <td className="a2-col-name" data-testid="agent-v2-col-name">
                       <div className="a2-card-head">
                         <span className="a2-pill" aria-hidden>
                           {(r.name ?? '?').slice(0, 1)}
                         </span>
-                        <span>
-                          {r.name ?? '—'}
-                          <span className="a2-meta">{r.title ? ` · ${r.title}` : ''}</span>
+                        <span className="a2-name-cell">
+                          <span title={r.name ?? undefined}>{r.name ?? '—'}</span>
+                          <span className="a2-meta" title={r.title ?? undefined}>
+                            {r.title ? ` · ${r.title}` : ''}
+                          </span>
                         </span>
                       </div>
                     </td>
@@ -1010,6 +1031,28 @@ export function EmployeesListPage() {
               {t('agentConsole.v2.emp.nextPage')}
             </button>
           </div>
+          {/* P1-3: conditional, measurement-backed — hidden when the table fits */}
+          {tableOverflows && (
+            <p className="a2-scroll-hint" data-testid="agent-v2-employees-scroll-hint">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <polyline points="18 8 22 12 18 16" />
+                <polyline points="6 8 2 12 6 16" />
+                <line x1="2" x2="22" y1="12" y2="12" />
+              </svg>
+              {t('agentConsole.v2.tableScrollHint')}
+            </p>
+          )}
         </div>
       )}
       <span aria-live="polite" data-testid="agent-v2-copy-toast">

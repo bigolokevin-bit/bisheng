@@ -4427,6 +4427,7 @@
       "metricsDegraded": "Degraded ({{reason}})",
       "metricsDegradedPlain": "Degraded",
       "metricsUnavailable": "Unavailable",
+      "tableScrollHint": "Scroll the table sideways",
       "metricsServiceUnavailable": "Metrics service unavailable",
       "metricsNotPriced": "Not priced",
       "metricsUnattributed": "Unattributed",
@@ -4869,10 +4870,16 @@
         "scopeMineNoUid": "Identity unavailable; “mine” view is disabled",
         "sourceChip": "Source: {{channel}}",
         "sourceFacetNone": "No source facets on loaded pages",
-        "srcFeishu": "Feishu message",
+        "src": {
+          "feishu": "Feishu message",
+          "chat": "Chat",
+          "manual": "Manual",
+          "system": "Scheduled",
+          "console": "Manual",
+          "other": "Other"
+        },
         "srcFeishuCell": "Feishu",
         "srcNote": "Source filter is a client facet over loaded pages only",
-        "srcOther": "Other",
         "due7d": "Due within 7 days",
         "statusLabel": {
           "open": "To do",
@@ -4895,9 +4902,6 @@
         "colUpdated": "Updated",
         "roleEmployee": "Employee",
         "roleSelf": "Self",
-        "srcChat": "Chat",
-        "srcManual": "Manual",
-        "srcSystem": "Scheduled",
         "priHighChip": "High"
       },
       "met": {
@@ -5173,6 +5177,7 @@
         "tabHistory": "Decided",
         "historyDisabledNote": "The decided list is not available in this wave: the current data source only serves the pending queue; decided records arrive in a later wave.",
         "batchNote": "Batch decisions are not enabled in this wave: the approval action entry point arrives with the detail wave; only selection works here.",
+        "decideDisabledTitle": "M1 read-only: the batch decision write path (AP2) is not wired yet; selection only",
         "selectAll": "Select this page",
         "selectedCount": "{{count}} selected",
         "forbidden": "No access to the approval queue",

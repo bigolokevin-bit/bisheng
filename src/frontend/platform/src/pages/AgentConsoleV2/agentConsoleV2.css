@@ -220,6 +220,23 @@
 }
 .agent-app .a2-btn:hover { background: var(--hover); }
 .agent-app .a2-btn.is-primary:hover { background: hsl(var(--primary)); opacity: 0.92; }
+/* P1-2 (element audit): several entry points are INTENTIONALLY disabled — 新建员工,
+   batch 批准/驳回, 上一页, the frozen filter selects, 已决 tab — and all of them
+   already carry a real `disabled` attribute (verified, no functional
+   regression). They only lacked the visual contract, so they read as clickable.
+   This changes appearance only; the DOM stays disabled. */
+.agent-app .a2-btn[disabled],
+.agent-app .a2-btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.agent-app .a2-btn[disabled]:hover,
+.agent-app .a2-btn[aria-disabled='true']:hover { background: transparent; }
+.agent-app .a2-btn.is-primary[disabled]:hover,
+.agent-app .a2-btn.is-primary[aria-disabled='true']:hover { background: hsl(var(--primary)); }
+.agent-app .a2-pill[disabled] { opacity: 0.45; cursor: not-allowed; }
+.agent-app .a2-pill[disabled]:hover { background: var(--neutral-pill-bg); }
+.agent-app .a2-input[disabled] { opacity: 0.5; cursor: not-allowed; }
 .agent-app .a2-table { width: 100%; border-collapse: collapse; }
 .agent-app .a2-table th {
   text-align: left;
@@ -791,6 +808,36 @@
 }
 .agent-app .a2-cell-nowrap {
   white-space: nowrap;
+}
+
+/* OBS (EMP-01 375): with the 880px min table the name column got squeezed and
+   `overflow-wrap:anywhere` broke CJK names one glyph per line, inflating the
+   row height. The name keeps a readable minimum and ellipsizes instead; the
+   full name/title stay in the cell title. */
+.agent-app .a2-col-name {
+  min-width: 180px;
+}
+.agent-app .a2-name-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.agent-app .a2-name-cell > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* P1-3: 「↔ 表格可左右滑动」 only while the wrapper actually overflows (hidden
+   at 1440, where the table fits) — same conditional idiom as TSK/RUN. */
+.agent-app .a2-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 0 0;
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
 }
 
 /* P0-3 (observer pixel audit): the native checkbox painted a solid white

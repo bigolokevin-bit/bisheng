@@ -41,8 +41,11 @@ import {
 /* A-01 (假定): page size fixed at 20, not exposed in the UI. */
 const PAGE_LIMIT = 20;
 
-/* F-02: exactly the five contract enums; unknown values get the defensive
- * neutral-pill + mono raw rendering of T-02 ⑤, never a guessed mapping. */
+/* F-02: this is the CONTRACT enum, not a label table — it only enumerates the
+ * filter choices (a filter must offer contract states even when the loaded
+ * page has none). Every label/tone lookup is i18n- or map-driven at render
+ * time; an unknown value never enters this list and renders as the raw enum in
+ * a warning pill (T-02 ⑤ / P1-4). */
 const TASK_STATUSES = ['open', 'in_progress', 'blocked', 'done', 'cancelled'] as const;
 
 /* VG FAIL-2 (observer 2026-11-16) five-state tones — no accent (blue-purple)
@@ -66,6 +69,13 @@ const STATUS_DOT: Record<string, string> = {
   done: 'dot-ok',
   cancelled: 'dot-neutral',
 };
+
+/* P1-4: the tone comes from the contract map, and an enum the contract does
+ * not define is never silently neutral — it reads as a warning until i18n and
+ * the contract name it (the raw value stays visible in the pill). */
+function statusTone(s: string): string {
+  return Object.prototype.hasOwnProperty.call(STATUS_TONE, s) ? STATUS_TONE[s] : 'is-warn';
+}
 
 /* F-04: preset shortcuts ONLY — the request carries a single dueBefore
  * bound; there is no dueAfter in the contract and none is invented (A-13). */
@@ -223,18 +233,19 @@ interface FselProps {
   children: (close: () => void) => JSX.Element;
 }
 
-/* VG FAIL-1 (observer 2026-11-16): the source column is ALWAYS Chinese —
- * feishu→飞书消息, chat→对话, manual→手动创建, system→系统计划,
- * console→手动创建 (console-created rows are manual by caliber); any unknown
- * enum renders 「其他」 and the raw value survives only in the cell title.
- * A bare `console` (or any raw enum) must never reach the screen. */
-const SRC_LABEL_KEY: Record<string, string> = {
-  feishu: 'agentConsole.v2.tsk.srcFeishu',
-  chat: 'agentConsole.v2.tsk.srcChat',
-  manual: 'agentConsole.v2.tsk.srcManual',
-  system: 'agentConsole.v2.tsk.srcSystem',
-  console: 'agentConsole.v2.tsk.srcManual',
-};
+/* P1-4 (element/semantic audit): channel labels are i18n-driven, not a
+ * hand-kept map — the key is derived from the upstream enum
+ * (`agentConsole.v2.tsk.src.<channel>`) and an ABSENT key falls back to
+ * 「其他」. Adding a channel therefore needs a locale entry, not a code edit.
+ * The raw enum still survives only in the cell title (VG FAIL-1). */
+const MISSING_LABEL = '\u0000';
+
+type LabelFn = (key: string, defaultValue?: string) => string;
+
+function srcLabel(t: LabelFn, ch: string): string {
+  const hit = t(`agentConsole.v2.tsk.src.${ch}`, MISSING_LABEL);
+  return hit === MISSING_LABEL ? t('agentConsole.v2.tsk.src.other') : hit;
+}
 
 function Fsel({ testid, label, display, icon, disabled, children }: FselProps) {
   const [open, setOpen] = useState(false);
@@ -548,17 +559,18 @@ export function TasksListPage() {
   };
 
   /* ---------- status / label helpers ---------- */
+  /* P1-4: no hardcoded status whitelist — the label comes from
+     `statusLabel.<status>` and an absent key returns null (the caller then
+     renders the RAW enum inside a warning pill: an unknown state must look
+     suspicious, never get a fabricated Chinese label). */
   const statusText = (s: string) => {
-    if ((TASK_STATUSES as readonly string[]).includes(s)) {
-      return t(`agentConsole.v2.tsk.statusLabel.${s}`, s);
-    }
-    return null; // unknown enum → defensive mono rendering (T-02 ⑤)
+    const hit = t(`agentConsole.v2.tsk.statusLabel.${s}`, MISSING_LABEL);
+    return hit === MISSING_LABEL ? null : hit;
   };
 
   /* VG FAIL-1: unknown channels read 「其他」 everywhere (facet, condition
      line, cells); the raw enum is kept for titles only. */
-  const channelName = (ch: string) =>
-    SRC_LABEL_KEY[ch] ? t(SRC_LABEL_KEY[ch]) : t('agentConsole.v2.tsk.srcOther');
+  const channelName = (ch: string) => srcLabel(t as LabelFn, ch);
 
   /* F-05 facet options come from what the loaded page actually carries —
      no speculative channels are pre-rendered (A-14 ⑤). Memoized so the
@@ -915,7 +927,7 @@ export function TasksListPage() {
                 >
                   <span>
                     <span
-                      className={`a2-pill${STATUS_TONE[r.status ?? ''] ? ` ${STATUS_TONE[r.status ?? '']}` : ''}`}
+                      className={`a2-pill${statusTone(r.status ?? '') ? ` ${statusTone(r.status ?? '')}` : ''}`}
                     >
                       {statusText(r.status ?? '') ?? r.status ?? '—'}
                     </span>
@@ -1334,6 +1346,9 @@ interface AssigneeView {
   id: string;
   isMe: boolean;
   mono: boolean;
+  /** i18n key of the role badge (本人 / 员工) — empty for an unresolvable ref.
+   *  Declared here to match `assigneeView()`'s return shape (pre-existing gap). */
+  roleKey: string;
 }
 
 interface RowProps {
@@ -1419,7 +1434,7 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
         {/* T-02 status pill: dot + localized text; title keeps the raw enum */}
         <td className="a2-cell-nowrap" data-testid="agent-v2-task-status" title={r.status}>
           {stLabel ? (
-            <span className={`a2-pill${STATUS_TONE[r.status] ? ` ${STATUS_TONE[r.status]}` : ''}`}>
+            <span className={`a2-pill${statusTone(r.status) ? ` ${statusTone(r.status)}` : ''}`}>
               {r.status === 'cancelled' ? (
                 /* VG FAIL-2: 已取消 = neutral gray + 「—」, same as its chip */
                 <span className="a2-mono">—</span>
@@ -1429,7 +1444,11 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
               {stLabel}
             </span>
           ) : (
-            <span className="a2-pill">
+            /* P1-4: unknown enum → RAW value in a warning pill. Nothing is
+               translated for a state the contract does not define, and the
+               warning tone is what makes it visible instead of silent. */
+            <span className="a2-pill is-warn" data-testid="agent-v2-task-status-unknown">
+              <span className="a2-pill-dot dot-warn" aria-hidden />
               <span className="a2-mono">{r.status}</span>
             </span>
           )}
@@ -1483,9 +1502,7 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
                 title={`channel=${src.channel}${src.messageId ? ` · ${src.messageId}` : ''}`}
               >
                 <Icon name="msg" size={13} />
-                {SRC_LABEL_KEY[src.channel]
-                  ? t(SRC_LABEL_KEY[src.channel])
-                  : t('agentConsole.v2.tsk.srcOther')}
+                {srcLabel(t as LabelFn, src.channel)}
               </span>
               {src.runId && (
                 <NavLink

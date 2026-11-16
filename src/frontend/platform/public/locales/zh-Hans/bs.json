@@ -4372,6 +4372,7 @@
       "metricsDegraded": "降级（{{reason}}）",
       "metricsDegradedPlain": "降级",
       "metricsUnavailable": "暂不可用",
+      "tableScrollHint": "表格可左右滑动",
       "metricsServiceUnavailable": "服务指标暂不可用",
       "metricsNotPriced": "未计价",
       "metricsUnattributed": "未归属",
@@ -4814,10 +4815,16 @@
         "scopeMineNoUid": "无法识别当前身份，暂不能按“指派给我”查看",
         "sourceChip": "来源：{{channel}}",
         "sourceFacetNone": "已加载页面暂无来源标签",
-        "srcFeishu": "飞书消息",
+        "src": {
+          "feishu": "飞书消息",
+          "chat": "对话",
+          "manual": "手动创建",
+          "system": "系统计划",
+          "console": "手动创建",
+          "other": "其他"
+        },
         "srcFeishuCell": "飞书",
         "srcNote": "来源筛选为客户端 facet，仅覆盖已加载页面",
-        "srcOther": "其他",
         "due7d": "近 7 天截止",
         "statusLabel": {
           "open": "待办",
@@ -4840,9 +4847,6 @@
         "colUpdated": "最近更新",
         "roleEmployee": "员工",
         "roleSelf": "本人",
-        "srcChat": "对话",
-        "srcManual": "手动创建",
-        "srcSystem": "系统计划",
         "priHighChip": "高优"
       },
       "met": {
@@ -5118,6 +5122,7 @@
         "tabHistory": "已决",
         "historyDisabledNote": "已决列表本波未提供：当前数据源只支持待办队列查询，已决记录将在后续波次接入。",
         "batchNote": "批量决策本波未开放：审批处理入口将在详情波次接入，当前仅支持选择。",
+        "decideDisabledTitle": "M1 只读：批量决策的写入口（AP2）尚未接线，当前只能选择",
         "selectAll": "全选本页",
         "selectedCount": "已选 {{count}} 项",
         "forbidden": "无权查看审批队列",
