@@ -4652,7 +4652,8 @@
         "kbdSearch": "搜索",
         "openAuditCenter": "打开审计中心",
         "anomalyCountUnit": "{{count}} 条",
-        "p95NotDrawn": "未绘制"
+        "p95NotDrawn": "未绘制",
+        "clearFilters": "清除条件"
       },
       "shell": {
         "gOverview": "概览",

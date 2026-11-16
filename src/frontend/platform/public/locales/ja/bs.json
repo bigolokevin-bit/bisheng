@@ -4533,7 +4533,8 @@
         "kbdSearch": "検索",
         "openAuditCenter": "監査センターを開く",
         "anomalyCountUnit": "{{count}} 件",
-        "p95NotDrawn": "未描画"
+        "p95NotDrawn": "未描画",
+        "clearFilters": "条件をクリア"
       },
       "shell": {
         "gOverview": "概要",

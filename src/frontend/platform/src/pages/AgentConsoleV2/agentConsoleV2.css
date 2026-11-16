@@ -813,6 +813,15 @@
 .agent-app .ov-fresh { display: flex; align-items: center; gap: 8px; font-size: 12px; color: hsl(var(--micro-foreground)); flex-wrap: wrap; }
 .agent-app .ov-fresh .a2-mono, .agent-app .ov-fresh [data-testid='agent-v2-ov-updated'] { color: hsl(var(--muted-foreground)); }
 .agent-app .ov-fresh .faint { opacity: 0.6; }
+/* C2-F7: persistent focus ring for ?focus=<block> — outline only, so the
+ * card keeps its exact box (no layout shift) and the ring survives refresh
+ * and direct links because it is driven by the URL-parsed focus param. */
+.agent-app .ov-focus-ring {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+.agent-app .ov-clear-filters { height: 36px; }
+
 /* C1 P3: icon-left/label-right on ONE line (target 80×36); the bare
  * inline-block button stacked the block-level svg above the label. */
 .agent-app .ov-refresh {

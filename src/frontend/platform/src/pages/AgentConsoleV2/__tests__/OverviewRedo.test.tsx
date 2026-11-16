@@ -16,7 +16,7 @@
  * fetch is stubbed at the global level (makeFetcher uses window fetch).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/components/bs-ui/message', () => ({
@@ -158,10 +158,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderOverview() {
+function renderOverview(entry = '/agent') {
   return render(
     <userContext.Provider value={{ user: { user_id: 1 } } as never}>
-      <MemoryRouter initialEntries={['/agent']}>
+      <MemoryRouter initialEntries={[entry]}>
         <OverviewPage />
       </MemoryRouter>
     </userContext.Provider>
@@ -242,5 +242,44 @@ describe('OV-01 redo', () => {
     expect(screen.getAllByTestId('agent-v2-ov-current-cell')).toHaveLength(1);
     const foot = screen.getByTestId('agent-v2-ov-heat-foot');
     expect(foot.textContent).toContain('不画异常档');
+  });
+
+  // C2-F7: URL filters are restorable AND clearable in place.
+  it('C2-F7: default URL shows no clear control; non-default params reveal 清除条件', async () => {
+    stubFetch();
+    const { unmount } = renderOverview();
+    await screen.findByTestId('agent-v2-ov-updated');
+    expect(screen.queryByTestId('agent-v2-ov-clear-filters')).toBeNull();
+    unmount();
+    renderOverview('/agent?range=7d&weeks=8&focus=cost');
+    const clear = await screen.findByTestId('agent-v2-ov-clear-filters');
+    expect(clear.textContent).toBe('清除条件');
+  });
+
+  it('C2-F7: focus=cost keeps a persistent visible ring on the cost card', async () => {
+    stubFetch();
+    renderOverview('/agent?focus=cost');
+    const cost = await screen.findByTestId('agent-v2-ov-block-cost');
+    await waitFor(() => expect(cost.classList.contains('ov-focus-ring')).toBe(true));
+  });
+
+  it('C2-F7: clicking 清除条件 strips range/weeks/focus back to defaults (five-step restore)', async () => {
+    stubFetch();
+    renderOverview('/agent?range=7d&weeks=8&focus=cost');
+    const clear = await screen.findByTestId('agent-v2-ov-clear-filters');
+    // step 1: defaults were overridden on arrival
+    expect(screen.getByTestId('agent-v2-ov-range-7d').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByTestId('agent-v2-ov-weeks-8').getAttribute('aria-pressed')).toBe('true');
+    const cost = screen.getByTestId('agent-v2-ov-block-cost');
+    expect(cost.classList.contains('ov-focus-ring')).toBe(true);
+    // step 2-4: one click removes range, weeks and focus together
+    fireEvent.click(clear);
+    // step 5: page returns to the default window without a reload
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-v2-ov-range-28d').getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByTestId('agent-v2-ov-weeks-4').getAttribute('aria-pressed')).toBe('true');
+      expect(screen.queryByTestId('agent-v2-ov-clear-filters')).toBeNull();
+      expect(cost.classList.contains('ov-focus-ring')).toBe(false);
+    });
   });
 });

@@ -4707,7 +4707,8 @@
         "kbdSearch": "search",
         "openAuditCenter": "Open audit center",
         "anomalyCountUnit": "{{count}} item(s)",
-        "p95NotDrawn": "not plotted"
+        "p95NotDrawn": "not plotted",
+        "clearFilters": "Clear filters"
       },
       "shell": {
         "gOverview": "Overview",

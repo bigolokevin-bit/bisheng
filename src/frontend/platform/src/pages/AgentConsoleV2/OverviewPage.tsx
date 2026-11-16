@@ -173,6 +173,21 @@ export function OverviewPage() {
   const weeksRaw = Number.parseInt(searchParams.get('weeks') ?? '', 10);
   const heatWeeks = HEAT_WEEK_OPTIONS.includes(weeksRaw) ? weeksRaw : 4;
   const focus = searchParams.get('focus');
+  /* C2-F7: the URL is the page-state source; when any filter departs from
+   * the default (range≠28d, weeks≠4, focus set) the header shows an
+   * accessible 清除条件 control that strips the params in-place (router
+   * state only — never a full reload). */
+  const filtersActive =
+    (searchParams.get('range') !== null && searchParams.get('range') !== DEFAULT_RANGE) ||
+    (searchParams.get('weeks') !== null && searchParams.get('weeks') !== '4') ||
+    (focus !== null && focus !== '');
+  const clearFilters = useCallback(() => {
+    const next = new URLSearchParams(searchParams);
+    next.delete('range');
+    next.delete('weeks');
+    next.delete('focus');
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
   const updateParam = useCallback(
     (key: string, value: string | null) => {
       const next = new URLSearchParams(searchParams);
@@ -185,13 +200,19 @@ export function OverviewPage() {
 
   // fix A (G9): ?focus=<block> scrolls the matching block into view; re-run
   // when fresh data lands so a shared link works before first paint too.
+  // C2-F7: the focused block additionally keeps a persistent visible ring
+  // (outline-only, zero layout shift) that survives refresh / direct links.
   useEffect(() => {
+    document.querySelectorAll('.ov-focus-ring').forEach((el) => el.classList.remove('ov-focus-ring'));
     if (!focus) return;
     const testId = FOCUS_TESTID[focus];
     if (!testId) return;
     const el = document.querySelector(`[data-testid="${testId}"]`);
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    if (el) {
+      el.classList.add('ov-focus-ring');
+      if (typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
     }
   }, [focus, updatedAt]);
 
@@ -537,6 +558,16 @@ export function OverviewPage() {
               </button>
             ))}
           </div>
+          {filtersActive ? (
+            <button
+              type="button"
+              className="a2-btn ov-clear-filters"
+              data-testid="agent-v2-ov-clear-filters"
+              onClick={clearFilters}
+            >
+              {t('agentConsole.v2.ov.clearFilters')}
+            </button>
+          ) : null}
           <button type="button" className="a2-btn ov-refresh" data-testid="agent-v2-ov-refresh" onClick={refresh}>
             <Icon name="refresh" size={16} />
             {t('agentConsole.v2.ov.refresh')}
