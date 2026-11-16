@@ -1342,7 +1342,14 @@
 .agent-app .met-phead { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
 .agent-app .met-phead .sp { flex: 1; }
 .agent-app .met-sub { font-size: 13.5px; color: hsl(var(--muted-foreground)); margin: 6px 0 0; }
-.agent-app .met-fresh { display: flex; align-items: center; gap: 8px; font-size: 12px; color: hsl(var(--micro-foreground)); flex-wrap: wrap; }
+/* The pendingKpi help tip anchors at the end of this row, so its fixed popover
+   opens exactly where the next block starts. `.met-page > *` puts every block
+   in its own z-index:0 stacking context, which confined the popover (z-index
+   60) inside this row and let the following calib panel / cards paint over its
+   text — the reader saw an empty rounded shell. Lifting this one row's level
+   keeps its tooltip above those blocks (they never overlap in flow, so nothing
+   else moves). Scoped to .met-fresh: no other tip or page is affected. */
+.agent-app .met-fresh { display: flex; align-items: center; gap: 8px; font-size: 12px; color: hsl(var(--micro-foreground)); flex-wrap: wrap; position: relative; z-index: 5; }
 .agent-app .met-fresh .a2-mono { color: hsl(var(--muted-foreground)); }
 .agent-app .met-fresh .faint { opacity: 0.6; }
 .agent-app .met-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

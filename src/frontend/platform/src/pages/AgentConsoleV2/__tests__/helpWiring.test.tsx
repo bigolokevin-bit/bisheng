@@ -91,6 +91,21 @@ describe('help wiring — APR-02 / MET-01 / EMP-01 / TSK-01', () => {
     expect(src).toMatch(/term="caliber"/);
   });
 
+  it('MET-01 pendingKpi popover can paint over the block below it (stacking guard)', () => {
+    const css = page('agentConsoleV2.css');
+    // `.met-page > *` pins every MET block to z-index:0 — each becomes its own
+    // stacking context, so the fixed popover (z-index 60) inside the fresh row
+    // was trapped under the following calib panel/cards: only the popover's top
+    // border showed (an empty rounded shell). The fresh row must sit above them.
+    const fresh = /\.agent-app \.met-fresh \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(fresh).toMatch(/position:\s*relative/);
+    const z = /z-index:\s*([1-9]\d*)/.exec(fresh)?.[1];
+    expect(z).toBeTruthy();
+    expect(Number(z)).toBeGreaterThan(0);
+    // scoped: no other MET block or tip anchor is re-layered by this guard
+    expect(css).not.toMatch(/\.agent-app \.met-(?:calib|pfoot|a0) \{[^}]*z-index/);
+  });
+
   it('EMP-01 / TSK-01 explain the human: owner ref and the source column', () => {
     expect(page('EmployeesListPage.tsx')).toMatch(/term="humanPrefix"/);
     expect(page('EmployeeDetailPage.tsx')).toMatch(/term="humanPrefix"/);
