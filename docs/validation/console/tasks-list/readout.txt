@@ -1,0 +1,47 @@
+# TSK-01 readout (live command transcripts, 2026-11-16 17:5x)
+## vitest single file (34b7ce8 + search query fix)
+ Test Files  1 passed (1)
+      Tests  18 passed (18)
+## scoped eslint raw output (exit 2)
+
+Oops! Something went wrong! :(
+
+ESLint: 9.39.5
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@eslint/js' imported from /Users/kevin_studio/Projects/bisheng-tsk01-readonly/src/frontend/config/eslint.mjs
+Did you mean to import "@eslint/js/src/index.js"?
+    at packageResolve (node:internal/modules/esm/resolve:873:9)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49)
+## normal-state shots (browser-layer fetch fixture injected; NOT a backend change)
+INJ={"identifier":"1"}
+URL0=http://127.0.0.1:5401/agent/tasks
+ROWS_READY=true
+DOM_DARK_1440={"url":"/agent/tasks","rows":5,"pageInfo":"本页 5 条","resultCount":"命中 5 / 已加载 5 条","rawKeyHits":[],"tplBraces":false,"hasTotal":false,"kpi":0,"newTask":0,"pendingNote":false,"side":0,"prevNext":2,"chips":5,"sw":1440,"cw":1440,"failedRes":[]}
+SEARCHLIVE={"rowsBefore":5,"rowsAfter":1,"rowsRestored":5,"apiCallsDelta":0,"midUrl":"/agent/tasks?q=%E5%91%A8%E6%8A%A5","clearedUrl":"/agent/tasks"}
+SHOT_D1440=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/tsk01n-1440x900-dark.png
+DIMS375={"sw":375,"cw":375,"iw":375}
+SHOT_D375=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/tsk01n-375x812-dark.png
+ROWS_READY_LIGHT=true
+DOM_LIGHT_1440={"url":"/agent/tasks","rows":5,"pageInfo":"本页 5 条","resultCount":"命中 5 / 已加载 5 条","rawKeyHits":[],"tplBraces":false,"hasTotal":false,"kpi":0,"newTask":0,"pendingNote":false,"side":0,"prevNext":2,"chips":5,"sw":1440,"cw":1440,"failedRes":[]}
+SHOT_L1440=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/tsk01n-1440x900-light.png
+SHOT_L375=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/tsk01n-375x812-light.png
+SHOT_TGT=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/tsk01n-target-1440-dark.png
+SHOT_PAIR=/private/var/folders/2b/bnpsyz450pn98w375q_803yw0000gn/T/opencode/tsk01n-pair-1440-dark.png
+DONE2
+## live backend state shots (real data, no injection): rows=0 empty board
+DOM_DARK_1440={"url":"/agent/tasks","rows":0,"pageInfo":null,"rawKeyHits":[],"tplBraces":false,"hasTotal":false,"kpi":0,"newTask":0,"pendingNote":false,"side":0,"prevNext":0,"sw":1440,"cw":1440,"failedRes":[]}
+SEARCHLIVE={"rowsBefore":0,"rowsAfter":0,"rowsRestored":0,"apiCallsDelta":0,"midUrl":"/agent/tasks?q=%E5%91%A8%E6%8A%A5","clearedUrl":"/agent/tasks"}
+DOM_LIGHT_1440={"url":"/agent/tasks","rows":0,"pageInfo":null,"rawKeyHits":[],"tplBraces":false,"hasTotal":false,"kpi":0,"newTask":0,"pendingNote":false,"side":0,"prevNext":0,"sw":1440,"cw":1440,"failedRes":[]}
+## committed image sha256
+e194807fdb6fea532fe56c1d354534539da13d393c242b3aa56ccd21a49bd0f2  /Users/kevin_studio/Projects/bisheng-tsk01-readonly/docs/validation/console/tasks-list/tsk01n-1440x900-dark.png
+b142685d8d7ba643f5687ebef2d52ee766020a67b0ee470cd233a03bf8afaf14  /Users/kevin_studio/Projects/bisheng-tsk01-readonly/docs/validation/console/tasks-list/tsk01n-1440x900-light.png
+67839e274e02232e5d2a387eca6d96abd78a5047c39af0bb92fe2ede6e8bed0c  /Users/kevin_studio/Projects/bisheng-tsk01-readonly/docs/validation/console/tasks-list/tsk01n-375x812-dark.png
+f929457b32c8d0812a47a3bb8c77a7b02c0b4d2be72e16165461deabb59dd597  /Users/kevin_studio/Projects/bisheng-tsk01-readonly/docs/validation/console/tasks-list/tsk01n-375x812-light.png
+3e8dbeb49ce777dfbbbbd0173ae55b03554663382639dca04962aae8d6575d57  /Users/kevin_studio/Projects/bisheng-tsk01-readonly/docs/validation/console/tasks-list/tsk01n-pair-1440-dark.png
+c19f73b78d951f8dbc88246abb4f8967a31a4aaddbd79713651b2b8c106b4300  /Users/kevin_studio/Projects/bisheng-tsk01-readonly/docs/validation/console/tasks-list/tsk01n-target-1440-dark.png
