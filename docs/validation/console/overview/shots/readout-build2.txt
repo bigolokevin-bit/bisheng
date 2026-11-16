@@ -10,3 +10,11 @@ GEO375={"railW":375,"railStickyTopScroll":true,"railHintVisible":true,"searchIco
 KPI={"onduty":2,"pending":0,"runs7d":14,"cost":"USD 0.13","quotaFoot":"30 格＝30 天 · 占月预算 0.7%（USD 0.13 / 20.00）","heatCells":168,"trendSvg":true}
 
 PAIRS=左=ov01-target.html 渲染 右=实页 5399/agent 深色 fullPage 同宽并排
+
+# ---- block-1 FIX rereview (P1+P3) — 2026-11-16 12:4x, dev 5399 + BFF 8092, dark ----
+P1_LOGO={"bbox":"19,14 34x34","glyph_color":"rgb(10,10,12)","tile_min_gray":10,"tile_max_gray":234,"target_min_gray":12}  # 深墨显式 var(--background)；375 display:none ✓
+P3_REFRESH={"w":84,"h":36,"display":"flex","flex_direction":"row","gap":"8px","white-space":"nowrap","icon_rect":[1341,124,16],"label_rect":[1365,123,26],"same_line":true,"style":"outline(描边保留)"}  # target 80×36；±4px
+GEOM1440={"sw":1440,"cw":1425,"iw":1440}  # 桌面仿真；sw==iw，cw 差 15＝滚动条（G7 豁免）
+GEOM375={"sw":375,"cw":375}  # 移动仿真严格相等；logo 不渲染
+PAIRS_RERESHOT=pair-shell-header-1440-dark.png pair-shell-header-375-dark.png (左=target 右=修复后实页)
+NOTE=trend 图体在本组 fullPage 中仍空白（useElementWidth bug，修复在 block2 stash，observer 已按 P 项范围豁免）

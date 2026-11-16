@@ -813,7 +813,16 @@
 .agent-app .ov-fresh { display: flex; align-items: center; gap: 8px; font-size: 12px; color: hsl(var(--micro-foreground)); flex-wrap: wrap; }
 .agent-app .ov-fresh .a2-mono, .agent-app .ov-fresh [data-testid='agent-v2-ov-updated'] { color: hsl(var(--muted-foreground)); }
 .agent-app .ov-fresh .faint { opacity: 0.6; }
-.agent-app .ov-refresh { height: 36px; }
+/* C1 P3: icon-left/label-right on ONE line (target 80×36); the bare
+ * inline-block button stacked the block-level svg above the label. */
+.agent-app .ov-refresh {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex: none;
+}
 
 /* segmented period control (FilterBar vocabulary) */
 .agent-app .ov-seg { display: inline-flex; background: hsl(var(--surface)); border: 1px solid var(--hairline); border-radius: 8px; padding: 2px; gap: 2px; }

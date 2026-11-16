@@ -44,7 +44,10 @@
   height: 34px;
   border-radius: 10px;
   background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  /* C1 P1: the tile is the fixed light primary chip; the glyph must carry
+   * dark ink (target darkest #0D0C0E). Inheriting --primary-foreground let
+   * the bisheng dark theme paint a near-white letter on a near-white tile. */
+  color: hsl(var(--background));
   display: flex;
   align-items: center;
   justify-content: center;
