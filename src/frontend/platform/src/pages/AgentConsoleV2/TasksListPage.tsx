@@ -204,6 +204,15 @@ interface FselProps {
   children: (close: () => void) => JSX.Element;
 }
 
+/* G1 FAIL 2: the four contract channels have localized names; an unknown enum
+   still renders raw (A-14 ⑤ — nothing is invented). */
+const SRC_LABEL_KEY: Record<string, string> = {
+  feishu: 'agentConsole.v2.tsk.srcFeishu',
+  chat: 'agentConsole.v2.tsk.srcChat',
+  manual: 'agentConsole.v2.tsk.srcManual',
+  system: 'agentConsole.v2.tsk.srcSystem',
+};
+
 function Fsel({ testid, label, display, icon, disabled, children }: FselProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLSpanElement | null>(null);
@@ -395,10 +404,8 @@ export function TasksListPage() {
     patchParams({ due: value, cursor: null });
   };
 
-  /* F-05: facet toggles do NOT refetch — they re-filter loaded rows. */
-  const handleSource = (value: string) => {
-    patchParams({ source: value === sourceFacet ? null : value });
-  };
+  /* F-05: the source facet lives in the Fsel dropdown and writes the URL
+     param directly — faceting never refetches, it re-filters loaded rows. */
 
   /* F-06/A-15: clear restores the default view (scope=mine, no extras) and
      never touches identity or theme. */
@@ -519,7 +526,7 @@ export function TasksListPage() {
     return null; // unknown enum → defensive mono rendering (T-02 ⑤)
   };
 
-  const channelName = (ch: string) => (ch === 'feishu' ? t('agentConsole.v2.tsk.srcFeishu') : ch);
+  const channelName = (ch: string) => (SRC_LABEL_KEY[ch] ? t(SRC_LABEL_KEY[ch]) : ch);
 
   /* F-05 facet options come from what the loaded page actually carries —
      no speculative channels are pre-rendered (A-14 ⑤). */
@@ -590,22 +597,33 @@ export function TasksListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t, status, assigneeFilter, dueKey, sourceFacet, names, uid]);
 
-  /* assignee display for T-03 (A-19: never a bare `employee:`/`human:`) */
-  const assigneeView = (r: TaskRow): { nm: string; id: string; isMe: boolean; mono: boolean } => {
+  /* assignee display for T-03 (A-19: never a bare `employee:`/`human:`).
+     G1 FAIL 6 — three shapes only: 员工 (directory name + role badge),
+     本人 (current user), and the unresolved-directory fallback which shows an
+     em-dash plus a traceable short id instead of a bare `emp_x2` on screen. */
+  const assigneeView = (
+    r: TaskRow,
+  ): { nm: string; id: string; isMe: boolean; mono: boolean; roleKey: string } => {
     const { type, bare } = splitRef(r.assignee?.id);
-    if (!bare) return { nm: '—', id: '', isMe: false, mono: false };
+    if (!bare) return { nm: '—', id: '', isMe: false, mono: false, roleKey: '' };
     const isMe = type === 'human' && uid !== '' && bare === uid;
     if (isMe) {
-      return { nm: userName || bare, id: last6(bare), isMe: true, mono: false };
+      return {
+        nm: userName || bare,
+        id: last6(bare),
+        isMe: true,
+        mono: false,
+        roleKey: 'agentConsole.v2.tsk.roleSelf',
+      };
     }
     if (type === 'employee') {
       const name = names[bare];
       return name
-        ? { nm: name, id: last6(bare), isMe: false, mono: false }
-        : { nm: bare, id: '', isMe: false, mono: true };
+        ? { nm: name, id: last6(bare), isMe: false, mono: false, roleKey: 'agentConsole.v2.tsk.roleEmployee' }
+        : { nm: '—', id: '', isMe: false, mono: true, roleKey: 'agentConsole.v2.tsk.roleEmployee' };
     }
-    // human others: 姓名/uid (no human-name endpoint — mono uid honest)
-    return { nm: bare, id: last6(bare), isMe: false, mono: true };
+    // human others: no human-name endpoint — mono uid stays honest, no role word
+    return { nm: bare, id: last6(bare), isMe: false, mono: true, roleKey: '' };
   };
 
   /* ---------- body by state ---------- */
@@ -736,9 +754,9 @@ export function TasksListPage() {
                 <th>{t('agentConsole.v2.tsk.colTask')}</th>
                 <th>{t('agentConsole.v2.colStatus')}</th>
                 <th>{t('agentConsole.v2.colOwner')}</th>
-                <th>{t('agentConsole.tasks.colPriority')}</th>
-                <th>{t('agentConsole.tasks.colDueAt')}</th>
                 <th>{t('agentConsole.v2.tsk.filterSource')}</th>
+                <th>{t('agentConsole.tasks.colDueAt')}</th>
+                <th>{t('agentConsole.v2.tsk.colUpdated')}</th>
                 <th>{t('agentConsole.v2.tsk.colProgress')}</th>
                 <th>{t('agentConsole.v2.tsk.colAction')}</th>
               </tr>
@@ -931,18 +949,20 @@ export function TasksListPage() {
           <p className="a2-meta">{t('agentConsole.v2.tsk.desc')}</p>
         </div>
         <span className="a2-sp" />
-        {/* fix C1b (L0 ruling 3): the follow-up rail is optional and default-collapsed. */}
+        {/* G1 FAIL 5: baseline header right side carries ONE control — the
+            warning-triangle follow-up toggle. No refresh button exists there. */}
         <button
           type="button"
           className="a2-btn"
           data-testid="agent-v2-tsk-side-toggle"
           aria-expanded={sideOpen}
+          aria-controls="agent-v2-tsk-side"
           onClick={() => setSideOpen((v) => !v)}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
         >
+          <Icon name="alert" size={14} />
           {t('agentConsole.v2.tsk.sideToggle')}
-        </button>
-        <button type="button" className="a2-btn" data-testid="agent-v2-tsk-refresh" onClick={handleRetry}>
-          <Icon name="refresh" size={14} /> {t('agentConsole.v2.tsk.refresh')}
+          <Icon name="chevD" size={13} />
         </button>
       </div>
       <p className="a2-meta" data-testid="agent-v2-tsk-fresh" aria-live="polite">
@@ -1142,27 +1162,43 @@ export function TasksListPage() {
             )}
           </Fsel>
 
-          {/* F-05 source facet chips — present channels only */}
-          {pageChannels.length === 0 ? (
-            <button type="button" className="a2-pill" disabled data-testid="agent-v2-tsk-source-none">
-              {t('agentConsole.v2.tsk.sourceFacetNone')}
-            </button>
-          ) : (
-            pageChannels.map((ch) => (
-              <button
-                key={ch}
-                type="button"
-                className={`a2-pill${sourceFacet === ch ? ' active' : ''}`}
-                aria-pressed={sourceFacet === ch}
-                data-testid={`agent-v2-tsk-source-${ch}`}
-                title={t('agentConsole.v2.tsk.srcNote')}
-                disabled={listLoading}
-                onClick={() => handleSource(ch)}
-              >
-                {t('agentConsole.v2.tsk.sourceChip', { channel: channelName(ch) })}
-              </button>
-            ))
-          )}
+          {/* G1 FAIL 2: source is a dropdown next to 负责人/截止时间 (baseline
+              structure), never a row of flat chips. Options come from what the
+              loaded page actually carries (A-14 ⑤). */}
+          <Fsel
+            testid="agent-v2-tsk-source-fsel"
+            label={t('agentConsole.v2.tsk.filterSource')}
+            display={sourceFacet ? channelName(sourceFacet) : t('agentConsole.v2.tsk.sourceAny')}
+            icon="msg"
+            disabled={listLoading || pageChannels.length === 0}
+          >
+            {(close) => (
+              <>
+                <MenuItem
+                  active={!sourceFacet}
+                  onClick={() => {
+                    patchParams({ source: null });
+                    close();
+                  }}
+                >
+                  {t('agentConsole.v2.tsk.sourceAny')}
+                </MenuItem>
+                {pageChannels.map((ch) => (
+                  <MenuItem
+                    key={ch}
+                    active={sourceFacet === ch}
+                    hint={t('agentConsole.v2.tsk.srcNote')}
+                    onClick={() => {
+                      patchParams({ source: ch });
+                      close();
+                    }}
+                  >
+                    {channelName(ch)}
+                  </MenuItem>
+                ))}
+              </>
+            )}
+          </Fsel>
 
           {/* fix C1b (target §1.4): client-only search over loaded rows. */}
           <input
@@ -1277,6 +1313,16 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
                 title={r.title}
                 data-testid="agent-v2-task-title"
               >
+                {prioKnown && prio === 'high' && (
+                  <span
+                    className="a2-pill a2-warn"
+                    style={{ marginRight: 6, fontSize: 11, padding: '1px 6px' }}
+                    data-testid="agent-v2-task-pri-chip"
+                    title={t('agentConsole.tasks.priority.high', 'high')}
+                  >
+                    {t('agentConsole.v2.tsk.priHighChip')}
+                  </span>
+                )}
                 {r.title ?? '—'}
               </div>
               <span className="a2-mono a2-micro" title={r.taskId}>
@@ -1309,48 +1355,30 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
         {/* T-03 assignee */}
         <td className="a2-cell-nowrap" data-testid="agent-v2-task-assignee" title={r.assignee?.id}>
           <span className={av.mono ? 'a2-mono' : undefined}>{av.nm}</span>
-          {av.isMe && (
-            <span className="a2-pill" style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px' }}>
-              {t('agentConsole.v2.tsk.me')}
+          {av.roleKey && (
+            <span
+              className="a2-pill"
+              style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px' }}
+              data-testid="agent-v2-task-assignee-role"
+            >
+              {t(av.roleKey)}
             </span>
           )}
           {av.id ? <span className="a2-mono a2-micro">{` ${av.id}`}</span> : null}
-        </td>
-        {/* T-04 priority — colored text, never a solid block; absent = contract default normal */}
-        <td className="a2-cell-nowrap" title={r.priority ?? 'normal'} data-testid="agent-v2-task-priority">
-          {prioKnown ? (
-            <span className={prio === 'high' ? 'a2-warn' : prio === 'low' ? 'a2-meta' : undefined}>
-              {t(`agentConsole.tasks.priority.${prio}`, prio)}
-            </span>
-          ) : (
-            <span className="a2-mono">{prio}</span>
-          )}
-        </td>
-        {/* T-05 due */}
-        <td className="a2-cell-nowrap" data-testid="agent-v2-task-due" title={r.dueAt ?? undefined}>
-          {r.dueAt ? (
-            <>
-              <span className={`a2-mono${overdue ? ' a2-danger-text' : ''}`}>{fmtTime(r.dueAt)}</span>
-              {overdue && (
-                <span className="a2-pill is-danger" style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px' }}>
-                  {t('agentConsole.v2.tsk.overdue')}
-                </span>
-              )}
-            </>
-          ) : (
-            <span className="a2-meta">—</span>
-          )}
         </td>
         {/* T-06 source: channel + copyable msg id; runId → runs deep link */}
         <td className="a2-cell-nowrap" data-testid="agent-v2-task-source">
           {src.channel ? (
             <div>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title={`channel=${src.channel}`}
+              >
                 <Icon name="msg" size={13} />
-                {src.channel === 'feishu' ? (
-                  t('agentConsole.v2.tsk.srcFeishuCell')
+                {SRC_LABEL_KEY[src.channel] ? (
+                  t(SRC_LABEL_KEY[src.channel])
                 ) : (
-                  <span className="a2-pill">{<span className="a2-mono">{src.channel}</span>}</span>
+                  <span className="a2-mono">{src.channel}</span>
                 )}
               </span>
               {src.messageId && (
@@ -1382,6 +1410,29 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
             '—'
           )}
         </td>
+        {/* T-05 due */}
+        <td className="a2-cell-nowrap" data-testid="agent-v2-task-due" title={r.dueAt ?? undefined}>
+          {r.dueAt ? (
+            <>
+              <span className={`a2-mono${overdue ? ' a2-danger-text' : ''}`}>{fmtTime(r.dueAt)}</span>
+              {overdue && (
+                <span className="a2-pill is-danger" style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px' }}>
+                  {t('agentConsole.v2.tsk.overdue')}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="a2-meta">—</span>
+          )}
+        </td>
+        {/* G1 FAIL 3: 最近更新 — baseline column, Asia/Shanghai MM-DD HH:mm */}
+        <td
+          className="a2-cell-nowrap"
+          data-testid="agent-v2-task-updated"
+          title={r.updatedAt ?? undefined}
+        >
+          {r.updatedAt ? fmtTime(r.updatedAt) : '—'}
+        </td>
         {/* T-07 progress: single line; null AND empty string both render — */}
         <td data-testid="agent-v2-task-progress">
           <span
@@ -1399,12 +1450,13 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
             className="a2-btn"
             data-testid="agent-v2-task-detail"
             disabled
+            aria-disabled="true"
             title={t('agentConsole.v2.tsk.detailDisabled')}
+            style={{ opacity: 0.4, boxShadow: 'none', cursor: 'not-allowed' }}
           >
             {t('agentConsole.v2.detail')}
           </button>
-        </td>
-      </tr>
+        </td>      </tr>
       {isOpen && (
         <tr data-testid="agent-v2-task-expanded" data-task-id={r.taskId}>
           <td colSpan={8}>

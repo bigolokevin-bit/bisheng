@@ -4713,7 +4713,14 @@
         "sideOnlyBlocked": "阻止のみ",
         "sideOnlyOverdue": "期限超過のみ",
         "noProgress": "進捗記録なし · 最終変更 {{time}}",
-        "dueBeforeLabel": "期限前"
+        "dueBeforeLabel": "期限前",
+        "colUpdated": "最近更新",
+        "roleEmployee": "従業員",
+        "roleSelf": "本人",
+        "srcChat": "チャット",
+        "srcManual": "手動作成",
+        "srcSystem": "システム予定",
+        "priHighChip": "高優先"
       },
       "apr": {
         "desc": "承認の未処理キュー：保留中の承認を確認します。本波は読み取り専用（このページの選択のみ）。",

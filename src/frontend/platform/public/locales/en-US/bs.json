@@ -4885,7 +4885,14 @@
         "sideOnlyBlocked": "Blocked only",
         "sideOnlyOverdue": "Overdue only",
         "noProgress": "No progress note · last change {{time}}",
-        "dueBeforeLabel": "Due before"
+        "dueBeforeLabel": "Due before",
+        "colUpdated": "Updated",
+        "roleEmployee": "Employee",
+        "roleSelf": "Self",
+        "srcChat": "Chat",
+        "srcManual": "Manual",
+        "srcSystem": "Scheduled",
+        "priHighChip": "High"
       },
       "apr": {
         "desc": "Approval to-do queue: review pending approvals; selection covers this page (read-only in this wave).",

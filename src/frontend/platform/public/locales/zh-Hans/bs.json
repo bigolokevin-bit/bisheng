@@ -4830,7 +4830,14 @@
         "sideOnlyBlocked": "只看受阻",
         "sideOnlyOverdue": "只看逾期",
         "noProgress": "暂无进展记录 · 最后变更 {{time}}",
-        "dueBeforeLabel": "截止早于"
+        "dueBeforeLabel": "截止早于",
+        "colUpdated": "最近更新",
+        "roleEmployee": "员工",
+        "roleSelf": "本人",
+        "srcChat": "对话",
+        "srcManual": "手动创建",
+        "srcSystem": "系统计划",
+        "priHighChip": "高优"
       },
       "apr": {
         "desc": "审批待办队列：查看待处理的审批单，可按本页选择（本波只读）。",

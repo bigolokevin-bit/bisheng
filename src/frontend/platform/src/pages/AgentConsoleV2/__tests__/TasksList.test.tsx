@@ -191,7 +191,7 @@ describe('TSK-01 read-only task board (reconciled)', () => {
     expect(screen.queryByText('新建任务')).toBeNull();
   });
 
-  it('renders contract columns honestly: id+title, zh status pill, assignee, priority, progress null → —', async () => {
+  it('renders contract columns honestly: id+title, zh status pill, assignee role, updated, progress null → —', async () => {
     renderPage();
     const rows = await screen.findAllByTestId('agent-v2-task-row');
     expect(rows).toHaveLength(5);
@@ -201,10 +201,19 @@ describe('TSK-01 read-only task board (reconciled)', () => {
     // progressNote null → em-dash, never an empty cell or fake text
     const progress2 = rows[1].querySelector('[data-testid="agent-v2-task-progress"]');
     expect(progress2?.textContent).toBe('—');
-    // source channel shown in Chinese
+    // source channel shown in Chinese (never a bare enum on screen)
     expect(rows[0].querySelector('[data-testid="agent-v2-task-source"]')?.textContent).toContain(
       '飞书'
     );
+    // G1 FAIL 3: 最近更新 is its own column (Asia/Shanghai MM-DD HH:mm) and
+    // priority is no longer a column of its own.
+    const upd = rows[0].querySelector('[data-testid="agent-v2-task-updated"]');
+    expect(upd?.textContent).toMatch(/^\d{2}-\d{2} \d{2}:\d{2}/);
+    expect(rows[0].querySelector('[data-testid="agent-v2-task-priority"]')).toBeNull();
+    // G1 FAIL 5/6: one right-side header control (no refresh button) and the
+    // assignee cell carries a role badge instead of a bare id.
+    expect(screen.queryByTestId('agent-v2-tsk-refresh')).toBeNull();
+    expect(screen.queryAllByTestId('agent-v2-task-assignee-role').length).toBeGreaterThan(0);
   });
 
   it('detail entry is a disabled honest stub on every row while TSK-02 is not built', async () => {
@@ -327,8 +336,15 @@ describe('TSK-01 read-only task board (reconciled)', () => {
     renderPage();
     await screen.findAllByTestId('agent-v2-task-row');
     const before = t5().length;
-    const chip = screen.getByTestId('agent-v2-tsk-source-feishu');
-    fireEvent.click(chip);
+    // G1 FAIL 2: source is a dropdown beside 负责人/截止时间, not flat chips.
+    expect(screen.queryByTestId('agent-v2-tsk-source-feishu')).toBeNull();
+    fireEvent.click(screen.getByTestId('agent-v2-tsk-source-fsel'));
+    const menu = screen.getByTestId('agent-v2-tsk-source-fsel-menu');
+    const opt = Array.from(menu.querySelectorAll('button, [role="menuitem"]')).find(
+      (el) => (el.textContent ?? '').includes('飞书消息')
+    ) as HTMLElement;
+    expect(opt).toBeTruthy();
+    fireEvent.click(opt);
     await waitFor(() => {
       expect(screen.queryAllByTestId('agent-v2-task-row')).toHaveLength(3);
     });
