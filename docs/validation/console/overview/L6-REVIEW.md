@@ -84,3 +84,27 @@ R2 轮（main `3d9e547`）观察①「succeeded=13 vs 列表 completed=12+runnin
 `uv run --with pytest --with httpx pytest apps/console/tests/test_bff_authz.py -v`
 → **rc=0，15 passed in 1.03s**（原文 $T/bffr2-pytest.out）。关键用例亲验：`test_child_admin_flag_without_menus_is_denied` PASSED、`test_child_admin_with_granted_menu_is_allowed` PASSED、`test_identity_granted_matrix` PASSED。
 **C4-P2 判定升级为 L6 独立 PASS**（代码 diff 亲读 + 矩阵亲跑），OBSERVATION(no child_admin account，在线腿待部署拍) 维持。四硬门收口：C2=PASS 除 C2-F7 FAIL；C5=MEASURED PASS；C4-P2=PASS(独立)；eslint=PASS(rc=0 钉版)。整页仍不 PASS，唯一实现级阻断=**C2-F7**（focus 持久高亮+页内清除控件，OverviewPage.tsx:190-197，owner=L4）；部署腿=C5-E1 PENDING(deploy)。r3 终局=L4 修 C2-F7 push 后 ≤10 分钟给。
+
+## R3 终局复跑（C2-F7 修复 36f2b42 / dev 5401 + BFF 8092）— 2026-11-16 14:2x
+
+被测源：lane/L4-ov01-c2f7 @ 36f2b422f4bf9e1ffc208ce56ddb6cf8a791c324（基点 6148b2b；改动 6 文件 OverviewPage.tsx/css/三语 bs.json/OverviewRedo.test，与卡面一致）。8182 未部署（PENDING(deploy) 维持）；5399 现查仍服务主检出 6148b2b（无修复代码），故本拍在 lane worktree 检出 36f2b42 并以同构 dev 配置（代理 /agent-api→8092）起自有 vite 5401 作为被测源，VITE_AGENT_CONSOLE_V2=1 开 V2 壳；证据文件 $T=…/T/opencode：r3-vite-5401.log、r3-ego.out/r3-ego2.out/r3-ego3.out/r3-ego5.out/r3-ego7.out、r3-vitest.out、r3-eslint.out、r3-bff-authz.out。
+
+### 判词（四项，五值制）
+
+| 项 | 判定 | 实测证据（ego 现役 opsadmin 会话，零回显） |
+|---|---|---|
+| C2-F7 五步复原 | **PASS** | S1 默认无控件（clearBtn=false, p28/w4 pressed=true, search=''）→ S2 ?range=7d 控件出现（clearBtn=true, p7=true/p28=false）→ S3 点清除 search='' p28=true 控件消失 → S3b 清除后刷新仍默认（search=''）→ S4 ?weeks=12 脏→清除 w4=true。focus 腿：S5 ?focus=cost 直达 block-cost ring（costRing=true, outline solid 2px, ringCount=1）→ 刷新仍持久 → 数据回填（updated 在位）后仍持久；S6 ?focus=cost&range=7d 清除后 ringCount=0 且参数全清 |
+| C2 其余不回归 | **PASS** | S7 点击 7天按钮→search=?range=7d+p7 pressed+p28 false+updated 在位；KPI/导航 href 8 条完好（/agent/employees、/agent/approvals、/agent/tasks、/agent/runs、/agent/metrics、/agent/audit、/agent/settings、/agent/employees?lifecycle=active&src=ov） |
+| C5 真实 E2E | **PASS（MEASURED）** | 总览 /agent ov-page+updated ✓；approval-stats in-page fetch=200 ✓；/agent/employees rows=2 ✓→详情 /agent/employees/emp_86A81CE8FF6F42E187BCF2B540（agent-v2-employee-detail 根节点）✓→回退 rows=2 ✓→刷新 rows=2 ✓；console error 全程 0（r3-ego7.out L1-L5） |
+| C4-P2 GAP-OV-19 矩阵 | **PASS** | 主仓 detached worktree @9f50913：uv run --with pytest --with httpx pytest apps/console/tests/test_bff_authz.py -q → 15 passed rc=0（r3-bff-authz.out） |
+| C6 门禁 | **PASS** | targeted vitest（树=36f2b42）12 files/137 passed rc=0（含 OverviewRedo 新增 3 用例：默认隐藏控件/focus ring 持久/清除复原）；钉版 eslint（fork src/frontend 层）对 OverviewPage.tsx+OverviewBlocks.tsx+OverviewRedo.test.tsx rc=0；git show --check 36f2b42 rc=0 |
+
+### 观察项（不阻断）
+
+- OBS-1 back 语义：清除后浏览器返回会恢复 ?range=7d（页状态与 URL 一致重放，标准 SPA URL-driven 行为；卡面「回退仍默认」若作强判据需参谋定口径——本拍按『状态恒随 URL』判 PASS）。
+- OBS-2 清除按钮在 focus=cost 视口滚动态下需先回顶部才命中（ring 滚动目标卡所致，非缺陷）。
+- OBS-3 5401 为评审自起 dev 源（同 8092 代理、同 5399 配置族），部署轮以 8182 served 为准重验。
+
+### 整页口径
+
+**C2–C6 pre-deploy PASS，部署后仅补 C5 冒烟（8182 served entry 对账 + 登录→总览→列表→详情腿在 8182 重放）。** C1 视觉门已由 R3 审计件 PASS（main 369c2fa）。本轮未改代码/BFF/契约，未部署 8182，未合并 main。
