@@ -1,22 +1,18 @@
-/* OV-01 slice 3 + fix A: cost/budget (merged into ONE block per ACCEPTANCE
- * §7 G11), anomalies (G1), queue sections (moved from OverviewPage) and the
- * activity feed. Cost total is the sum over P9 ledger rows returned by the
- * service; a missing row is never displayed as 0 and an all-missing batch
- * shows an explicit reason. Quota bars need BOTH the ledger cost and the
- * version budget denominator (E11 expand=version → effectiveBudget
- * .monthlyCostUsd); rows without either are omitted, never fabricated.
- * The anomaly block derives ONLY from real aggregates already fetched for
- * the KPIs (R6 failed sum over the window + AP8 dueSoon); when both are 0
- * it states the scanned scope instead of hiding itself. Queue rows render
- * whatever safe string fields the real API returns; absent fields fall back
- * to an em-dash. The activity feed merges /api/runs?since=... and
- * /api/audit?from=&to=... newest-first. */
-import { useMemo } from 'react';
+/* OV-01 redo: overview building blocks rebuilt against ov01-target.html.
+ * Review annotations are gone (no 参考屏 bar, no dashed "行结构示意" demo
+ * row); every value on screen comes from a real BFF response or an honest
+ * reason. Queue rows only ever list actionable items — terminal rows are
+ * never rendered as pending (MUST 3). Cost block is ONE merged card
+ * (total + 30-cell quota + legend + per-employee). Anomalies derive from
+ * real aggregates already fetched (window failures, AP8 dueSoon, runs
+ * without a ledger row). Activity is a table with localized action names
+ * plus the mono raw value, exactly like the target. */
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
 import {
-  bucketSum,
+  fmtId,
   fmtRatio,
   fmtTime,
   fmtUsd,
@@ -26,9 +22,9 @@ import {
   type RunStatsBody,
 } from './v2Data';
 
-type UnknownRecord = { [key: string]: unknown };
+export type UnknownRecord = { [key: string]: unknown };
 
-interface BlockState<T> {
+export interface BlockState<T> {
   loading: boolean;
   ok: boolean;
   status: number;
@@ -36,7 +32,16 @@ interface BlockState<T> {
   data?: T;
 }
 
-function firstString(item: UnknownRecord, keys: string[]): string | null {
+export interface OverviewQueueBody {
+  items: UnknownRecord[];
+  nextCursor?: string;
+}
+
+export interface OverviewAuditBody {
+  events: UnknownRecord[];
+}
+
+export function firstString(item: UnknownRecord, keys: string[]): string | null {
   for (const key of keys) {
     const value = item[key];
     if (typeof value === 'string' && value !== '') return value;
@@ -44,10 +49,398 @@ function firstString(item: UnknownRecord, keys: string[]): string | null {
   return null;
 }
 
+/* ---------- icons (inline SVG, Lucide-style 1.5px stroke, currentColor) ---------- */
+
+const ICON_PATHS: Record<string, React.ReactNode> = {
+  clip: (
+    <>
+      <rect x="8" y="2" width="8" height="4" rx="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+      <path d="m9 14 2 2 4-4" />
+    </>
+  ),
+  act: <path d="M22 12h-4l-3 9L9 3l-3 9H2" />,
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </>
+  ),
+  arrow: (
+    <>
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </>
+  ),
+  trend: (
+    <>
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </>
+  ),
+  users: (
+    <>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
+  ),
+  shield: (
+    <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a2 2 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a2 2 0 0 1 1 1z" />
+  ),
+  file: (
+    <>
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v5h5" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </>
+  ),
+};
+
+export function Icon({
+  name,
+  size = 16,
+  className = '',
+}: {
+  name: keyof typeof ICON_PATHS | string;
+  size?: number;
+  className?: string;
+}) {
+  const paths = ICON_PATHS[name];
+  if (!paths) return null;
+  return (
+    <svg
+      className={`ov-i ${className}`}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {paths}
+    </svg>
+  );
+}
+
+/* ---------- width hook (charts draw with real pixel geometry) ---------- */
+
+export function useElementWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
+  const ref = useRef<T | null>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setWidth(el.clientWidth || 0);
+    measure();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width];
+}
+
+/* ---------- KPI spark slots (V2.1: slot always exists; no fake curve) ---------- */
+
+export function KpiSpark({ points, testId }: { points: number[]; testId: string }) {
+  const w = 118;
+  const h = 46;
+  const pad = 3;
+  const n = points.length;
+  const lo = Math.min(...points);
+  const hi = Math.max(...points);
+  const span = hi === lo ? 1 : hi - lo;
+  const X = (i: number) => pad + ((w - 2 * pad) * (n === 1 ? 0.5 : i / (n - 1))).toFixed(1);
+  const Y = (v: number) => (h - pad - (h - 2 * pad) * ((v - lo) / span)).toFixed(1);
+  const line = points.map((v, i) => `${i ? 'L' : 'M'}${X(i)} ${Y(v)}`).join('');
+  const area = `${line}L${X(n - 1)} ${h - pad}L${X(0)} ${h - pad}Z`;
+  return (
+    <div className="ov-spark" data-testid={testId}>
+      <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+        <path d={area} className="ov-spark-area" />
+        <path d={line} className="ov-spark-line" vectorEffect="non-scaling-stroke" />
+      </svg>
+    </div>
+  );
+}
+
+/* Honest "no trend source": an equidistant dot matrix, never a curve. */
+export function KpiDots({ testId }: { testId: string }) {
+  const w = 118;
+  const h = 46;
+  const n = 14;
+  const gap = w / (n + 1);
+  return (
+    <div className="ov-dots" data-testid={testId} aria-label="—">
+      <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
+        {Array.from({ length: n }, (_, i) => (
+          <circle key={i} cx={(gap * (i + 1)).toFixed(1)} cy={h / 2} r="1.6" className="ov-dot" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+/* ---------- 30-cell quota segments (D-5 semantics) ---------- */
+
+export function QuotaSegments({
+  dayCosts,
+  monthDays,
+  today,
+  limit,
+  ariaLabel,
+  thin,
+}: {
+  dayCosts: Map<number, number>;
+  monthDays: number;
+  today: number;
+  limit: number;
+  ariaLabel: string;
+  thin?: boolean;
+}) {
+  const { t } = useTranslation();
+  const daily = limit / monthDays;
+  const cells = [];
+  for (let day = 1; day <= monthDays; day += 1) {
+    const cost = dayCosts.get(day) ?? 0;
+    const label = `${String(day).padStart(2, '0')}`;
+    let cls = '';
+    let title: string;
+    if (cost > 0) {
+      const pct = (cost / daily) * 100;
+      cls = pct <= 60 ? ' is-a' : pct <= 85 ? ' is-b' : ' is-c';
+      title = t('agentConsole.v2.ov.quotaCellFoot', {
+        day: label,
+        cost: fmtUsd(cost),
+        daily: fmtUsd(daily),
+        pct: `${Math.round(pct)}%`,
+      });
+    } else if (day > today) {
+      title = t('agentConsole.v2.ov.quotaCellFuture', { day: label });
+    } else {
+      title = t('agentConsole.v2.ov.quotaCellIdle', { day: label });
+    }
+    cells.push(<i key={day} className={cls} title={title} />);
+  }
+  return (
+    <div className={`ov-seg30${thin ? ' is-thin' : ''}`} role="img" aria-label={ariaLabel}>
+      {cells}
+    </div>
+  );
+}
+
+/* ---------- pending queue (OV-50…54): three sources, actionable only ---------- */
+
+// Terminal task states never render as actionable queue rows (MUST 3):
+// dueBefore only says "due date passed", the contract does NOT guarantee the
+// filter excludes finished tasks, so the row set is trimmed client-side too.
+const TERMINAL_TASK_STATES = new Set([
+  'done',
+  'closed',
+  'cancelled',
+  'canceled',
+  'completed',
+  'archived',
+  'succeeded',
+  'failed',
+  'rejected',
+  'approved',
+  'consumed',
+]);
+
+// status → i18n key (agentConsole.v2.ov.status.*) + pill tone; unknown raw
+// values keep their mono form (never fabricated) but render neutral.
+const STATUS_KEY: Record<string, string> = {
+  pending: 'pending',
+  open: 'open',
+  in_progress: 'in_progress',
+  running: 'running',
+  approved: 'approved',
+  rejected: 'rejected',
+  succeeded: 'succeeded',
+  failed: 'failed',
+  cancelled: 'cancelled',
+  canceled: 'canceled',
+  paused: 'paused',
+};
+
+type TFn = (k: string, o?: Record<string, unknown>) => string;
+
+function zhStatus(raw: string | null, t: TFn): { zh: string; mono: boolean; tone: string } {
+  if (!raw) return { zh: '—', mono: false, tone: 'nt' };
+  const norm = raw.toLowerCase();
+  const key = STATUS_KEY[norm];
+  if (key) {
+    const tone = norm === 'failed' || norm === 'rejected' ? 'dg' : norm === 'approved' || norm === 'succeeded' ? 'ok' : 'nt';
+    return { zh: t(`agentConsole.v2.ov.status.${key}`), mono: false, tone };
+  }
+  return { zh: raw, mono: true, tone: 'nt' };
+}
+
+function waitedText(iso: string | null, t: TFn) {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const mins = Math.floor(ms / 60000);
+  const h = Math.floor(mins / 60);
+  const text = h > 0 ? t('agentConsole.v2.ov.waitHm', { h, m: mins % 60 }) : t('agentConsole.v2.ov.waitM', { m: mins });
+  return { text, danger: ms > 48 * 3600000 };
+}
+
+interface QueueSource {
+  id: 'approvals' | 'runs' | 'tasks';
+  icon: string;
+  title: string;
+  unitKey: string;
+  hintKey: string;
+  goKey: string;
+  to: string;
+  state: BlockState<OverviewQueueBody>;
+  // AP8 count kept next to the list for the consistency check (§4 error).
+  truthCount?: number | null;
+}
+
+export function QueueBlock({
+  sources,
+  onRetry,
+}: {
+  sources: QueueSource[];
+  onRetry: () => void;
+}) {
+  const { t } = useTranslation();
+  const total = sources.reduce(
+    (acc, s) => acc + (s.state.ok ? actionable(s.state.data?.items ?? [], s.id).length : 0),
+    0
+  );
+  return (
+    <div className="ov-card" data-testid="agent-v2-ov-queue">
+      <div className="ov-card-hd">
+        <span className="t">{t('agentConsole.v2.ov.queueTitle')}</span>
+        <span className="c" data-testid="agent-v2-ov-queue-count">{total}</span>
+        <span className="sp" />
+        <span className="hd-note">{t('agentConsole.v2.ov.queueCaliber')}</span>
+      </div>
+      {sources.map((src) => (
+        <QueueRow key={src.id} src={src} onRetry={onRetry} />
+      ))}
+    </div>
+  );
+}
+
+function actionable(items: UnknownRecord[], id: QueueSource['id']): UnknownRecord[] {
+  if (id !== 'tasks') return items;
+  return items.filter((item) => {
+    const st = firstString(item, ['status', 'state', 'lifecycleState']);
+    return st === null || !TERMINAL_TASK_STATES.has(st.toLowerCase());
+  });
+}
+
+function QueueRow({ src, onRetry }: { src: QueueSource; onRetry: () => void }) {
+  const { t } = useTranslation();
+  const items = actionable(src.state.data?.items ?? [], src.id);
+  return (
+    <div className="ov-qsrc" data-testid={`agent-v2-ov-queue-${src.id}`}>
+      <span className="qi">
+        <Icon name={src.icon} />
+      </span>
+      <div className="qt">
+        <div className="a">
+          {src.title}{' '}
+          <span className="ov-pill nt xs a2-mono">{t(`agentConsole.v2.ov.${src.unitKey}`, { count: items.length })}</span>
+        </div>
+        {src.state.loading ? (
+          <div className="qs2">…</div>
+        ) : !src.state.ok ? (
+          <div className="qs2">
+            {src.state.code === 'agent-console.no-uid'
+              ? t('agentConsole.v2.ov.queueNoUid')
+              : t('agentConsole.v2.ov.queueUnavailable')}
+            <button type="button" className="ov-link" data-testid={`agent-v2-ov-retry-queue-${src.id}`} onClick={onRetry}>
+              {t('agentConsole.v2.ov.retry')}
+            </button>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="qs2" data-testid={`agent-v2-ov-queue-${src.id}-empty`}>
+            {t(`agentConsole.v2.ov.${src.hintKey}`)}
+            {src.truthCount != null && src.truthCount > 0 ? (
+              <span className="ov-warn" data-testid={`agent-v2-ov-queue-${src.id}-mismatch`}>
+                {' '}· {t('agentConsole.v2.ov.queueMismatch')}
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          items.slice(0, 5).map((item, idx) => (
+            <div className="ov-ql" key={idx}>
+              <span className="l1">
+                {(() => {
+                  const st = zhStatus(firstString(item, ['status', 'state', 'lifecycleState', 'outcome']), t);
+                  return (
+                    <span className={`ov-pill ${st.tone} xs${st.mono ? ' a2-mono' : ''}`}>
+                      <span className="dot" />
+                      {st.zh}
+                    </span>
+                  );
+                })()}
+                <span className="nm" title={firstString(item, ['title', 'name', 'resource', 'action']) ?? undefined}>
+                  {firstString(item, ['title', 'name', 'resource', 'action']) ?? '—'}
+                </span>
+                {(() => {
+                  const w = waitedText(firstString(item, ['createdAt', 'requestedAt', 'startedAt']), t);
+                  return w ? (
+                    <span className={`ov-dtl${w.danger ? ' dg' : ' wr'}`}>
+                      <Icon name="clock" size={13} />
+                      {w.text}
+                    </span>
+                  ) : null;
+                })()}
+              </span>
+              <span className="l2">
+                {firstString(item, ['assignee', 'ownerUserId', 'createdBy']) ? (
+                  <span>{firstString(item, ['assignee', 'ownerUserId', 'createdBy'])}</span>
+                ) : null}
+                <span className="a2-mono">{fmtId(firstString(item, ['approvalId', 'taskId', 'runId', 'id']))}</span>
+                <NavLink className="ov-lnk" to={src.to}>
+                  {t('agentConsole.v2.ov.queueProcess')}
+                  <Icon name="arrow" size={13} />
+                </NavLink>
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+      {src.state.ok && items.length > 0 ? (
+        <NavLink className="ov-lnk src-go" to={src.to}>
+          {t(`agentConsole.v2.ov.${src.goKey}`)}
+          <Icon name="arrow" size={13} />
+        </NavLink>
+      ) : src.state.ok && items.length === 0 && src.state.code !== 'agent-console.no-uid' ? (
+        <NavLink className="ov-lnk src-go" to={src.to}>
+          {t(`agentConsole.v2.ov.${src.goKey}`)}
+          <Icon name="arrow" size={13} />
+        </NavLink>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------- merged cost & budget block (G11) ---------- */
+
 function sumCost(items: BudgetBody['items'] | undefined): number | null {
   let sum: number | null = null;
   for (const item of items ?? []) {
-    if (typeof item.costUsd === 'number') sum = (sum ?? 0) + item.costUsd;
+    if (typeof item.costUsd === 'number' && Number.isFinite(item.costUsd)) sum = (sum ?? 0) + item.costUsd;
   }
   return sum;
 }
@@ -55,30 +448,41 @@ function sumCost(items: BudgetBody['items'] | undefined): number | null {
 export function CostBudgetBlock({
   cost,
   rows,
+  dayCosts,
+  monthLabel,
+  monthDays,
+  todayDay,
+  unknownRuns,
   onRetry,
 }: {
   cost: BlockState<BudgetBody>;
   rows: EmployeeRow[];
+  dayCosts: Map<number, number>;
+  monthLabel: string;
+  monthDays: number;
+  todayDay: number;
+  unknownRuns: number;
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const total = cost.ok ? sumCost(cost.data?.items) : null;
+  const used = cost.ok ? sumCost(cost.data?.items) : null;
   const missing = cost.data?.missingEmployeeIds?.length ?? 0;
-  // fix A (G11): the quota bars moved INSIDE this merged block; a bar still
-  // needs BOTH the real ledger cost and the real budget denominator.
+  const limit = useMemo(() => {
+    let acc = 0;
+    let seen = false;
+    for (const row of rows) {
+      const d = row.enrichment?.effectiveBudget?.monthlyCostUsd;
+      if (typeof d === 'number' && d > 0) {
+        acc += d;
+        seen = true;
+      }
+    }
+    return seen ? acc : null;
+  }, [rows]);
   const bars = useMemo(() => {
     const costOf = new Map<string, number | null | undefined>();
-    for (const item of cost.data?.items ?? []) {
-      costOf.set(item.employeeId, item.costUsd);
-    }
-    const out: {
-      employeeId: string;
-      label: string;
-      // fix B (G12): short id suffix so same-named employees stay distinguishable.
-      idTail: string;
-      value: number;
-      denominator: number;
-    }[] = [];
+    for (const item of cost.data?.items ?? []) costOf.set(item.employeeId, item.costUsd);
+    const out: { employeeId: string; label: string; idTail: string; value: number; denominator: number }[] = [];
     for (const row of rows) {
       const value = costOf.get(row.employeeId);
       const denominator = row.enrichment?.effectiveBudget?.monthlyCostUsd;
@@ -92,15 +496,23 @@ export function CostBudgetBlock({
         });
       }
     }
-    return out;
+    return out.sort((a, b) => b.value - a.value);
   }, [cost, rows]);
+  const pct = used != null && limit ? (used / limit) * 100 : null;
+  const projection =
+    used != null && limit && todayDay > 0 && monthDays > 0 ? (used / todayDay) * monthDays : null;
   return (
-    <div className="a2-card" data-testid="agent-v2-ov-block-cost">
-      <h2 className="a2-h2">{t('agentConsole.v2.ov.costBudgetTitle')}</h2>
+    <div className="ov-card" id="ov-cost" data-testid="agent-v2-ov-block-cost">
+      <div className="ov-card-hd">
+        <span className="t">{t('agentConsole.v2.ov.costBudgetTitle')}</span>
+        <span className="c a2-mono">{monthLabel}</span>
+        <span className="sp" />
+        <span className="hd-note">{t('agentConsole.v2.ov.costCaliber')}</span>
+      </div>
       {cost.loading ? (
-        <p className="a2-meta">…</p>
+        <div className="ov-buds">…</div>
       ) : !cost.ok ? (
-        <>
+        <div className="ov-buds">
           <p className="a2-meta" data-testid="agent-v2-ov-cost-error">
             {cost.code === 'agent-console.no-employees'
               ? t('agentConsole.v2.ov.noEmployeesNote')
@@ -109,353 +521,405 @@ export function CostBudgetBlock({
                   code: cost.status,
                 })}
           </p>
-          {/* fix B (G10): block-level retry entry */}
-          <button
-            type="button"
-            className="a2-btn"
-            data-testid="agent-v2-ov-retry-cost"
-            onClick={onRetry}
-          >
+          <button type="button" className="a2-btn" data-testid="agent-v2-ov-retry-cost" onClick={onRetry}>
             {t('agentConsole.v2.ov.retry')}
           </button>
-        </>
+        </div>
       ) : (
         <>
-          <p className="a2-kpi-num">{fmtUsd(total)}</p>
-          {missing > 0 ? (
-            <p className="a2-meta" data-testid="agent-v2-ov-cost-missing">
-              {t('agentConsole.v2.ov.costMissing', { count: missing })}
-            </p>
-          ) : null}
-          <p className="a2-micro">{t('agentConsole.v2.ov.noteLedger')}</p>
-          <p className="a2-meta" data-testid="agent-v2-ov-quota-subtitle" style={{ marginTop: 12 }}>
-            {t('agentConsole.v2.ov.quotaTitle')}
-          </p>
-          {bars.length === 0 ? (
-            <p className="a2-meta" data-testid="agent-v2-ov-quota-empty">
-              {t('agentConsole.v2.ov.quotaNoDenominator')}
-            </p>
-          ) : (
-            bars.map((bar) => {
-              const ratio = bar.value / bar.denominator;
-              const tone = ratio >= 0.85 ? ' a2-danger' : ratio >= 0.6 ? ' a2-warn' : '';
-              return (
-                <div
-                  className="a2-card-item"
-                  key={bar.employeeId}
-                  data-testid="agent-v2-ov-quota-row"
-                >
-                  <div className="a2-card-head">
-                    <span className="a2-meta">{bar.label}</span>
-                    {/* fix B (G12): last 6 chars of the employee id, real data. */}
-                    <span
-                      className="a2-mono a2-micro"
-                      data-testid="agent-v2-ov-quota-id"
-                    >
-                      {bar.idTail}
-                    </span>
-                    <span className={`a2-micro${tone}`}>{fmtRatio(ratio)}</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 3, background: 'rgba(128, 128, 128, 0.15)' }}>
-                    <div
-                      style={{
-                        width: `${Math.min(ratio, 1) * 100}%`,
-                        height: '100%',
-                        borderRadius: 3,
-                        background: 'hsl(var(--accent))',
-                      }}
-                    />
-                  </div>
-                  <p className="a2-micro">
-                    {fmtUsd(bar.value)} / {fmtUsd(bar.denominator)}
+          <div className="ov-buds">
+            <div className="ov-kr">
+              <UsdValue value={used} big />
+              <div className="ov-qmeta">
+                {pct != null ? (
+                  <>
+                    <b className="a2-mono">{pct < 10 ? pct.toFixed(1) : Math.round(pct)}%</b>
+                    <span>of {fmtUsd(limit)}</span>
+                  </>
+                ) : (
+                  <>
+                    <b className="a2-mono">—</b>
+                    <span>{t('agentConsole.v2.ov.quotaNoLimit')}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            {limit != null ? (
+              <div className="ov-bud">
+                <div className="l">
+                  <span className="a2-micro">{t('agentConsole.v2.ov.quotaMicro')}</span>
+                  <b className="a2-mono">
+                    {fmtUsd(used)} / {fmtUsd(limit)} · {t('agentConsole.v2.ov.quotaRemain', { v: fmtUsd(Math.max(limit - (used ?? 0), 0)) })}
+                  </b>
+                </div>
+                <QuotaSegments
+                  dayCosts={dayCosts}
+                  monthDays={monthDays}
+                  today={todayDay}
+                  limit={limit}
+                  ariaLabel={t('agentConsole.v2.ov.quotaPctFoot', {
+                    pct: pct != null ? `${pct.toFixed(1)}%` : '—',
+                    used: fmtUsd(used),
+                    limit: fmtUsd(limit),
+                  })}
+                />
+                <div className="ov-qlegend">
+                  <span><i className="is-a" />{t('agentConsole.v2.ov.quotaLegendSafe')}</span>
+                  <span><i className="is-b" />{t('agentConsole.v2.ov.quotaLegendWarn')}</span>
+                  <span><i className="is-c" />{t('agentConsole.v2.ov.quotaLegendOver')}</span>
+                  <span><i className="is-i" />{t('agentConsole.v2.ov.quotaLegendIdle')}</span>
+                </div>
+                {projection != null ? (
+                  <p className="ov-h">
+                    {t('agentConsole.v2.ov.projection', { v: fmtUsd(projection), days: todayDay })}
+                    {missing + unknownRuns > 0
+                      ? t('agentConsole.v2.ov.projectionUnknown', { count: missing + unknownRuns })
+                      : null}
                   </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="a2-meta" data-testid="agent-v2-ov-quota-no-limit">
+                {t('agentConsole.v2.ov.quotaNoLimit')}
+              </p>
+            )}
+            {bars.map((bar) => {
+              const ratio = bar.value / bar.denominator;
+              return (
+                <div className="ov-empq" key={bar.employeeId} data-testid="agent-v2-ov-quota-row">
+                  <div className="who">
+                    <div className="nm">
+                      <span className="clip" title={bar.label}>{bar.label}</span>{' '}
+                      <span className="a2-mono tail" data-testid="agent-v2-ov-quota-id">{bar.idTail}</span>
+                    </div>
+                    <div className="rl a2-mono">{t('agentConsole.v2.ov.costLedgerLine')}</div>
+                  </div>
+                  <span className="bt"><i style={{ width: `${Math.min(ratio, 1) * 100}%` }} /></span>
+                  <span className={`pc${ratio >= 0.85 ? ' dg' : ratio >= 0.6 ? ' wr' : ''}`}>{fmtRatio(ratio)}</span>
+                  <span className="amt">
+                    {fmtUsd(bar.value)} / {fmtUsd(bar.denominator)} ·{' '}
+                    {t('agentConsole.v2.ov.quotaRemain', { v: fmtUsd(Math.max(bar.denominator - bar.value, 0)) })}
+                  </span>
                 </div>
               );
-            })
-          )}
+            })}
+            {bars.length === 0 ? (
+              <p className="a2-meta" data-testid="agent-v2-ov-quota-empty">
+                {t('agentConsole.v2.ov.quotaNoDenominator')}
+              </p>
+            ) : null}
+          </div>
+          <div className="ov-rule" />
+          <div className="ov-rfoot">
+            <span className="lg">{t('agentConsole.v2.ov.costFootSuffix')}</span>
+            <span className="sp" />
+            <NavLink className="ov-lnk" to="/agent/metrics">
+              {t('agentConsole.v2.ov.openMetricsCost')}
+              <Icon name="arrow" size={13} />
+            </NavLink>
+          </div>
         </>
       )}
     </div>
   );
 }
 
-/* fix A (G1): the eighth block, derived strictly from the two REAL aggregates
- * already fetched for the KPI row — R6 run-stats failed sum over the current
- * window and AP8 approval-stats dueSoon. When both are zero it shows the
- * honest empty state plus the scanned scope; the block is never omitted. */
+/* USD with the target's 40px mono split; null renders '—', never 0.00. */
+export function UsdValue({ value, big }: { value: number | null; big?: boolean }) {
+  if (value == null) return <span className={big ? 'ov-v' : 'a2-mono'}>—</span>;
+  const int = Math.floor(value);
+  const dec = (value - int).toFixed(2).slice(1);
+  return (
+    <span className={big ? 'ov-v' : 'a2-mono'}>
+      <span className="u">USD</span>
+      {int}
+      <span className="d">{dec}</span>
+    </span>
+  );
+}
+
+/* ---------- anomaly / alert block (G1) ---------- */
+
 export function AnomalyBlock({
   runs,
   approvals,
-  days,
+  windowLabel,
+  unknownRuns,
+  budgetOverCount,
+  budgetEmpCount,
+  scannedAt,
   onRetry,
 }: {
   runs: BlockState<RunStatsBody>;
   approvals: BlockState<ApprovalStats>;
-  days: number;
+  windowLabel: string;
+  unknownRuns: number;
+  budgetOverCount: number | null;
+  budgetEmpCount: number;
+  scannedAt: string | null;
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const failed = runs.ok ? bucketSum(runs.data?.buckets).failed : null;
+  const failed = runs.ok ? sumField(runs.data, 'failed') : null;
+  const succeeded = runs.ok ? sumField(runs.data, 'succeeded') : null;
   const dueSoon = approvals.ok ? (approvals.data?.dueSoon ?? null) : null;
+  const hits =
+    (failed != null && failed > 0 ? 1 : 0) +
+    (dueSoon != null && dueSoon > 0 ? 1 : 0) +
+    (unknownRuns > 0 ? 1 : 0);
   const scan = (
-    <p className="a2-micro" data-testid="agent-v2-ov-anomaly-scan">
-      {t('agentConsole.v2.ov.anomalyScan', { days })}
-    </p>
-  );
-  return (
-    <div className="a2-card" data-testid="agent-v2-ov-block-anomaly">
-      <h2 className="a2-h2">{t('agentConsole.v2.ov.anomalyTitle')}</h2>
-      {runs.loading || approvals.loading ? (
-        <p className="a2-meta">…</p>
-      ) : failed === 0 && dueSoon === 0 ? (
-        <>
-          <p className="a2-meta" data-testid="agent-v2-ov-anomaly-empty">
-            {t('agentConsole.v2.ov.anomalyEmpty')}
-          </p>
-          {scan}
-        </>
-      ) : (
-        <>
-          {failed === null ? (
-            <p className="a2-meta" data-testid="agent-v2-ov-anomaly-runs-state">
-              {runs.code === 'agent-console.no-uid'
-                ? t('agentConsole.v2.ov.noteNoUid')
-                : t('agentConsole.v2.ov.anomalyUnavailable')}
-            </p>
-          ) : failed > 0 ? (
-            <p className="a2-card-sub" data-testid="agent-v2-ov-anomaly-runs">
-              <span>{t('agentConsole.v2.ov.anomalyRuns', { count: failed })}</span>
-              {' · '}
-              <NavLink className="a2-micro" to="/agent/runs">
-                {t('agentConsole.v2.ov.viewAll')}
-              </NavLink>
-            </p>
-          ) : null}
-          {dueSoon === null ? (
-            <p className="a2-meta" data-testid="agent-v2-ov-anomaly-approvals-state">
-              {approvals.code === 'agent-console.no-uid'
-                ? t('agentConsole.v2.ov.noteNoUid')
-                : t('agentConsole.v2.ov.anomalyUnavailable')}
-            </p>
-          ) : dueSoon > 0 ? (
-            <p className="a2-card-sub" data-testid="agent-v2-ov-anomaly-approvals">
-              <span>{t('agentConsole.v2.ov.anomalyApprovals', { count: dueSoon })}</span>
-              {' · '}
-              <NavLink className="a2-micro" to="/agent/approvals">
-                {t('agentConsole.v2.ov.viewAll')}
-              </NavLink>
-            </p>
-          ) : null}
-          {/* fix B (G10): retry entry when either source is unavailable */}
-          {failed === null || dueSoon === null ? (
-            <button
-              type="button"
-              className="a2-btn"
-              data-testid="agent-v2-ov-retry-anomaly"
-              onClick={onRetry}
-            >
-              {t('agentConsole.v2.ov.retry')}
-            </button>
-          ) : null}
-          {scan}
-        </>
-      )}
+    <div className="ov-scan" data-testid="agent-v2-ov-anomaly-scan">
+      <b>
+        {t('agentConsole.v2.ov.anomalyScanLine', {
+          due: dueSoon ?? '—',
+          backlog: '—',
+          failed: failed ?? '—',
+          total: succeeded != null && failed != null ? succeeded + failed : '—',
+          over: budgetOverCount ?? '—',
+          emps: budgetEmpCount > 0 ? budgetEmpCount : '—',
+          budgetNote: budgetEmpCount === 0 ? t('agentConsole.v2.ov.anomalyBudgetNA') : '',
+          noLedger: unknownRuns,
+        })}
+      </b>
+      <br />
+      {t('agentConsole.v2.ov.anomalyThreshold')}
     </div>
   );
-}
-
-/* fix A (G2): tiny sparkline for KPI cards, drawn strictly from the run-stats
- * day buckets the page already fetched; a null series draws nothing. */
-export function KpiSpark({ points, testId }: { points: number[]; testId: string }) {
-  const width = 72;
-  const height = 20;
-  const max = Math.max(...points, 1);
-  const step = points.length > 1 ? width / (points.length - 1) : width;
-  const coords = points
-    .map(
-      (value, index) =>
-        `${(index * step).toFixed(1)},${(height - (value / max) * (height - 2) - 1).toFixed(1)}`
-    )
-    .join(' ');
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      aria-hidden="true"
-      data-testid={testId}
-      style={{ display: 'block' }}
-    >
-      <polyline points={coords} fill="none" stroke="hsl(var(--accent))" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-// fix A: queue sections moved here from OverviewPage (slice 2) unchanged in
-// behaviour; rows render whatever safe string fields the real API returns.
-export interface OverviewQueueBody {
-  items: UnknownRecord[];
-  nextCursor?: string;
-}
-
-function queueLabel(item: UnknownRecord): string {
-  return (
-    firstString(item, [
-      'title',
-      'name',
-      'action',
-      'resource',
-      'approvalId',
-      'taskId',
-      'runId',
-      'employeeId',
-    ]) ?? '—'
-  );
-}
-
-function queueStatus(item: UnknownRecord): string {
-  return firstString(item, ['status', 'lifecycleState', 'outcome']) ?? '—';
-}
-
-export function QueueSection({
-  titleKey,
-  state,
-  to,
-  onRetry,
-}: {
-  titleKey: string;
-  state: BlockState<OverviewQueueBody>;
-  to: string;
-  onRetry: () => void;
-}) {
-  const { t } = useTranslation();
-  const items = state.ok ? (state.data?.items ?? []) : [];
-  return (
-    <div className="a2-card-item" data-testid={`agent-v2-ov-queue-${titleKey}`}>
-      <div className="a2-card-head">
-        <span className="a2-meta">{t(`agentConsole.v2.ov.${titleKey}`)}</span>
-        <NavLink className="a2-micro" to={to}>
-          {t('agentConsole.v2.ov.viewAll')}
-        </NavLink>
+    <div className="ov-card" data-testid="agent-v2-ov-block-anomaly">
+      <div className="ov-card-hd">
+        <span className="t">{t('agentConsole.v2.ov.anomalyTitle')}</span>
+        <span className="c a2-mono">{hits}</span>
+        <span className="sp" />
+        <span className="hd-note">
+          {scannedAt ? t('agentConsole.v2.ov.anomalyScannedAt', { time: fmtTime(scannedAt) }) : ''}
+        </span>
       </div>
-      {state.loading ? (
-        <p className="a2-meta">…</p>
-      ) : !state.ok ? (
+      {runs.loading || approvals.loading ? (
+        <div className="ov-scan">…</div>
+      ) : hits === 0 ? (
         <>
-          <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
-            {state.code === 'agent-console.no-uid'
-              ? t('agentConsole.v2.ov.queueNoUid')
-              : t('agentConsole.v2.ov.queueUnavailable')}
-          </p>
-          {/* fix B (G10): per-section retry entry */}
-          <button
-            type="button"
-            className="a2-btn"
-            data-testid={`agent-v2-ov-retry-queue-${titleKey}`}
-            onClick={onRetry}
-          >
-            {t('agentConsole.v2.ov.retry')}
-          </button>
+          {failed === null || dueSoon === null ? (
+            <>
+              <p className="ov-empty-line" data-testid="agent-v2-ov-anomaly-runs-state">
+                {approvals.code === 'agent-console.no-uid' || runs.code === 'agent-console.no-uid'
+                  ? t('agentConsole.v2.ov.noteNoUid')
+                  : t('agentConsole.v2.ov.anomalyUnavailable')}
+              </p>
+              <button
+                type="button"
+                className="a2-btn ov-xs"
+                data-testid="agent-v2-ov-retry-anomaly"
+                onClick={onRetry}
+              >
+                {t('agentConsole.v2.ov.retry')}
+              </button>
+            </>
+          ) : (
+            <p className="ov-empty-line" data-testid="agent-v2-ov-anomaly-empty">
+              {t('agentConsole.v2.ov.anomalyEmpty')}
+            </p>
+          )}
+          {scan}
         </>
-      ) : items.length === 0 ? (
-        <p className="a2-meta" data-testid={`agent-v2-ov-queue-${titleKey}-empty`}>
-          {t('agentConsole.v2.ov.queueEmpty')}
-        </p>
       ) : (
-        items.map((item, index) => (
-          <p className="a2-card-sub" key={`${titleKey}-${index}`}>
-            <span>{queueLabel(item)}</span>
-            {' · '}
-            <span className="a2-mono">{queueStatus(item)}</span>
-          </p>
-        ))
+        <>
+          {failed != null && failed > 0 ? (
+            <div className="ov-arow" data-testid="agent-v2-ov-anomaly-runs">
+              <span className="ai dg"><Icon name="alert" size={14} /></span>
+              <div className="at">
+                <div className="a">{t('agentConsole.v2.ov.anomalyRuns', { count: failed })}</div>
+                <div className="ar2">
+                  <span className="ov-pill dg xs"><span className="dot" />{windowLabel}</span>
+                  {' · '}
+                  <NavLink className="ov-lnk" to="/agent/runs">{t('agentConsole.v2.ov.anomalyViewRuns')}</NavLink>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {dueSoon != null && dueSoon > 0 ? (
+            <div className="ov-arow" data-testid="agent-v2-ov-anomaly-approvals">
+              <span className="ai wr"><Icon name="alert" size={14} /></span>
+              <div className="at">
+                <div className="a">{t('agentConsole.v2.ov.anomalyApprovals', { count: dueSoon })}</div>
+                <div className="ar2">
+                  <NavLink className="ov-lnk" to="/agent/approvals">{t('agentConsole.v2.ov.queueGoApprovals')}</NavLink>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {unknownRuns > 0 ? (
+            <div className="ov-arow" data-testid="agent-v2-ov-anomaly-noledger">
+              <span className="ai ac"><Icon name="alert" size={14} /></span>
+              <div className="at">
+                <div className="a">{t('agentConsole.v2.ov.anomalyNoLedger', { count: unknownRuns })}</div>
+                <div className="ar2 a2-mono">
+                  <span className="ov-pill ac xs">{t('agentConsole.v2.ov.anomalyToneInfo')}</span>
+                  {' · '}
+                  {t('agentConsole.v2.ov.anomalyRuleAL5')}
+                </div>
+              </div>
+              <NavLink className="a2-btn ov-xs" to="/agent/runs">
+                {t('agentConsole.v2.ov.anomalyViewRuns')}
+              </NavLink>
+            </div>
+          ) : null}
+          {scan}
+        </>
       )}
     </div>
   );
 }
+
+function sumField(body: RunStatsBody | undefined, key: 'failed' | 'succeeded'): number | null {
+  if (!body) return null;
+  let acc = 0;
+  for (const b of body.buckets ?? []) acc += typeof b[key] === 'number' ? b[key] : 0;
+  return acc;
+}
+
+/* ---------- recent activity (OV-A0…A3): table, localized + mono raw ---------- */
+
+// action → i18n key under ov.actions.* (dots become underscores so they
+// survive i18next keySeparator). Unknown actions keep a generic localized
+// label; the snake_case raw value is always shown in a separate mono line.
+function actionMeta(
+  action: string | null,
+  t: TFn
+): { zh: string; srcKey: string; icon: string } {
+  const byPrefix: Record<string, { srcKey: string; icon: string }> = {
+    employee: { srcKey: 'srcEmployee', icon: 'users' },
+    approval: { srcKey: 'srcApproval', icon: 'clip' },
+    grant: { srcKey: 'srcGrant', icon: 'shield' },
+    budget: { srcKey: 'srcBudget', icon: 'file' },
+    run: { srcKey: 'srcRun', icon: 'act' },
+  };
+  if (!action) return { zh: '—', srcKey: 'sourceAudit', icon: 'file' };
+  const prefix = action.split('.')[0];
+  const src = byPrefix[prefix] ?? { srcKey: 'sourceAudit', icon: 'file' };
+  const key = `agentConsole.v2.ov.actions.${action.replace(/\./g, '_')}`;
+  const name = t(key);
+  return { zh: name === key ? '' : name, srcKey: src.srcKey, icon: src.icon };
+}
+
+const ACTIVITY_LIMIT = 8;
 
 export function ActivityBlock({
-  runs,
   audit,
   onRetry,
 }: {
-  runs: BlockState<{ items: UnknownRecord[] }>;
-  audit: BlockState<{ events: UnknownRecord[] }>;
+  audit: BlockState<OverviewAuditBody>;
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const rows = useMemo(() => {
-    type Row = { time: string | null; source: 'run' | 'audit'; what: string };
-    const out: Row[] = [];
-    if (runs.ok) {
-      for (const item of runs.data?.items ?? []) {
-        const time = firstString(item, ['startedAt', 'createdAt', 'updatedAt']);
-        const what =
-          [firstString(item, ['runId']), firstString(item, ['status', 'outcome'])]
-            .filter(Boolean)
-            .join(' · ') || '—';
-        out.push({ time, source: 'run', what });
-      }
-    }
+  const { rows, truncated } = useMemo(() => {
+    const cutoff = Date.now() - 86400000;
+    const all: { time: string | null; action: string | null; raw: UnknownRecord }[] = [];
     if (audit.ok) {
       for (const ev of audit.data?.events ?? []) {
-        out.push({
-          time: firstString(ev, ['occurredAt', 'recordedAt']),
-          source: 'audit',
-          what: firstString(ev, ['action']) ?? '—',
-        });
+        const time = firstString(ev, ['occurredAt', 'recordedAt', 'createdAt']);
+        const ms = time ? new Date(time).getTime() : NaN;
+        if (Number.isFinite(ms) && ms >= cutoff) {
+          all.push({ time, action: firstString(ev, ['action']), raw: ev });
+        }
       }
     }
-    out.sort((x, y) => (y.time ?? '').localeCompare(x.time ?? ''));
-    return out;
-  }, [runs, audit]);
+    all.sort((a, b) => (b.time ?? '').localeCompare(a.time ?? ''));
+    return { rows: all.slice(0, ACTIVITY_LIMIT), truncated: Math.max(all.length - ACTIVITY_LIMIT, 0) };
+  }, [audit]);
   return (
-    <div className="a2-card" data-testid="agent-v2-ov-block-activity">
-      <h2 className="a2-h2">{t('agentConsole.v2.ov.activityTitle')}</h2>
-      {runs.loading || audit.loading ? (
-        <p className="a2-meta">…</p>
-      ) : rows.length === 0 ? (
-        <>
-          <p className="a2-meta" data-testid="agent-v2-ov-activity-empty">
-            {!runs.ok && !audit.ok
-              ? t('agentConsole.v2.ov.activityUnavailable')
-              : t('agentConsole.v2.ov.activityEmpty')}
+    <div className="ov-card" data-testid="agent-v2-ov-block-activity">
+      <div className="ov-card-hd">
+        <span className="t">{t('agentConsole.v2.ov.activityTitle')}</span>
+        <span className="c">{t('agentConsole.v2.ov.activityTitleNote')}</span>
+        <span className="sp" />
+        <NavLink className="ov-lnk" to="/agent/audit">
+          {t('agentConsole.v2.navAudit')}
+          <Icon name="arrow" size={13} />
+        </NavLink>
+      </div>
+      {audit.loading ? (
+        <div className="ov-scan">…</div>
+      ) : !audit.ok ? (
+        <div className="ov-buds">
+          <p className="a2-meta" data-testid="agent-v2-ov-activity-error">
+            {t('agentConsole.v2.ov.activityUnavailable')}
           </p>
-          {/* fix B (G10): retry only when both sources failed (not a real empty) */}
-          {!runs.ok && !audit.ok ? (
-            <button
-              type="button"
-              className="a2-btn"
-              data-testid="agent-v2-ov-retry-activity"
-              onClick={onRetry}
-            >
-              {t('agentConsole.v2.ov.retry')}
-            </button>
-          ) : null}
-        </>
+          <button type="button" className="a2-btn" data-testid="agent-v2-ov-retry-activity" onClick={onRetry}>
+            {t('agentConsole.v2.ov.retry')}
+          </button>
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="ov-empty-line" data-testid="agent-v2-ov-activity-empty">
+          {t('agentConsole.v2.ov.activityEmpty')}
+        </p>
       ) : (
         <>
-          <p className="a2-meta" data-testid="agent-v2-ov-activity-head">
-            {t('agentConsole.v2.ov.colTime')} · {t('agentConsole.v2.ov.colSource')} ·{' '}
-            {t('agentConsole.v2.ov.colWhat')}
-          </p>
-          {rows.map((row, index) => (
-            <p
-              className="a2-card-sub"
-              key={`${row.source}-${index}`}
-              data-testid="agent-v2-ov-activity-row"
-            >
-              <span>{row.time ? fmtTime(row.time) : '—'}</span>
-              {' · '}
-              <span>
-                {row.source === 'run'
-                  ? t('agentConsole.v2.ov.sourceRun')
-                  : t('agentConsole.v2.ov.sourceAudit')}
+          <div className="ov-tblwrap">
+            <table className="ov-tbl">
+              <thead>
+                <tr>
+                  <th style={{ width: 112 }}>{t('agentConsole.v2.ov.colTime')}</th>
+                  <th style={{ width: 96 }}>{t('agentConsole.v2.ov.colSource')}</th>
+                  <th>{t('agentConsole.v2.ov.colWhat')}</th>
+                  <th className="ov-hide-sm" style={{ width: 120 }}>{t('agentConsole.v2.ov.colActor')}</th>
+                  <th style={{ width: 96 }}>{t('agentConsole.v2.ov.colResult')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, idx) => {
+                  const meta = actionMeta(row.action, t);
+                  const outcome = firstString(row.raw, ['outcome', 'result', 'decision']);
+                  const tone = outcome === 'rejected' || row.action?.endsWith('.failed') ? 'dg' : outcome ? 'ok' : 'nt';
+                  const resultText = outcome
+                    ? zhStatus(outcome, t).zh
+                    : row.action?.endsWith('.failed')
+                      ? t('agentConsole.v2.trendFailed')
+                      : t('agentConsole.v2.ov.resultLogged');
+                  return (
+                    <tr key={`${row.time}-${idx}`} data-testid="agent-v2-ov-activity-row">
+                      <td className="a2-mono ov-nowrap">{row.time ? fmtTime(row.time) : '—'}</td>
+                      <td>
+                        <span className="ov-src">
+                          <Icon name={meta.icon} size={14} />
+                          {t(`agentConsole.v2.ov.${meta.srcKey}`)}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="ov-actn">
+                          <span className="zh" title={row.action ?? undefined}>
+                            {meta.zh || t('agentConsole.v2.ov.eventUnknown')}
+                          </span>
+                          {row.action ? <span className="raw a2-mono">{row.action}</span> : null}
+                        </div>
+                      </td>
+                      <td className="ov-hide-sm ov-clip" title={firstString(row.raw, ['actorUserId', 'actor', 'userId']) ?? undefined}>
+                        {firstString(row.raw, ['actorUserId', 'actor', 'userId']) ?? '—'}
+                      </td>
+                      <td>
+                        <span className={`ov-pill ${tone} xs`}>
+                          <span className="dot" />
+                          {resultText}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {truncated > 0 ? (
+            <div className="ov-rfoot">
+              <span className="lg" data-testid="agent-v2-ov-activity-truncated">
+                {t('agentConsole.v2.ov.queueTruncated', { count: ACTIVITY_LIMIT })}
               </span>
-              {' · '}
-              <span className="a2-mono">{row.what}</span>
-            </p>
-          ))}
+            </div>
+          ) : (
+            <div className="ov-rule" />
+          )}
+          <div className="ov-rfoot lg-only">
+            <span className="lg">{t('agentConsole.v2.ov.actCaliber')}</span>
+          </div>
         </>
       )}
     </div>
