@@ -141,12 +141,14 @@ export function Icon({
 
 /* ---------- width hook (charts draw with real pixel geometry) ---------- */
 
-export function useElementWidth<T extends HTMLElement>(): [React.RefObject<T | null>, number] {
-  const ref = useRef<T | null>(null);
+/* Callback-ref variant: the measured node may mount AFTER this hook first
+ * runs (loading branch), so a plain ref + [] deps would never observe it —
+ * that bug left the trend chart unmeasured (W=0) and therefore undrawn. */
+export function useElementWidth<T extends HTMLElement>(): [(node: T | null) => void, number] {
+  const [el, setEl] = useState<T | null>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    if (!el) return undefined;
     const measure = () => setWidth(el.clientWidth || 0);
     measure();
     if (typeof ResizeObserver === 'undefined') {

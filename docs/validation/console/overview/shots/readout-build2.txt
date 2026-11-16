@@ -24,3 +24,6 @@ KPI: [2 在岗(共2在册·点阵14) | 0 待审批(今天没有到期单·点阵
 
 # ---- block2 QUEUE — 2026-11-16 12:5x (dev 5399 + BFF 8092, dark) ----
 QUEUE: 计数 0 项=三源 actionable 和；审批腿「组织级待办未接入（M2）」(GAP-OV-03)；三源空态逐字+去向链接；truthCount 一致性挂起；locale 本笔含后续区块共用键（queueGapOrgTodos/staleBar/kbdSearch/openAuditCenter/anomalyCountUnit/activityEmpty/p95NotDrawn）
+
+# ---- block2 TREND — 2026-11-16 12:5x (dev 5399 + BFF 8092, dark) ----
+TREND: trendSvg=1 rects=32（useElementWidth 回调 ref，趋势图体实际绘制）；C1-r2 P1 修复：相邻事件日标签 y 阶梯（实测 3 标签 3 档、水平簇=1、无叠字、不溢出卡缘，右缘翻转锚点保留）；每日子标签仍 ≤2 动作 slice(0,2) join ' · '；P3：图例「P95 时长（样本不足（<20），未绘制）」；摘要 14·13·0·1条运行中/未知·100.0%·P95—；卡脚与 KPI 闭环；现网桶漂移不硬编码；今日虚线框在

@@ -973,6 +973,7 @@ function TrendCard({
   let chart: React.ReactNode = null;
   if (bars && W > 0) {
     const parts: React.ReactNode[] = [];
+    const eventLabels: { x1: number; x2: number; y: number }[] = [];
     for (let k = 0; k <= 3; k += 1) {
       const y = pt + (ih * k) / 3;
       parts.push(<line key={`g${k}`} x1={pl} x2={W - pr} y1={y} y2={y + 0.5} className="ov-grid" />);
@@ -1041,11 +1042,23 @@ function TrendCard({
           tx = (minX + maxX) / 2;
           anchor = 'middle';
         }
+        const boxOf = (x: number, a: 'start' | 'end' | 'middle') =>
+          a === 'start' ? [x - 4, x + est] : a === 'end' ? [x - est, x + 4] : [x - est / 2, x + est / 2];
+        let [x1, x2] = boxOf(tx, anchor);
+        x1 = Math.max(minX, x1);
+        x2 = Math.min(maxX, x2);
+        let ly = pt - 11;
+        for (let tier = 0; tier < 3; tier += 1) {
+          const hit = eventLabels.some((b) => b.y === ly && b.x1 < x2 && b.x2 > x1);
+          if (!hit) break;
+          ly += 12;
+        }
+        eventLabels.push({ x1, x2, y: ly });
         parts.push(
           <g key={`ev${i}`}>
             <line x1={cx} x2={cx} y1={pt - 8} y2={pt + ih} stroke="var(--ov-chart-marker)" strokeDasharray="3 4" />
             <circle cx={cx} cy={pt - 8} r={2} fill="var(--ov-chart-marker)" />
-            <text x={tx} y={pt - 11} textAnchor={anchor} className="ov-svg-lbl">
+            <text x={tx} y={ly} textAnchor={anchor} className="ov-svg-lbl">
               {ev}
             </text>
           </g>
@@ -1130,7 +1143,7 @@ function TrendCard({
           <span className={p95HasSample ? '' : 'off'} data-testid="agent-v2-ov-trend-legend-p95">
             <i className="lb" />
             {t('agentConsole.v2.trendP95')}
-            {p95HasSample ? '' : `（${t('agentConsole.v2.ov.p95Insufficient')}）`}
+            {p95HasSample ? '' : `（${t('agentConsole.v2.ov.p95Insufficient')}，${t('agentConsole.v2.ov.p95NotDrawn')}）`}
           </span>
           <span>
             <i className="mk" />
