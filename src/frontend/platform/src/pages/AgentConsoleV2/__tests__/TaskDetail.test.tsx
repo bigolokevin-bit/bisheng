@@ -342,6 +342,10 @@ describe('TSK-02 — progressNote three states and statusReason anomaly', () => 
     const reason = screen.getByTestId('agent-v2-task-reason');
     expect(reason.textContent).toContain('等客户提供开票资料');
     expect(reason.textContent).toContain('受阻超过 72 小时');
+    // VG FAIL-1: the contract key stays in the title, never in visible text.
+    expect(reason.textContent).not.toContain('status_reason');
+    expect(reason.textContent).toContain('受阻原因 · 契约必填');
+    expect(reason.querySelector('[title="契约字段 status_reason"]')).not.toBeNull();
     expect(screen.queryByTestId('agent-v2-task-anomaly')).toBeNull();
     expect(screen.getByTestId('agent-v2-task-overdue').textContent).toContain('已逾期 1 天');
   });

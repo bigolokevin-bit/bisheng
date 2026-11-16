@@ -614,7 +614,15 @@ export function TaskDetailPage({
                     ? 'agentConsole.v2.tsk02.reasonBlockedTitle'
                     : 'agentConsole.v2.tsk02.reasonCancelledTitle',
                 )}
-                note={t('agentConsole.v2.tsk02.reasonNote')}
+                note={
+                  <span title={t('agentConsole.v2.tsk02.reasonNoteTitle')}>
+                    {t(
+                      status === 'blocked'
+                        ? 'agentConsole.v2.tsk02.reasonNote'
+                        : 'agentConsole.v2.tsk02.reasonNoteCancelled',
+                    )}
+                  </span>
+                }
                 foot={t(
                   status === 'blocked'
                     ? 'agentConsole.v2.tsk02.reasonBlockedFoot'
