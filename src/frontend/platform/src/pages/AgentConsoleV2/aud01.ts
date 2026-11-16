@@ -163,6 +163,10 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 
 /** GET through the console BFF, returning status/code instead of throwing. */
 export function createHttpAuditApi(options: HttpAuditApiOptions = {}): AuditApi {
+  /* Same-origin prefix routed by Caddy to the console BFF; every path below
+   * keeps the BFF's own `/api/` segment (`/agent-api/api/…`), exactly like
+   * createHttpAgentConsoleApi's `/api/tasks` and createHttpAgentConsoleRunsApi's
+   * `/api/runs`. Dropping it yields a Caddy 404 — the AUD-01 VG block. */
   const base = options.base ?? '/agent-api';
   const getToken =
     options.getToken ??
@@ -226,7 +230,7 @@ export function createHttpAuditApi(options: HttpAuditApiOptions = {}): AuditApi 
 
   return {
     async listAudit(params) {
-      const res = await get<AuditListShape>('/audit', {
+      const res = await get<AuditListShape>('/api/audit', {
         runId: params.runId,
         taskId: params.taskId,
         actorId: params.actorId,
@@ -248,7 +252,7 @@ export function createHttpAuditApi(options: HttpAuditApiOptions = {}): AuditApi 
     },
 
     verifyAudit({ from, to }) {
-      return get<AuditVerifyResult>('/audit-verify', { from, to });
+      return get<AuditVerifyResult>('/api/audit-verify', { from, to });
     },
   };
 }
