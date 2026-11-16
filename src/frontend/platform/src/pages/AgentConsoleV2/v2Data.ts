@@ -338,6 +338,69 @@ export function fetchEmployeeVersions(
   return fetch<VersionListBody>('/api/employee-versions', { id: employeeId, limit });
 }
 
+// TSK-01 (T5): GET /api/tasks?assignee=&status=&dueBefore=&cursor=&limit=.
+// Server-side filters ONLY: assignee/status/dueBefore. There is no source
+// query upstream — the page keeps 来源 as a client facet over the returned
+// page and must never smuggle it into this request (ACCEPTANCE §2).
+export function fetchTasksPage(
+  fetch: Fetcher,
+  args: {
+    assignee?: string;
+    status?: string;
+    dueBefore?: string;
+    limit?: number;
+    cursor?: string;
+  }
+): Promise<ApiRes<TaskListBody>> {
+  return fetch<TaskListBody>('/api/tasks', {
+    assignee: args.assignee,
+    status: args.status,
+    dueBefore: args.dueBefore,
+    limit: args.limit ?? 20,
+    cursor: args.cursor,
+  });
+}
+
+// TSK-01 (T5): read-only task list. Field vocabulary follows CONTRACT
+// TASK.md v1.0 with the BFF camelCase mapping (ACCEPTANCE tasks-list §2):
+// progressNote is ALWAYS present and may be null; source carries
+// {channel,messageId,runId?}; dueAt absent → null. The BFF gate requires at
+// least one of assignee/status — the page never issues an unfiltered query.
+export interface TaskAssigneeRef {
+  type?: string;
+  id?: string;
+}
+
+export interface TaskSourceRef {
+  channel?: string;
+  messageId?: string;
+  conversationRef?: string | null;
+  runId?: string | null;
+}
+
+export interface TaskRow {
+  taskId: string;
+  title: string;
+  description?: string | null;
+  status: string;
+  assignee?: TaskAssigneeRef | null;
+  priority?: string | null;
+  dueAt?: string | null;
+  source?: TaskSourceRef | null;
+  progressNote?: string | null;
+  employeeVersionRef?: string | null;
+  relatedTaskIds?: string[] | null;
+  createdAt?: string;
+  updatedAt?: string;
+  statusReason?: string | null;
+  closedAt?: string | null;
+}
+
+export interface TaskListBody {
+  items: TaskRow[];
+  nextCursor?: string;
+}
+
 // ---------- utilities ----------
 
 /** Run fn over items with at most `cap` in flight; preserves input order. */

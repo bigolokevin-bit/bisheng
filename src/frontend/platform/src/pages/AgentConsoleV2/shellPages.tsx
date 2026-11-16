@@ -12,6 +12,7 @@ import { HermesMetricsSection } from './HermesMetricsSection';
 import { OverviewPage as OverviewScreen } from './OverviewPage';
 import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
+import { TasksListPage } from './TasksListPage';
 
 interface L1PageProps {
   titleKey: string;
@@ -56,14 +57,9 @@ export function ApprovalsPage() {
   return <ApprovalsListPage />;
 }
 
+/* TSK-01: real read-only task board (was an honest empty shell). */
 export function TasksPage() {
-  return (
-    <L1Page
-      titleKey="agentConsole.v2.navTasks"
-      descKey="agentConsole.v2.shell.tasksDesc"
-      testid="agent-v2-page-tasks"
-    />
-  );
+  return <TasksListPage />;
 }
 
 export function AuditPage() {
