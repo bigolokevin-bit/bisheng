@@ -53,6 +53,7 @@ vi.mock('react-i18next', async () => {
 
 import { AgentConsoleV2Page } from '../AgentConsoleV2Page';
 import { userContext } from '@/contexts/userContext';
+import { AuthError, UpstreamError } from '@/controllers/API/agent';
 import type {
   AgentConsoleHermesApi,
   HermesSummary,
@@ -453,15 +454,18 @@ describe('console v2 hermes metrics section (P0-14 l4-hermes-panels)', () => {
     expect(within(health).getByTestId('agent-v2-metrics-platforms-empty').textContent).toBe('暂无平台连接');
   });
 
-  it('a 503 runtime.metrics_unconfigured summary turns the whole health block into 服务指标暂不可用 with the verbatim code and no fabricated rows', async () => {
+  it('a 503 runtime.metrics_unconfigured summary turns the whole health block into localized 运行健康暂时取不到（HTTP 503）— the machine code never renders — and fabricates no rows', async () => {
     const { api } = makeHermesApi({ summary: fail(503, 'runtime.metrics_unconfigured') });
     const { health, usage, heat } = await openMetrics(
       api,
       makeTrendsApi({ activity: { cells: [{ dow: 1, hour: 9, count: 1 }], max: 1 } }).api,
     );
     const err = within(health).getByTestId('agent-v2-metrics-health-error');
-    expect(err.textContent).toContain('服务指标暂不可用');
-    expect(err.textContent).toContain('runtime.metrics_unconfigured');
+    // G15: HTTP status is an interpolation parameter only, and the
+    // envelope code (runtime.metrics_unconfigured) stays off the DOM.
+    expect(err.textContent).toBe('运行健康暂时取不到（HTTP 503）');
+    expect(health.textContent).not.toContain('runtime.metrics_unconfigured');
+    expect(health.textContent).not.toContain('agent.http.503');
     // nothing of the source layout survives in the failed state
     expect(within(health).queryByTestId('agent-v2-metrics-src-gateway')).toBeNull();
     expect(within(health).queryByTestId('agent-v2-metrics-gw-status')).toBeNull();
@@ -625,12 +629,15 @@ describe('console v2 hermes metrics section (P0-14 l4-hermes-panels)', () => {
 
   // ---- D. per-block error isolation ----
 
-  it('a 503 usage envelope errors only the usage block; health and the summary-derived Hermes heat column keep their data', async () => {
+  it('a 503 usage envelope errors only the usage block with localized copy; health and the summary-derived Hermes heat column keep their data', async () => {
     const { api } = makeHermesApi({ usage: fail(503, 'runtime.hermes_metrics_unconfigured') });
     const { usage, health, heat } = await openMetrics(api);
     const err = within(usage).getByTestId('agent-v2-metrics-usage-error');
-    expect(err.textContent).toContain('查询失败，请重试');
-    expect(err.textContent).toContain('runtime.hermes_metrics_unconfigured');
+    // G15: localized blockUnavailable copy, HTTP status interpolated; the
+    // envelope code never reaches the DOM.
+    expect(err.textContent).toBe('模型与工具用量暂时取不到（HTTP 503）');
+    expect(usage.textContent).not.toContain('runtime.hermes_metrics_unconfigured');
+    expect(usage.textContent).not.toContain('agent.http.503');
     // usage data area replaced entirely — no partial fabrication
     expect(within(usage).queryByTestId('agent-v2-metrics-tokens')).toBeNull();
     expect(within(usage).queryByTestId('agent-v2-metrics-cost-chip')).toBeNull();
@@ -639,5 +646,95 @@ describe('console v2 hermes metrics section (P0-14 l4-hermes-panels)', () => {
     // heat Hermes side survives (it reads the summary, not the usage)
     const hermes = within(heat).getByTestId('agent-v2-metrics-heat-hermes');
     expect(within(hermes).getByText('2026-11-14')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------- G15 (P0)
+/**
+ * G15 (same gate EMP-01 r5 pinned for the employees list): internal machine
+ * codes must never reach the DOM of the 「运行指标」 section. Envelope codes
+ * (runtime.*, request.invalid_query, console.*) and the synthesized
+ * agent.http.* fallback are replaced by the localized blockUnavailable
+ * copy with the HTTP status as an interpolation parameter only. AuthError
+ * and network failures map to 401/0; nothing raw is rendered either. The
+ * Hermes adapter's ApiResult carries no requestId, so no request id is
+ * inline and no copy-diag affordance appears here (copyDiag is only ever
+ * offered where an id exists, per the emp/ov idiom).
+ */
+const CODEISH = /[a-z]+\.[a-z_]+/;
+
+describe('console v2 hermes metrics G15: machine codes off the DOM', () => {
+  it('envelope codes never render — localized blockUnavailable copy with the HTTP status per block', async () => {
+    const { api } = makeHermesApi({
+      summary: fail(503, 'runtime.metrics_unconfigured'),
+      usage: fail(422, 'request.invalid_query'),
+    });
+    const { section, health, usage, heat } = await openMetrics(
+      api,
+      makeTrendsApi({ activity: fail(500, 'console.forbidden') }).api,
+    );
+    expect(within(health).getByTestId('agent-v2-metrics-health-error').textContent).toBe(
+      '运行健康暂时取不到（HTTP 503）',
+    );
+    expect(within(usage).getByTestId('agent-v2-metrics-usage-error').textContent).toBe(
+      '模型与工具用量暂时取不到（HTTP 422）',
+    );
+    expect(within(heat).getByTestId('agent-v2-metrics-heat-error').textContent).toBe(
+      '活动热力（平台对照）暂时取不到（HTTP 500）',
+    );
+    // strict scan: no dotted machine code anywhere in the section, and
+    // none of the injected codes as plain substrings either
+    const text = section.textContent ?? '';
+    expect(text).not.toMatch(CODEISH);
+    for (const code of [
+      'runtime.metrics_unconfigured',
+      'request.invalid_query',
+      'console.forbidden',
+      'agent.http.',
+    ]) {
+      expect(text).not.toContain(code);
+    }
+    // no requestId in this envelope → nothing inline, nothing to copy
+    expect(text).not.toContain('复制诊断');
+  });
+
+  it('a thrown AuthError is the 401 case of the localized copy, never agent.http.401', async () => {
+    const api = {
+      getSummary: vi.fn().mockRejectedValue(new AuthError()),
+      getUsage: vi.fn().mockResolvedValue(ok(USAGE_OK)),
+    } as unknown as AgentConsoleHermesApi;
+    const { section, health } = await openMetrics(api);
+    expect(within(health).getByTestId('agent-v2-metrics-health-error').textContent).toBe(
+      '运行健康暂时取不到（HTTP 401）',
+    );
+    expect(section.textContent).not.toMatch(CODEISH);
+  });
+
+  it('a thrown network failure degrades to the HTTP 0 case without the raw reason', async () => {
+    const api = {
+      getSummary: vi.fn().mockRejectedValue(new UpstreamError('console request failed (network)')),
+      getUsage: vi.fn().mockResolvedValue(ok(USAGE_OK)),
+    } as unknown as AgentConsoleHermesApi;
+    const { section, health } = await openMetrics(api);
+    expect(within(health).getByTestId('agent-v2-metrics-health-error').textContent).toBe(
+      '运行健康暂时取不到（HTTP 0）',
+    );
+    const text = section.textContent ?? '';
+    expect(text).not.toContain('network');
+    expect(text).not.toMatch(CODEISH);
+  });
+
+  it('an ok response with an empty body reports its real HTTP status, never an .empty fallback code', async () => {
+    const api = {
+      getSummary: vi.fn().mockResolvedValue({ ok: true, status: 200, data: null }),
+      getUsage: vi.fn().mockResolvedValue(ok(USAGE_OK)),
+    } as unknown as AgentConsoleHermesApi;
+    const { section, health } = await openMetrics(api);
+    expect(within(health).getByTestId('agent-v2-metrics-health-error').textContent).toBe(
+      '运行健康暂时取不到（HTTP 200）',
+    );
+    const text = section.textContent ?? '';
+    expect(text).not.toContain('.empty');
+    expect(text).not.toMatch(CODEISH);
   });
 });

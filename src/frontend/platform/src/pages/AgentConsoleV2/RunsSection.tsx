@@ -1,32 +1,31 @@
 /**
- * L4 console v2-4 (l4-console-v2-trace): the 「运行与追踪」 section.
+ * RUN-01 `/agent/runs` — read-only run list, rebuilt against the frozen C1
+ * baseline run01-target.html (sha 1cbe1633…) + RUN01-TARGET-SPEC.md.
  *
- * R5 run list (filter bar + run cards) with an expandable R3 event timeline
- * per run. Every block degrades independently (same Box<T> discipline as
- * TrendsCostsSection): list loading/ok/error+retry, per-run event stream
- * loading/ok/error+retry.
+ * Shape (spec §1): page head (NO KPI layer — R5 has no total) → meta row →
+ * FilterBar (only real server dimensions) → one 10-column table card →
+ * cursor foot (「本页 N 条 · 下一页」, never 「共 N」) → caliber foot.
+ * Structure comes from the shared list suite (./listkit), built once for
+ * RUN-01/TSK-01/MET-01.
  *
- * Honest-data rules (design.md 数据面事实 + §3):
- * - Every R5 request carries `since` (a 6-day local-day ISO start, same
- *   buildWindow idiom as P0-5) plus a fixed `limit` of 50: an unconditional
- *   query is rejected upstream with 400 request.missing_filter, so it is
- *   never sent.
- * - Values render verbatim from the capture: runId is truncated visually
- *   only (title carries the full value), `costUsd` is shown as the raw
- *   upstream figure (never re-rounded to 0.00), durations are only computed
- *   when `endedAt` exists — a running/unfinished run shows 「—」 instead of a
- *   fabricated number, and an unknown `costStatus` shows 「—」 rather than a
- *   pill.
- * - Unknown enum values are logged loudly and rendered raw (never guessed),
- *   mirroring the lifecycle-state guardrail on the detail page.
- * - The event timeline is the pure `buildRunTrace` port of the runtime's
- *   trace.py: ascending seq, call→result pairing badges (pending/settled/
- *   orphan-result/duplicate-call) and post-terminal events kept as facts.
- * - Pagination never duplicates and never loses a row: 「加载更多」 requests
- *   `sinceSeq = nextSeq` (exclusive lower bound, verified live) and merges
- *   pages by seq.
- * Layout uses fr / minmax(0,1fr) tracks with ellipsis and wrapping only, so
- * 375px stays free of horizontal overflow.
+ * Honest-data rules (ACCEPTANCE.md + spec §2/§7):
+ * - R5 is the main source; every request carries `since` (default 7d, always
+ *   sent — upstream rejects filter-less queries with 400 request.missing_filter,
+ *   which is surfaced as a localized in-page error, never silently widened).
+ * - `nextCursor` is consumed explicitly by the 「下一页」 button only; the
+ *   replay guard lives in useCursorList (spec §7 first red line).
+ * - Nullable columns (costUsd/costStatus/employeeVersionNo/endedAt) are filled
+ *   per-row lazily from R2 (/api/run-detail) — never batch, never prefetch,
+ *   never blocking first paint; a failed fill keeps —/unknown + inline retry.
+ * - costUsd renders verbatim (0.009875 never becomes 0.00); costStatus
+ *   `unknown` renders the literal word (never 0, never —); double-null is —.
+ * - Durations only exist when endedAt exists; times are Asia/Shanghai
+ *   MM-DD HH:mm; unknown status enums are logged loudly and rendered raw.
+ * - No write entries anywhere (R4 belongs elsewhere); 「查看」 stays disabled
+ *   with a reason until RUN-02 exists; no R3 consumption on this page.
+ * - Filters + cursor live in the URL query (employeeId/status/since/limit/
+ *   cursor); foreign markers like ?src=ov are neither consumed nor errored.
+ *   A URL-restored cursor is a fresh first request (spec §2.4 known limit).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
@@ -36,31 +35,21 @@ import type { AgentConsoleApi, EmployeeSummary } from '@/controllers/API/agent';
 import {
   type AgentConsoleRunsApi,
   type Run,
-  type RunEvent,
   type RunStatus,
 } from '@/controllers/API/agentConsoleRuns';
 
-import { buildWindow } from './TrendsCostsSection';
-import { buildRunTrace, type RunStep, type TraceEvent } from './runTrace';
-
-type Box<T> = { phase: 'loading' } | { phase: 'ok'; value: T } | { phase: 'error' };
-
-/** One run's accumulated event stream (merged R3 pages). */
-interface EventsPage {
-  items: RunEvent[];
-  nextSeq: number | null;
-  hasMore: boolean;
-}
-
-const boxLoading = { phase: 'loading' } as const;
-const boxError = { phase: 'error' } as const;
-
-/** R5 page size — fixed 50 (upstream max is 100; design.md 风险与裁定). */
-const RUNS_LIMIT = 50;
-/** R3 page size; 「加载更多」 walks `nextSeq` while `hasMore` stays true. */
-const EVENT_LIMIT = 50;
-/** E11 page size for employee-name lookup (contract max 200). */
-const EMPLOYEES_LIMIT = 200;
+import {
+  CopyId,
+  CursorFoot,
+  EmptyPanel,
+  FilterBar,
+  LkIcon,
+  ListSkeleton,
+  StageCard,
+  TableCard,
+  useCursorList,
+  type LkColumn,
+} from './listkit';
 
 /** RunStatus contract enum, in filter order (agentrun_models.py). */
 const RUN_STATUSES: RunStatus[] = [
@@ -72,7 +61,7 @@ const RUN_STATUSES: RunStatus[] = [
   'interrupted',
 ];
 
-/** Reuses the frozen run-status keys already present in all three locales. */
+/** Frozen run-status labels, already present in all three locales. */
 const RUN_STATUS_LABEL_KEYS: Record<RunStatus, string> = {
   pending: 'agentConsole.runs.status.pending',
   running: 'agentConsole.runs.status.running',
@@ -82,40 +71,129 @@ const RUN_STATUS_LABEL_KEYS: Record<RunStatus, string> = {
   interrupted: 'agentConsole.runs.status.interrupted',
 };
 
-/** Pill tone per design.md §3 (completed ok, pending/running warn, else danger). */
+/** Chip tone classes (target §1.3): dot keeps the semantic color when选中. */
+const STATUS_CHIP_TONE: Record<RunStatus, string> = {
+  pending: 's-pend',
+  running: 's-run',
+  completed: 's-done',
+  failed: 's-fail',
+  cancelled: 's-cancel',
+  interrupted: 's-int',
+};
+
+/** Pill tone (spec §2.1, same mapping as the frozen RunsSection). */
 function statusPillClass(status: string): string {
-  if (status === 'completed') return 'is-ok';
-  if (status === 'pending' || status === 'running') return 'is-warn';
-  if (status === 'failed' || status === 'cancelled' || status === 'interrupted') return 'is-danger';
+  if (status === 'completed') return 'ok';
+  if (status === 'pending' || status === 'running') return 'wr';
+  if (status === 'failed' || status === 'cancelled' || status === 'interrupted') return 'dg';
   return '';
 }
 
-const COST_STATUS_KEYS: Record<string, { cls: string; key: string }> = {
-  upstream: { cls: 'is-ok', key: 'agentConsole.v2.runsCostUpstream' },
-  estimated: { cls: 'is-warn', key: 'agentConsole.v2.runsCostEstimated' },
-};
+const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
 
-const BADGE_KEYS: Record<string, { cls: string; key: string }> = {
-  pending: { cls: 'is-warn', key: 'agentConsole.v2.evPending' },
-  settled: { cls: 'is-ok', key: 'agentConsole.v2.evSettled' },
-  'orphan-result': { cls: 'is-danger', key: 'agentConsole.v2.evOrphanResult' },
-  'duplicate-call': { cls: 'is-danger', key: 'agentConsole.v2.evDuplicateCall' },
-  postTerminal: { cls: 'is-warn', key: 'agentConsole.v2.evPostTerminal' },
-};
+/** since windows: the URL carries the relative key; requests carry the ISO
+ *  start computed at send time (spec §1.3: 24h/7d/30d 换算 ISO 起点). */
+const SINCE_WINDOWS = [
+  { value: '24h', hours: 24, labelKey: 'agentConsole.v2.runs01.since24h', windowKey: 'agentConsole.v2.runs01.window24h' },
+  { value: '7d', hours: 24 * 7, labelKey: 'agentConsole.v2.runs01.since7d', windowKey: 'agentConsole.v2.runs01.window7d' },
+  { value: '30d', hours: 24 * 30, labelKey: 'agentConsole.v2.runs01.since30d', windowKey: 'agentConsole.v2.runs01.window30d' },
+] as const;
+type SinceValue = (typeof SINCE_WINDOWS)[number]['value'];
 
-/** §5.1 mono id: 前4…后4, the full value stays in the title attribute. */
+const LIMITS = [20, 50, 100];
+const DEFAULT_LIMIT = 20;
+const DEFAULT_SINCE: SinceValue = '7d';
+/** E11 candidate page size (spec §1.3: GET /api/employees?limit=100). */
+const EMPLOYEES_LIMIT = 100;
+
+function sinceIso(window: SinceValue): string {
+  const hours = SINCE_WINDOWS.find((w) => w.value === window)?.hours ?? 24 * 7;
+  return new Date(Date.now() - hours * 3600_000).toISOString();
+}
+
+// ---------- URL query (spec §2.4: only these five params are consumed) ----------
+
+interface RunsQuery {
+  employeeId: string;
+  status: string;
+  since: SinceValue;
+  limit: number;
+  cursor: string | null;
+}
+
+function readRunsQuery(initialEmployeeId?: string | null): RunsQuery {
+  let p = new URLSearchParams();
+  try {
+    p = new URLSearchParams(window.location.search);
+  } catch {
+    /* non-browser环境: defaults below */
+  }
+  const since = p.get('since');
+  const limit = Number(p.get('limit'));
+  const status = p.get('status') ?? '';
+  return {
+    employeeId: initialEmployeeId || p.get('employeeId') || '',
+    status: (RUN_STATUSES as string[]).includes(status) ? status : '',
+    since: SINCE_WINDOWS.some((w) => w.value === since) ? (since as SinceValue) : DEFAULT_SINCE,
+    limit: LIMITS.includes(limit) ? limit : DEFAULT_LIMIT,
+    cursor: p.get('cursor') || null,
+  };
+}
+
+function writeRunsQuery(q: RunsQuery): void {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    // Foreign markers (?src=ov …) are preserved untouched — not consumed.
+    if (q.employeeId) p.set('employeeId', q.employeeId);
+    else p.delete('employeeId');
+    if (q.status) p.set('status', q.status);
+    else p.delete('status');
+    p.set('since', q.since);
+    p.set('limit', String(q.limit));
+    if (q.cursor) p.set('cursor', q.cursor);
+    else p.delete('cursor');
+    const qs = p.toString();
+    window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+  } catch {
+    /* history unavailable: filters still work in-memory */
+  }
+}
+
+// ---------- formatting (field names are law; no fabricated values) ----------
+
+/** runId: prefix + ULID first4 … last4 (spec §5.1); full value in title/copy. */
 function shortRunId(id: string): string {
+  if (id.startsWith('rn_') && id.length > 11) return `${id.slice(0, 7)}…${id.slice(-4)}`;
   if (id.length <= 9) return id;
   return `${id.slice(0, 4)}…${id.slice(-4)}`;
 }
 
-/** §5.2 idiom, verbatim from the v2 row cards: `String(x).slice(0,16).replace('T',' ')`. */
-function formatMoment(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  return String(iso).slice(0, 16).replace('T', ' ');
+/** channelEventId: first6 … last4 (target §1.4 column 6). */
+function shortEventId(id: string): string {
+  if (id.length <= 10) return id;
+  return `${id.slice(0, 6)}…${id.slice(-4)}`;
 }
 
-/** endedAt − startedAt, human-compact. No end ⇒ 「—」, never a fake duration. */
+const SHANGHAI_PARTS = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Shanghai',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+/** Asia/Shanghai MM-DD HH:mm (current-year convention, same as TSK/OV). */
+function formatMoment(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return '—';
+  const parts: Record<string, string> = {};
+  for (const p of SHANGHAI_PARTS.formatToParts(new Date(ms))) parts[p.type] = p.value;
+  return `${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
+/** endedAt − startedAt, human-compact. No end ⇒ —, never a fake duration. */
 function formatDuration(startedAt?: string | null, endedAt?: string | null): string {
   if (!startedAt || !endedAt) return '—';
   const ms = Date.parse(endedAt) - Date.parse(startedAt);
@@ -132,12 +210,6 @@ function formatCost(costUsd?: number | null): string {
   return typeof costUsd === 'number' && Number.isFinite(costUsd) ? String(costUsd) : '—';
 }
 
-/**
- * Localized label for a contract status. The six-value enum is the contract
- * (agentrun_models.py); anything else is an upstream bug — log it loudly,
- * then degrade to the raw value (never guess a label), same guardrail as the
- * employee lifecycle pill.
- */
 function runStatusLabel(t: TFunction, status: string): string {
   const key = RUN_STATUS_LABEL_KEYS[status as RunStatus];
   if (key === undefined) {
@@ -147,26 +219,28 @@ function runStatusLabel(t: TFunction, status: string): string {
   return t(key);
 }
 
-/** Merge R3 pages by seq: ascending, deduped, nothing dropped. */
-function mergeBySeq(prev: RunEvent[], added: RunEvent[]): RunEvent[] {
-  const bySeq = new Map<number, RunEvent>();
-  for (const e of prev) bySeq.set(e.seq, e);
-  for (const e of added) {
-    // A re-sent seq is the same stream fact; keep the copy already rendered.
-    if (!bySeq.has(e.seq)) bySeq.set(e.seq, e);
-  }
-  return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
+/** 10 columns, fixed order (AC §3); widths from target §4.1. */
+function buildColumns(t: TFunction): LkColumn[] {
+  return [
+    { key: 'run', label: t('agentConsole.v2.runs01.colRun') },
+    { key: 'employee', label: t('agentConsole.v2.runs01.colEmployee'), width: 112 },
+    { key: 'status', label: t('agentConsole.v2.runs01.colStatus'), width: 96 },
+    { key: 'duration', label: t('agentConsole.v2.runs01.colDuration'), width: 80, align: 'right' },
+    { key: 'cost', label: t('agentConsole.v2.runs01.colCost'), width: 148, align: 'right' },
+    { key: 'source', label: t('agentConsole.v2.runs01.colSource'), width: 128 },
+    { key: 'version', label: t('agentConsole.v2.runs01.colVersion'), width: 60, align: 'right' },
+    { key: 'start', label: t('agentConsole.v2.runs01.colStart'), width: 110, align: 'right' },
+    { key: 'end', label: t('agentConsole.v2.runs01.colEnd'), width: 110, align: 'right' },
+    { key: 'action', label: t('agentConsole.v2.runs01.colAction'), width: 72 },
+  ];
 }
 
-function payloadText(ev: TraceEvent): string {
-  if (!ev.parsed) return ev.rawPayload ?? '';
-  return JSON.stringify(ev.payload, null, 2);
-}
+type FillBox = { phase: 'loading' } | { phase: 'ok'; run: Run } | { phase: 'error' };
 
 export interface RunsSectionProps {
-  /** R5/R3 read-only adapter (injectable for tests, HTTP fallback on the page). */
+  /** R5/R2 read-only adapter (injectable for tests, HTTP fallback on the page). */
   api: AgentConsoleRunsApi;
-  /** E11 only: employee names for the cards and the filter select. */
+  /** E11 only: employee names for the rows and the filter select. */
   consoleApi: AgentConsoleApi;
   /** Set when entering from an employee's 「查看运行」 action. */
   initialEmployeeId?: string | null;
@@ -175,74 +249,87 @@ export interface RunsSectionProps {
 export function RunsSection({ api, consoleApi, initialEmployeeId }: RunsSectionProps) {
   const { t } = useTranslation();
 
-  const [runs, setRuns] = useState<Box<Run[]>>(boxLoading);
-  const [employees, setEmployees] = useState<Box<EmployeeSummary[]>>(boxLoading);
-  const [timelines, setTimelines] = useState<Record<string, Box<EventsPage>>>({});
-  const [openRun, setOpenRun] = useState<Record<string, boolean>>({});
-  const [fetchingMore, setFetchingMore] = useState<Record<string, boolean>>({});
-  const [status, setStatus] = useState<string>('');
-  const [employeeId, setEmployeeId] = useState<string>(initialEmployeeId ?? '');
-  const [retryNonce, setRetryNonce] = useState(0);
+  const [query, setQuery] = useState<RunsQuery>(() => readRunsQuery(initialEmployeeId));
+  const [employees, setEmployees] = useState<EmployeeSummary[] | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  /** R2 per-row lazy fills (never batch, never blocking first paint). */
+  const [fills, setFills] = useState<Record<string, FillBox>>({});
+  const fillRequestedRef = useRef<Set<string>>(new Set());
 
-  // Live guard for the imperative (click-driven) event requests.
-  const liveRef = useRef(true);
-  useEffect(() => {
-    liveRef.current = true;
-    return () => {
-      liveRef.current = false;
-    };
+  // 401 → login (the login page lives at "/"); never an in-page state.
+  const onAuth = useCallback(() => {
+    window.location.assign('/');
   }, []);
 
-  // Fixed 「近 7 天」 window: the local start of the day 6 days ago, as an ISO
-  // instant (same buildWindow idiom as P0-5 — a bare YYYY-MM-DD was parsed as
-  // local midnight upstream and dropped today's runs).
-  const since = useMemo(() => buildWindow().from, []);
+  const resetKey = `${query.employeeId}|${query.status}|${query.since}|${query.limit}`;
 
+  const fetchPage = useCallback(
+    (cursor: string | null) =>
+      api.listRuns({
+        employeeId: query.employeeId || undefined,
+        status: query.status || undefined,
+        // since is ALWAYS sent (default 7d) — the upstream hard requirement.
+        since: sinceIso(query.since),
+        limit: query.limit,
+        cursor: cursor ?? undefined,
+      }),
+    [api, query.employeeId, query.status, query.since, query.limit],
+  );
+
+  const list = useCursorList<Run>({
+    fetchPage,
+    keyOf: (r) => r.runId,
+    resetKey,
+    initialCursor: query.cursor,
+    onAuth,
+  });
+
+  // Filter change: clear cursor + seen pages (the hook resets on resetKey)
+  // and write the five params back to the URL.
+  const updateFilters = useCallback((patch: Partial<RunsQuery>) => {
+    setQuery((prev) => {
+      const next = { ...prev, ...patch, cursor: null };
+      writeRunsQuery(next);
+      return next;
+    });
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    updateFilters({ employeeId: '', status: '', since: DEFAULT_SINCE, limit: DEFAULT_LIMIT });
+  }, [updateFilters]);
+
+  // Explicit next-page: record the consumed cursor in the URL (replaceState),
+  // then let the hook fetch it. No automatic loading anywhere.
+  const onNext = useCallback(() => {
+    if (!list.nextCursor) return;
+    setQuery((prev) => {
+      const next = { ...prev, cursor: list.nextCursor };
+      writeRunsQuery(next);
+      return next;
+    });
+    list.loadNext();
+  }, [list]);
+
+  const onReloadFirst = useCallback(() => {
+    setQuery((prev) => {
+      const next = { ...prev, cursor: null };
+      writeRunsQuery(next);
+      return next;
+    });
+    list.reloadFirst();
+  }, [list]);
+
+  // E11 candidates for the employee select + row names. Cosmetic failure
+  // degrades to the raw employeeId (a real value, never a fabricated name).
   useEffect(() => {
     let live = true;
-    setRuns(boxLoading);
-    // Filters changed: cached timelines belong to the previous query, drop
-    // them along with the expanded state so nothing stale is rendered.
-    setOpenRun({});
-    setTimelines({});
-    setFetchingMore({});
-    api
-      .listRuns({
-        employeeId: employeeId || undefined,
-        status: status || undefined,
-        since,
-        limit: RUNS_LIMIT,
-      })
-      .then((res) => {
-        if (!live) return;
-        setRuns(
-          res.ok && res.data && Array.isArray(res.data.items)
-            ? { phase: 'ok', value: res.data.items }
-            : boxError,
-        );
-      })
-      .catch(() => {
-        if (live) setRuns(boxError);
-      });
-    return () => {
-      live = false;
-    };
-  }, [api, employeeId, status, since, retryNonce]);
-
-  useEffect(() => {
-    let live = true;
-    setEmployees(boxLoading);
     consoleApi
       .listEmployees({ limit: EMPLOYEES_LIMIT })
       .then((res) => {
-        if (!live) return;
-        setEmployees(
-          res && Array.isArray(res.items) ? { phase: 'ok', value: res.items } : boxError,
-        );
+        if (live && res && Array.isArray(res.items)) setEmployees(res.items);
       })
       .catch(() => {
-        // Names are cosmetic: degrade to the raw employeeId (a real value).
-        if (live) setEmployees(boxError);
+        /* names degrade to raw ids */
       });
     return () => {
       live = false;
@@ -251,379 +338,460 @@ export function RunsSection({ api, consoleApi, initialEmployeeId }: RunsSectionP
 
   const names = useMemo(() => {
     const map = new Map<string, string>();
-    if (employees.phase === 'ok') {
-      for (const e of employees.value) map.set(e.employeeId, e.name);
-    }
+    for (const e of employees ?? []) map.set(e.employeeId, e.name);
     return map;
   }, [employees]);
 
-  const setBox = useCallback((runId: string, box: Box<EventsPage>) => {
-    if (!liveRef.current) return;
-    setTimelines((prev) => ({ ...prev, [runId]: box }));
-  }, []);
+  // Freshness stamp: only set when a real page landed.
+  useEffect(() => {
+    if (list.phase === 'ok') setUpdatedAt(formatMoment(new Date().toISOString()));
+  }, [list.phase, list.items]);
 
-  const loadEvents = useCallback(
+  // Filter changes drop the previous query's lazy fills.
+  useEffect(() => {
+    fillRequestedRef.current = new Set();
+    setFills({});
+  }, [resetKey]);
+
+  const fetchFill = useCallback(
     (runId: string) => {
-      setBox(runId, boxLoading);
+      setFills((prev) => ({ ...prev, [runId]: { phase: 'loading' } }));
       api
-        .listEvents({ runId, limit: EVENT_LIMIT })
+        .getRunDetail({ id: runId })
         .then((res) => {
-          const data = res.ok ? res.data : null;
-          if (!data || !Array.isArray(data.items)) {
-            setBox(runId, boxError);
-            return;
+          if (res.ok && res.data) {
+            setFills((prev) => ({ ...prev, [runId]: { phase: 'ok', run: res.data as Run } }));
+          } else {
+            setFills((prev) => ({ ...prev, [runId]: { phase: 'error' } }));
           }
-          setBox(runId, {
-            phase: 'ok',
-            value: { items: data.items, nextSeq: data.nextSeq ?? null, hasMore: data.hasMore === true },
-          });
-        })
-        .catch(() => setBox(runId, boxError));
-    },
-    [api, setBox],
-  );
-
-  const loadMore = useCallback(
-    (runId: string, nextSeq: number) => {
-      setFetchingMore((prev) => ({ ...prev, [runId]: true }));
-      api
-        .listEvents({ runId, sinceSeq: nextSeq, limit: EVENT_LIMIT })
-        .then((res) => {
-          const data = res.ok ? res.data : null;
-          if (liveRef.current && data && Array.isArray(data.items)) {
-            setTimelines((prev) => {
-              const cur = prev[runId];
-              if (!cur || cur.phase !== 'ok') return prev;
-              return {
-                ...prev,
-                [runId]: {
-                  phase: 'ok',
-                  value: {
-                    items: mergeBySeq(cur.value.items, data.items),
-                    nextSeq: data.nextSeq ?? cur.value.nextSeq,
-                    hasMore: data.hasMore === true,
-                  },
-                },
-              };
-            });
-          }
-          // A failed "load more" keeps what is already on screen and leaves
-          // the same button in place, so clicking it again is the retry.
-          if (liveRef.current) setFetchingMore((prev) => ({ ...prev, [runId]: false }));
         })
         .catch(() => {
-          if (liveRef.current) setFetchingMore((prev) => ({ ...prev, [runId]: false }));
+          setFills((prev) => ({ ...prev, [runId]: { phase: 'error' } }));
         });
     },
     [api],
   );
 
-  const toggleRun = useCallback(
-    (run: Run) => {
-      const willOpen = !openRun[run.runId];
-      setOpenRun((prev) => ({ ...prev, [run.runId]: willOpen }));
-      if (willOpen && !timelines[run.runId]) {
-        if (run.lastEventSeq === 0) {
-          // The run row itself states there are no events — no request needed,
-          // and none is fabricated.
-          setBox(run.runId, { phase: 'ok', value: { items: [], nextSeq: null, hasMore: false } });
-        } else {
-          loadEvents(run.runId);
-        }
-      }
-    },
-    [loadEvents, openRun, setBox, timelines],
-  );
+  // R2 lazy fill: terminal runs missing nullable columns only. Non-terminal
+  // runs legitimately have no endedAt/cost yet — no request, no fabricated 0.
+  useEffect(() => {
+    if (list.phase !== 'ok') return;
+    for (const r of list.items) {
+      if (!TERMINAL_STATUSES.has(r.status)) continue;
+      const missing =
+        r.costUsd == null || r.costStatus == null || r.endedAt == null || r.employeeVersionNo == null;
+      if (!missing || fillRequestedRef.current.has(r.runId)) continue;
+      fillRequestedRef.current.add(r.runId);
+      fetchFill(r.runId);
+    }
+  }, [list.phase, list.items, fetchFill]);
+
+  const columns = useMemo(() => buildColumns(t), [t]);
+  const hasFilter = query.employeeId !== '' || query.status !== '';
+  const sinceWindow = SINCE_WINDOWS.find((w) => w.value === query.since) ?? SINCE_WINDOWS[1];
+
+  const employeeLabel = query.employeeId
+    ? t('agentConsole.v2.runs01.filterEmployeeValue', {
+        name: names.get(query.employeeId) ?? query.employeeId,
+      })
+    : t('agentConsole.v2.runs01.filterEmployee');
+
+  // ---------- state screens ----------
+
+  if (list.phase === 'loading') {
+    return (
+      <div className="lk" data-testid="agent-v2-runs">
+        <PageHead t={t} updatedAt={updatedAt} />
+        <ListSkeleton
+          ariaLabel={t('agentConsole.v2.runs01.loadingAria')}
+          note={t('agentConsole.v2.runs01.loadingNote')}
+        />
+      </div>
+    );
+  }
+
+  if (list.phase === 'error') {
+    const code = list.httpStatus;
+    const desc =
+      code === 400 ? (
+        t('agentConsole.v2.runs01.errorDesc400')
+      ) : code > 0 ? (
+        <>
+          {t('agentConsole.v2.runs01.errorDescPre')}
+          <span className="mono">HTTP {code}</span>
+          {t('agentConsole.v2.runs01.errorDescPost')}
+        </>
+      ) : (
+        t('agentConsole.v2.runs01.errorDescNetwork')
+      );
+    return (
+      <div className="lk" data-testid="agent-v2-runs">
+        <PageHead t={t} updatedAt={updatedAt} />
+        <StageCard icon="alert" title={t('agentConsole.v2.runs01.errorTitle')} desc={desc} testId="agent-v2-runs-error">
+          <button type="button" className="b out" data-testid="agent-v2-runs-retry" onClick={onReloadFirst}>
+            <LkIcon name="refresh" size={16} />
+            {t('agentConsole.v2.runs01.reload')}
+          </button>
+          {code !== 400 ? (
+            <a className="lnk" href="/agent" style={{ alignSelf: 'center' }}>
+              {t('agentConsole.v2.runs01.backOverview')}
+            </a>
+          ) : null}
+        </StageCard>
+      </div>
+    );
+  }
+
+  if (list.phase === 'forbidden') {
+    // 403 and 404 share the SAME body — only the HTTP code differs (no
+    // existence leak). No data row is ever rendered here.
+    return (
+      <div className="lk" data-testid="agent-v2-runs">
+        <PageHead t={t} updatedAt={updatedAt} />
+        <StageCard
+          icon="lock"
+          title={t('agentConsole.v2.runs01.forbiddenTitle')}
+          desc={
+            <>
+              {t('agentConsole.v2.runs01.forbiddenDescPre')}
+              <span className="mono">HTTP {list.httpStatus}</span>
+              {t('agentConsole.v2.runs01.forbiddenDescPost')}
+            </>
+          }
+          testId="agent-v2-runs-forbidden"
+        >
+          <button type="button" className="b out" data-testid="agent-v2-runs-forbidden-retry" onClick={onReloadFirst}>
+            <LkIcon name="refresh" size={16} />
+            {t('agentConsole.v2.runs01.forbiddenRetry')}
+          </button>
+        </StageCard>
+      </div>
+    );
+  }
+
+  // ---------- normal / empty (filters stay on screen in both) ----------
+
+  const filterSummary = [
+    query.employeeId ? (names.get(query.employeeId) ?? query.employeeId) : null,
+    query.status ? runStatusLabel(t, query.status) : null,
+    t(sinceWindow.windowKey),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <div className="a2-card" data-testid="agent-v2-runs">
-      <h2 className="a2-h2">{t('agentConsole.v2.runsTitle')}</h2>
+    <div className="lk" data-testid="agent-v2-runs">
+      <PageHead t={t} updatedAt={updatedAt} />
 
-      <div className="a2-toolbar a2-run-toolbar" data-testid="agent-v2-runs-toolbar">
-        <div className="a2-run-filter">
-          <span className="a2-micro">{t('agentConsole.v2.runsFilterStatus')}</span>
-          <div
-            className="a2-run-seg"
-            role="group"
-            aria-label={t('agentConsole.v2.runsFilterStatus')}
-            data-testid="agent-v2-runs-filter-status"
-          >
-            <button
-              type="button"
-              className="a2-btn a2-run-seg-btn"
-              aria-pressed={status === ''}
-              data-testid="agent-v2-runs-status-all"
-              onClick={() => setStatus('')}
-            >
-              {t('agentConsole.v2.runsFilterAll')}
-            </button>
-            {RUN_STATUSES.map((s) => (
-              <button
-                key={s}
-                type="button"
-                className="a2-btn a2-run-seg-btn"
-                aria-pressed={status === s}
-                data-testid={`agent-v2-runs-status-${s}`}
-                onClick={() => setStatus(s)}
-              >
-                {t(RUN_STATUS_LABEL_KEYS[s])}
-              </button>
-            ))}
-          </div>
+      <FilterBar
+        ariaLabel={t('agentConsole.v2.runs01.filterAria')}
+        selectsBefore={[
+          {
+            id: 'agent-v2-runs-filter-employee',
+            label: employeeLabel,
+            title: t('agentConsole.v2.runs01.filterEmployeeTitle'),
+            value: query.employeeId,
+            active: query.employeeId !== '',
+            options: [
+              { value: '', label: t('agentConsole.v2.runsFilterAll') },
+              ...(employees ?? []).map((e) => ({ value: e.employeeId, label: e.name })),
+            ],
+            onChange: (v) => updateFilters({ employeeId: v }),
+          },
+        ]}
+        chips={{
+          ariaLabel: t('agentConsole.v2.runs01.filterStatus'),
+          allValue: '',
+          allLabel: t('agentConsole.v2.runsFilterAll'),
+          value: query.status,
+          items: RUN_STATUSES.map((s) => ({
+            value: s,
+            label: t(RUN_STATUS_LABEL_KEYS[s]),
+            tone: STATUS_CHIP_TONE[s],
+            dot: true,
+          })),
+          onChange: (v) => updateFilters({ status: v }),
+        }}
+        seg={{
+          ariaLabel: t('agentConsole.v2.runs01.filterSince'),
+          items: SINCE_WINDOWS.map((w) => ({ value: w.value, label: t(w.labelKey) })),
+          value: query.since,
+          onChange: (v) => updateFilters({ since: v as SinceValue }),
+        }}
+        selectsAfter={[
+          {
+            id: 'agent-v2-runs-filter-limit',
+            label: t('agentConsole.v2.runs01.filterLimit', { n: query.limit }),
+            title: t('agentConsole.v2.runs01.filterLimitTitle'),
+            value: String(query.limit),
+            options: LIMITS.map((n) => ({
+              value: String(n),
+              label: t('agentConsole.v2.runs01.filterLimit', { n }),
+            })),
+            onChange: (v) => updateFilters({ limit: Number(v) }),
+          },
+          {
+            id: 'agent-v2-runs-filter-source',
+            label: t('agentConsole.v2.runs01.filterSource'),
+            value: '',
+            options: [],
+            onChange: () => undefined,
+            disabled: true,
+            disabledTitle: t('agentConsole.v2.runs01.filterSourceDisabled'),
+          },
+        ]}
+        clear={{
+          label: t('agentConsole.v2.runs01.clear'),
+          disabled: !hasFilter,
+          title: hasFilter
+            ? t('agentConsole.v2.runs01.clearTitle')
+            : t('agentConsole.v2.runs01.clearDisabledTitle'),
+          onClear: clearFilters,
+        }}
+        count={{
+          pre: t('agentConsole.v2.runs01.loadedPre'),
+          post: t('agentConsole.v2.runs01.loadedPost'),
+          n: list.items.length,
+        }}
+      />
+
+      {list.items.length === 0 ? (
+        <EmptyPanel
+          title={t('agentConsole.v2.runs01.emptyTitle')}
+          desc={
+            hasFilter
+              ? t('agentConsole.v2.runs01.emptyDescFiltered', { filters: filterSummary })
+              : t('agentConsole.v2.runs01.emptyDescPlain')
+          }
+          actionLabel={hasFilter ? t('agentConsole.v2.runs01.emptyClear') : undefined}
+          onAction={hasFilter ? clearFilters : undefined}
+        />
+      ) : (
+        <TableCard
+          ariaLabel={t('agentConsole.v2.runs01.tableAria')}
+          columns={columns}
+          foot={
+            <CursorFoot
+              pageRowsText={t('agentConsole.v2.runs01.pageRows', { n: list.items.length })}
+              noteText={t('agentConsole.v2.runs01.cursorNote', { n: query.limit })}
+              hintText={t('agentConsole.v2.runs01.tblHint')}
+              nextLabel={t('agentConsole.v2.runs01.next')}
+              nextTitle={t('agentConsole.v2.runs01.nextTitle')}
+              lastPageTitle={t('agentConsole.v2.runs01.lastPageTitle')}
+              hasNext={list.nextCursor !== null}
+              loadingMore={list.loadingMore}
+              onNext={onNext}
+              stale={list.stale}
+              staleTitle={t('agentConsole.v2.runs01.staleTitle')}
+              staleDesc={t('agentConsole.v2.runs01.staleDesc')}
+              staleReloadLabel={t('agentConsole.v2.runs01.staleReload')}
+              onReloadFirst={onReloadFirst}
+              nextErrorText={
+                list.nextError !== null
+                  ? list.nextError > 0
+                    ? t('agentConsole.v2.runs01.nextError', { code: list.nextError })
+                    : t('agentConsole.v2.runs01.nextErrorNetwork')
+                  : null
+              }
+              retryLabel={t('agentConsole.v2.runs01.nextRetry')}
+              caliberText={t('agentConsole.v2.runs01.caliber')}
+            />
+          }
+        >
+          {list.items.map((row) => (
+            <RunRow
+              key={row.runId}
+              run={row}
+              fill={fills[row.runId]}
+              onRetryFill={fetchFill}
+              name={names.get(row.employeeId)}
+              t={t}
+            />
+          ))}
+        </TableCard>
+      )}
+
+      <div className="pfoot">
+        <span>{t('agentConsole.v2.runs01.footSource')}</span>
+        <span className="sp" aria-hidden="true" />
+        <span>{t('agentConsole.v2.runs01.footCaliber')}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Page head + meta row (no KPI layer, no write buttons, no 「待接入」). */
+function PageHead({ t, updatedAt }: { t: TFunction; updatedAt: string | null }) {
+  return (
+    <>
+      <div className="phead">
+        <div>
+          <h1 className="h1">{t('agentConsole.v2.navRuns')}</h1>
+          <p className="sub">{t('agentConsole.v2.runs01.sub')}</p>
         </div>
-
-        <label className="a2-run-filter">
-          <span className="a2-micro">{t('agentConsole.v2.runsFilterEmployee')}</span>
-          <select
-            className="a2-run-select"
-            aria-label={t('agentConsole.v2.runsFilterEmployee')}
-            data-testid="agent-v2-runs-filter-employee"
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-          >
-            <option value="">{t('agentConsole.v2.runsFilterAll')}</option>
-            {employees.phase === 'ok'
-              ? employees.value.map((e) => (
-                  <option key={e.employeeId} value={e.employeeId}>
-                    {e.name}
-                  </option>
-                ))
-              : null}
-          </select>
-        </label>
-
-        <span className="a2-meta a2-run-window" data-testid="agent-v2-runs-window">
-          {t('agentConsole.v2.runsWindow')}
+      </div>
+      <div className="fresh">
+        <LkIcon name="clock" size={13} />
+        <span>
+          {t('agentConsole.v2.runs01.freshUpdated')} <span className="mono">{updatedAt ?? '—'}</span>
+        </span>
+        <span className="faint">·</span>
+        <span>
+          {t('agentConsole.v2.runs01.freshSource')} <span className="mono">GET /api/runs</span> (R5) ·{' '}
+          {t('agentConsole.v2.runs01.freshReadonly')}
         </span>
       </div>
-
-      {runs.phase === 'loading' ? (
-        <p className="a2-meta" data-testid="agent-v2-runs-loading">
-          {t('agentConsole.v2.loading')}
-        </p>
-      ) : null}
-
-      {runs.phase === 'error' ? (
-        <div className="a2-run-block" data-testid="agent-v2-runs-error">
-          <p className="a2-meta">{t('agentConsole.v2.runsError')}</p>
-          <button
-            type="button"
-            className="a2-btn"
-            data-testid="agent-v2-runs-retry"
-            onClick={() => setRetryNonce((n) => n + 1)}
-          >
-            {t('agentConsole.v2.runsRetry')}
-          </button>
-        </div>
-      ) : null}
-
-      {runs.phase === 'ok' && runs.value.length === 0 ? (
-        <p className="a2-meta" data-testid="agent-v2-runs-empty">
-          {t('agentConsole.v2.runsEmpty')}
-        </p>
-      ) : null}
-
-      {runs.phase === 'ok' && runs.value.length > 0 ? (
-        <div className="a2-runs-list">
-          {runs.value.map((run) => {
-            const statusLabel = runStatusLabel(t, run.status);
-            const cost = COST_STATUS_KEYS[run.costStatus ?? ''];
-            return (
-              <div className="a2-run-card" key={run.runId} data-testid="agent-v2-runs-card">
-                <div className="a2-run-head">
-                  <span
-                    className={`a2-pill ${statusPillClass(run.status)}`}
-                    data-testid="agent-v2-runs-status"
-                  >
-                    {statusLabel}
-                  </span>
-                  <span
-                    className="a2-run-id a2-mono"
-                    title={run.runId}
-                    data-testid="agent-v2-runs-id"
-                  >
-                    {shortRunId(run.runId)}
-                  </span>
-                  <span className="a2-run-name" data-testid="agent-v2-runs-employee">
-                    {names.get(run.employeeId) ?? run.employeeId}
-                  </span>
-                  <span
-                    className="a2-run-time a2-mono"
-                    title={run.startedAt}
-                    data-testid="agent-v2-runs-time"
-                  >
-                    {formatMoment(run.startedAt)}
-                  </span>
-                  <button
-                    type="button"
-                    className="a2-btn a2-run-toggle"
-                    aria-expanded={openRun[run.runId] === true}
-                    data-testid="agent-v2-runs-toggle"
-                    onClick={() => toggleRun(run)}
-                  >
-                    {t(openRun[run.runId] ? 'agentConsole.runs.collapse' : 'agentConsole.runs.expand')}
-                  </button>
-                </div>
-
-                <div className="a2-run-meta">
-                  <span className="a2-micro">{t('agentConsole.v2.runsDuration')}</span>
-                  <span className="a2-run-value a2-mono" data-testid="agent-v2-runs-duration">
-                    {formatDuration(run.startedAt, run.endedAt)}
-                  </span>
-                  <span className="a2-micro">{t('agentConsole.v2.runsCost')}</span>
-                  <span className="a2-run-value a2-mono" data-testid="agent-v2-runs-cost">
-                    {formatCost(run.costUsd)}
-                  </span>
-                  {cost ? (
-                    <span className={`a2-pill ${cost.cls}`} data-testid="agent-v2-runs-cost-status">
-                      {t(cost.key)}
-                    </span>
-                  ) : (
-                    <span className="a2-run-value" data-testid="agent-v2-runs-cost-status">
-                      {'—'}
-                    </span>
-                  )}
-                </div>
-
-                {openRun[run.runId] ? (
-                  <RunTimeline
-                    run={run}
-                    box={timelines[run.runId]}
-                    fetchingMore={fetchingMore[run.runId] === true}
-                    onLoadMore={loadMore}
-                    onRetry={loadEvents}
-                  />
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
+    </>
   );
 }
 
-interface RunTimelineProps {
+interface RunRowProps {
   run: Run;
-  box: Box<EventsPage> | undefined;
-  fetchingMore: boolean;
-  onLoadMore: (runId: string, nextSeq: number) => void;
-  onRetry: (runId: string) => void;
+  fill?: FillBox;
+  onRetryFill: (runId: string) => void;
+  name?: string;
+  t: TFunction;
 }
 
-/** One run's R3 stream: step-pairing summary + ascending event rows. */
-function RunTimeline({ run, box, fetchingMore, onLoadMore, onRetry }: RunTimelineProps) {
-  const { t } = useTranslation();
+/** One 10-column row. R5 is the main source; an ok R2 fill overlays the
+ *  nullable columns only. Every truncated value keeps its full form in title. */
+function RunRow({ run, fill, onRetryFill, name, t }: RunRowProps) {
+  const filled = fill?.phase === 'ok' ? fill.run : null;
+  const costUsd = filled ? (filled.costUsd ?? run.costUsd) : run.costUsd;
+  const costStatus = filled ? (filled.costStatus ?? run.costStatus) : run.costStatus;
+  const versionNo = filled ? (filled.employeeVersionNo ?? run.employeeVersionNo) : run.employeeVersionNo;
+  const endedAt = filled ? (filled.endedAt ?? run.endedAt) : run.endedAt;
 
-  if (!box || box.phase === 'loading') {
-    return (
-      <div className="a2-run-timeline" data-testid="agent-v2-ev-loading-block">
-        <p className="a2-meta" data-testid="agent-v2-ev-loading">
-          {t('agentConsole.v2.loading')}
-        </p>
-      </div>
-    );
-  }
+  const statusLabel = runStatusLabel(t, run.status);
+  const pillCls = statusPillClass(run.status);
+  const statusHintKey = `agentConsole.v2.runs01.statusHint.${run.status}`;
+  const displayName = name ?? run.employeeId;
 
-  if (box.phase === 'error') {
-    return (
-      <div className="a2-run-timeline" data-testid="agent-v2-ev-error-block">
-        <p className="a2-meta" data-testid="agent-v2-ev-error">
-          {t('agentConsole.v2.evError')}
-        </p>
-        <button type="button" className="a2-btn" data-testid="agent-v2-ev-retry" onClick={() => onRetry(run.runId)}>
-          {t('agentConsole.v2.runsRetry')}
-        </button>
-      </div>
-    );
-  }
-
-  const { items, nextSeq, hasMore } = box.value;
-  if (items.length === 0) {
-    return (
-      <div className="a2-run-timeline" data-testid="agent-v2-ev-empty-block">
-        <p className="a2-meta" data-testid="agent-v2-ev-empty">
-          {t('agentConsole.v2.evEmpty')}
-        </p>
-      </div>
-    );
-  }
-
-  const trace = buildRunTrace(items);
-  const badge = (kind: keyof typeof BADGE_KEYS, testid: string) => {
-    const b = BADGE_KEYS[kind];
-    return (
-      <span className={`a2-pill ${b.cls}`} data-testid={testid}>
-        {t(b.key)}
-      </span>
-    );
-  };
+  const duration = formatDuration(run.startedAt, endedAt);
+  const durationTitle =
+    duration === '—'
+      ? t('agentConsole.v2.runs01.durationNone')
+      : `${run.startedAt} → ${endedAt}`;
 
   return (
-    <div className="a2-run-timeline" data-testid="agent-v2-ev-timeline">
-      {trace.steps.length > 0 ? (
-        <div className="a2-ev-steps" data-testid="agent-v2-ev-steps">
-          <div className="a2-micro">{t('agentConsole.v2.evSteps')}</div>
-          {trace.steps.map((step: RunStep) => (
-            <div
-              className="a2-ev-step"
-              key={`${step.stepSeq}\u0000${step.toolName}\u0000${step.callEvent.seq}`}
-              data-testid="agent-v2-ev-step"
+    <tr title={run.runId} data-testid="agent-v2-runs-row">
+      <td>
+        <CopyId
+          value={run.runId}
+          display={shortRunId(run.runId)}
+          ariaLabel={t('agentConsole.v2.runs01.copyAria')}
+          copiedLabel={t('agentConsole.v2.runs01.copied')}
+          testId="agent-v2-runs-id"
+        />
+      </td>
+      <td className="lk-td-who">
+        <span className="who" title={run.employeeId} data-testid="agent-v2-runs-employee">
+          <span className="ava" aria-hidden="true">
+            {displayName.slice(0, 1)}
+          </span>
+          <span className="nm">{displayName}</span>
+        </span>
+      </td>
+      <td>
+        <span
+          className={`pill${pillCls ? ` ${pillCls}` : ''}`}
+          title={RUN_STATUS_LABEL_KEYS[run.status as RunStatus] ? t(statusHintKey) : undefined}
+          data-testid="agent-v2-runs-status"
+        >
+          <span className="dot" aria-hidden="true" />
+          {statusLabel}
+        </span>
+      </td>
+      <td
+        className={`num mono${duration === '—' ? ' faint' : ''}`}
+        title={durationTitle}
+        data-testid="agent-v2-runs-duration"
+      >
+        {duration}
+      </td>
+      <td className="num" data-testid="agent-v2-runs-cost">
+        <span className="cost">
+          {costStatus === 'unknown' ? (
+            <span className="v unk" title={t('agentConsole.v2.runs01.costUnknownTitle')}>
+              unknown
+            </span>
+          ) : (
+            <span
+              className={`v${formatCost(costUsd) === '—' ? ' faint' : ''}`}
+              title={formatCost(costUsd) === '—' ? t('agentConsole.v2.runs01.costNoneTitle') : undefined}
             >
-              <span className="a2-ev-num a2-mono">{step.stepSeq}</span>
-              <span className="a2-ev-tool">{step.toolName}</span>
-              {badge(step.state, 'agent-v2-ev-step-state')}
-              {step.anomaly ? badge(step.anomaly, 'agent-v2-ev-step-anomaly') : null}
-              <span className="a2-ev-call a2-mono" title={step.callEvent.occurredAt}>
-                #{step.callEvent.seq}
-              </span>
-              <span className="a2-ev-result a2-mono">
-                {step.resultSeq === null ? '—' : `#${step.resultSeq}`}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="a2-ev-head a2-micro">
-        <span>{t('agentConsole.v2.evSeq')}</span>
-        <span>{t('agentConsole.v2.evType')}</span>
-        <span>{t('agentConsole.v2.evTime')}</span>
-      </div>
-
-      {trace.events.map((ev: TraceEvent) => (
-        <div className="a2-ev-row" key={ev.seq} data-testid="agent-v2-ev-row">
-          <div className="a2-ev-line">
-            <span className="a2-ev-num a2-mono" data-testid="agent-v2-ev-seq">
-              {ev.seq}
+              {formatCost(costUsd)}
             </span>
-            <span className="a2-ev-type a2-mono" data-testid="agent-v2-ev-type">
-              {ev.eventType}
+          )}
+          {costStatus === 'upstream' ? (
+            <span className="pill ok xs" title={t('agentConsole.v2.runs01.costUpstreamTitle')} data-testid="agent-v2-runs-cost-status">
+              <span className="dot" aria-hidden="true" />
+              {t('agentConsole.v2.runsCostUpstream')}
             </span>
-            <span className="a2-ev-time a2-mono" data-testid="agent-v2-ev-time">
-              {formatMoment(ev.occurredAt)}
+          ) : costStatus === 'estimated' ? (
+            <span className="pill wr xs" title={t('agentConsole.v2.runs01.costEstimatedTitle')} data-testid="agent-v2-runs-cost-status">
+              <span className="dot" aria-hidden="true" />
+              {t('agentConsole.v2.runsCostEstimated')}
             </span>
-            {ev.anomaly ? badge(ev.anomaly, 'agent-v2-ev-anomaly') : null}
-            {ev.postTerminal ? badge('postTerminal', 'agent-v2-ev-post-terminal') : null}
-          </div>
-          <details className="a2-ev-payload" data-testid="agent-v2-ev-payload">
-            <summary className="a2-micro">{t('agentConsole.v2.evPayload')}</summary>
-            <pre className="a2-ev-json a2-mono">{payloadText(ev)}</pre>
-          </details>
-        </div>
-      ))}
-
-      {hasMore ? (
+          ) : null}
+          {fill?.phase === 'error' ? (
+            <button
+              type="button"
+              className="b xs gh"
+              title={t('agentConsole.v2.runs01.detailRetryTitle')}
+              aria-label={t('agentConsole.v2.runs01.detailRetryTitle')}
+              data-testid="agent-v2-runs-fill-retry"
+              onClick={() => onRetryFill(run.runId)}
+            >
+              <LkIcon name="refresh" size={13} />
+            </button>
+          ) : null}
+        </span>
+      </td>
+      <td data-testid="agent-v2-runs-source">
+        {run.channelEventId ? (
+          <span
+            className="src"
+            title={t('agentConsole.v2.runs01.sourceTitle', { id: run.channelEventId })}
+          >
+            <LkIcon name="msg" size={13} />
+            <span className="tx">{shortEventId(run.channelEventId)}</span>
+          </span>
+        ) : (
+          <span className="faint mono" title={t('agentConsole.v2.runs01.sourceNoneTitle')}>
+            —
+          </span>
+        )}
+      </td>
+      <td
+        className="num mono"
+        title={t('agentConsole.v2.runs01.versionTitle', { n: versionNo })}
+        data-testid="agent-v2-runs-version"
+      >
+        {versionNo == null ? '—' : String(versionNo)}
+      </td>
+      <td className="num mono" title={run.startedAt} data-testid="agent-v2-runs-start">
+        {formatMoment(run.startedAt)}
+      </td>
+      <td
+        className={`num mono${endedAt ? '' : ' faint'}`}
+        title={endedAt ?? t('agentConsole.v2.runs01.endNone')}
+        data-testid="agent-v2-runs-end"
+      >
+        {formatMoment(endedAt)}
+      </td>
+      <td>
         <button
           type="button"
-          className="a2-btn a2-ev-more"
-          data-testid="agent-v2-ev-load-more"
-          disabled={fetchingMore}
-          onClick={() => nextSeq !== null && onLoadMore(run.runId, nextSeq)}
+          className="b xs out"
+          disabled
+          aria-disabled="true"
+          title={t('agentConsole.v2.runs01.viewDisabledTitle')}
+          data-testid="agent-v2-runs-view"
         >
-          {t('agentConsole.v2.runsLoadMore')}
+          {t('agentConsole.v2.runs01.view')}
         </button>
-      ) : null}
-    </div>
+      </td>
+    </tr>
   );
 }

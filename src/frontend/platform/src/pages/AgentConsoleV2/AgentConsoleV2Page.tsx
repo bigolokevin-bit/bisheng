@@ -638,7 +638,8 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsAp
 
             {section === 'runs' ? (
               <>
-                <h1 className="a2-h1">{t('agentConsole.v2.navRuns')}</h1>
+                {/* RUN-01: RunsSection carries its own target-aligned page
+                    head (h1 + caliber sub + meta row); no duplicate h1 here. */}
                 {/* key on the preset: entering from a different employee must
                     remount with that employee pre-selected. */}
                 <RunsSection

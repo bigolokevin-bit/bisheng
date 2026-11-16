@@ -4,6 +4,12 @@
 // The client never reduces one page of rows into a fleet-wide number.
 // Missing data renders as an em-dash or an explicit honest note — no fake
 // zeroes, no fake curves, no internal keys leaking as labels.
+// EMP-01 r5 (G15, same idiom as OV-01 blockUnavailable): error copy is fully
+// localized; the HTTP status is only an interpolation parameter and the
+// internal machine code (console.forbidden / run.invalid_query /
+// budget.range_too_large / agent.http.*) never reaches the screen. The
+// requestId is offered through an explicit "copy diagnostics" control and is
+// never inlined in body text.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -89,6 +95,48 @@ interface KpiState {
 
 function isoShift(baseIso: string, days: number): string {
   return new Date(new Date(baseIso).getTime() - days * 86400000).toISOString();
+}
+
+// G15: copies ONLY the request id (safe diagnostic handle). Never the token,
+// never the response body, never the internal machine code.
+function DiagCopyButton({ requestId, testId }: { requestId?: string; testId: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+  if (!requestId) return null;
+  const handleCopy = () => {
+    if (!navigator.clipboard?.writeText) return;
+    void navigator.clipboard.writeText(requestId).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <button type="button" className="a2-btn" data-testid={testId} onClick={handleCopy}>
+      {copied ? t('agentConsole.v2.emp.copiedToast') : t('agentConsole.v2.emp.copyDiag')}
+    </button>
+  );
+}
+
+// Localized KPI-block failure line (OV-01 idiom): "…暂时取不到（HTTP nnn）"
+// plus the copy-diagnostics affordance. No machine code, no inline request id.
+function KpiBlockError({
+  res,
+  block,
+  testIdBase,
+}: {
+  res: ApiRes<unknown>;
+  block: string;
+  testIdBase: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <span className="a2-meta" data-testid={`${testIdBase}-error`}>
+        {t('agentConsole.v2.ov.blockUnavailable', { block, code: res.status })}
+      </span>
+      <DiagCopyButton requestId={res.requestId} testId={`${testIdBase}-diag`} />
+    </>
+  );
 }
 
 function sumCost(body: BudgetBody | null | undefined, ids: string[]): { total: number | null; covered: number } {
@@ -424,9 +472,11 @@ export function EmployeesListPage() {
         <div className="a2-kpi">
           <span className="a2-meta">{t('agentConsole.v2.emp.kpiOnDuty')}</span>
           {kpi.stats && !kpi.stats.ok ? (
-            <span className="a2-meta" data-testid="agent-v2-kpi-onduty-error">
-              {t('agentConsole.v2.errorQuery')} {kpi.stats.code ?? ''} {kpi.stats.requestId ? `req ${kpi.stats.requestId}` : ''}
-            </span>
+            <KpiBlockError
+              res={kpi.stats}
+              block={t('agentConsole.v2.emp.kpiOnDuty')}
+              testIdBase="agent-v2-kpi-onduty"
+            />
           ) : (
             <>
               <span className="a2-kpi-num" data-testid="agent-v2-kpi-onduty">
@@ -441,9 +491,11 @@ export function EmployeesListPage() {
         <div className="a2-kpi">
           <span className="a2-meta">{t('agentConsole.v2.emp.kpiPending')}</span>
           {kpi.approvals && !kpi.approvals.ok ? (
-            <span className="a2-meta" data-testid="agent-v2-kpi-pending-error">
-              {t('agentConsole.v2.errorQuery')} {kpi.approvals.code ?? ''}
-            </span>
+            <KpiBlockError
+              res={kpi.approvals}
+              block={t('agentConsole.v2.emp.kpiPending')}
+              testIdBase="agent-v2-kpi-pending"
+            />
           ) : (
             <>
               <span className="a2-kpi-num" data-testid="agent-v2-kpi-pending">
@@ -460,9 +512,11 @@ export function EmployeesListPage() {
         <div className="a2-kpi">
           <span className="a2-meta">{t('agentConsole.v2.emp.kpiCost')}</span>
           {kpi.costNow && !kpi.costNow.ok ? (
-            <span className="a2-meta" data-testid="agent-v2-kpi-cost-error">
-              {t('agentConsole.v2.errorQuery')} {kpi.costNow.code ?? ''}
-            </span>
+            <KpiBlockError
+              res={kpi.costNow}
+              block={t('agentConsole.v2.emp.kpiCost')}
+              testIdBase="agent-v2-kpi-cost"
+            />
           ) : (
             <>
               <span className="a2-kpi-num" data-testid="agent-v2-kpi-cost">
@@ -480,9 +534,11 @@ export function EmployeesListPage() {
         <div className="a2-kpi">
           <span className="a2-meta">{t('agentConsole.v2.emp.kpiAnomaly')}</span>
           {kpi.anomalyNow && !kpi.anomalyNow.ok ? (
-            <span className="a2-meta" data-testid="agent-v2-kpi-anomaly-error">
-              {t('agentConsole.v2.errorQuery')} {kpi.anomalyNow.code ?? ''}
-            </span>
+            <KpiBlockError
+              res={kpi.anomalyNow}
+              block={t('agentConsole.v2.emp.kpiAnomaly')}
+              testIdBase="agent-v2-kpi-anomaly"
+            />
           ) : (
             <>
               <span className="a2-kpi-num" data-testid="agent-v2-kpi-anomaly">
@@ -580,22 +636,57 @@ export function EmployeesListPage() {
       {isAuth ? (
         <div className="a2-card" data-testid="agent-v2-employees-auth">
           <p className="a2-h2">{t('agentConsole.v2.emp.authExpired')}</p>
-          <p className="a2-card-sub">{listRes?.code ?? ''}</p>
+          <p className="a2-card-sub">{t('agentConsole.v2.emp.authHint')}</p>
+          <div className="a2-card-actions">
+            <button
+              type="button"
+              className="a2-btn"
+              data-testid="agent-v2-employees-retry"
+              onClick={handleRetry}
+            >
+              {t('agentConsole.v2.retry')}
+            </button>
+            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" />
+          </div>
         </div>
       ) : isForbidden ? (
         <div className="a2-card" data-testid="agent-v2-employees-403">
           <p className="a2-h2">{t('agentConsole.v2.emp.noPermission')}</p>
-          <p className="a2-card-sub">{listRes?.code ?? ''}</p>
+          <p className="a2-card-sub">{t('agentConsole.v2.emp.forbiddenHint')}</p>
+          <div className="a2-card-actions">
+            <button
+              type="button"
+              className="a2-btn"
+              data-testid="agent-v2-employees-retry"
+              onClick={handleRetry}
+            >
+              {t('agentConsole.v2.retry')}
+            </button>
+            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" />
+          </div>
         </div>
       ) : isError ? (
         <div className="a2-card" data-testid="agent-v2-employees-error">
           <p className="a2-h2">{t('agentConsole.v2.errorQuery')}</p>
-          <p className="a2-card-sub">
-            {listRes?.code ?? ''} {listRes?.requestId ? `req ${listRes.requestId}` : ''}
+          {/* G15: localized line with the HTTP status as an interpolation
+              parameter only — the internal code is never rendered. */}
+          <p className="a2-card-sub" data-testid="agent-v2-employees-error-detail">
+            {t('agentConsole.v2.ov.blockUnavailable', {
+              block: t('agentConsole.v2.navEmployees'),
+              code: listRes?.status ?? '',
+            })}
           </p>
-          <button type="button" className="a2-btn" onClick={handleRetry}>
-            {t('agentConsole.v2.retry')}
-          </button>
+          <div className="a2-card-actions">
+            <button
+              type="button"
+              className="a2-btn"
+              data-testid="agent-v2-employees-retry"
+              onClick={handleRetry}
+            >
+              {t('agentConsole.v2.retry')}
+            </button>
+            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" />
+          </div>
         </div>
       ) : listLoading && !listRes ? (
         <div className="a2s-skeleton" data-testid="agent-v2-employees-loading" aria-hidden>
