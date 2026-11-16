@@ -696,6 +696,10 @@ export function AnomalyBlock({
   const failed = runs.ok ? sumField(runs.data, 'failed') : null;
   const succeeded = runs.ok ? sumField(runs.data, 'succeeded') : null;
   const dueSoon = approvals.ok ? (approvals.data?.dueSoon ?? null) : null;
+  /* A05: 48h backlog has no dedicated field — when AP8 reports zero pending
+   * there is provably nothing backlogged; with pending>0 we cannot know, so
+   * the honest '—' stays (never fabricate a count). */
+  const pendingCount = approvals.ok ? (approvals.data?.pending ?? null) : null;
   const hits =
     (failed != null && failed > 0 ? 1 : 0) +
     (dueSoon != null && dueSoon > 0 ? 1 : 0) +
@@ -705,7 +709,7 @@ export function AnomalyBlock({
       <b>
         {t('agentConsole.v2.ov.anomalyScanLine', {
           due: dueSoon ?? '—',
-          backlog: '—',
+          backlog: pendingCount === 0 ? '0' : '—',
           failed: failed ?? '—',
           total: succeeded != null && failed != null ? succeeded + failed : '—',
           over: budgetOverCount ?? '—',
@@ -722,7 +726,7 @@ export function AnomalyBlock({
     <div className="ov-card" data-testid="agent-v2-ov-block-anomaly">
       <div className="ov-card-hd">
         <span className="t">{t('agentConsole.v2.ov.anomalyTitle')}</span>
-        <span className="c a2-mono">{hits}</span>
+        <span className="c a2-mono">{t('agentConsole.v2.ov.anomalyCountUnit', { count: hits })}</span>
         <span className="sp" />
         <span className="hd-note">
           {scannedAt ? t('agentConsole.v2.ov.anomalyScannedAt', { time: fmtTime(scannedAt) }) : ''}
