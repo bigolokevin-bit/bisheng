@@ -684,7 +684,7 @@ function RunRow({ run, fill, onRetryFill, name, t }: RunRowProps) {
           testId="agent-v2-runs-id"
         />
       </td>
-      <td>
+      <td className="lk-td-who">
         <span className="who" title={run.employeeId} data-testid="agent-v2-runs-employee">
           <span className="ava" aria-hidden="true">
             {displayName.slice(0, 1)}

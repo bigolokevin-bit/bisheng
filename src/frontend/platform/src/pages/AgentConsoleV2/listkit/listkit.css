@@ -469,13 +469,17 @@
   white-space: nowrap;
 }
 
-/* 员工单元格 */
+/* 员工单元格：VG FAIL-1 — 无 E11 名字时降级裸 employeeId，任意长度不得出列。
+ * .who 必须被单元格内容宽约束（max-width:100%），.nm 作为可收缩 flex 项
+ * （min-width:0 + flex:0 1 auto）吃 ellipsis；头像 flex:none 不被压缩。
+ * 深浅同 DOM、375 卡内横滚同规则；title 全文由 RunsSection 保留。 */
 .agent-app .lk .who {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
   white-space: nowrap;
   min-width: 0;
+  max-width: 100%;
 }
 .agent-app .lk .who .ava {
   width: 20px;
@@ -493,6 +497,14 @@
 .agent-app .lk .who .nm {
   overflow: hidden;
   text-overflow: ellipsis;
+  /* 可收缩 flex 项：没有 min-width:0 时 flex 项拒绝缩到内容宽以下，
+   * ellipsis 永不生效（VG FAIL-1 根因之一）。 */
+  min-width: 0;
+  flex: 0 1 auto;
+}
+/* 员工列硬边界：任何长度的裸 employeeId 都不得越过本列（列宽 112 固定）。 */
+.agent-app .lk .tbl td.lk-td-who {
+  overflow: hidden;
 }
 
 /* 来源单元格 */

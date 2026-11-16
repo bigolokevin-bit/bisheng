@@ -177,6 +177,21 @@ describe('RUN-01 runs list — structure & honest values', () => {
     expect(id.textContent).toContain('已复制');
   });
 
+  it('degrades an unresolved employee to the raw ID inside the clipped who cell (VG FAIL-1)', async () => {
+    // E11 has no entry for this employee: the row must show the real raw id
+    // (never a fabricated name), clipped inside the fixed 112px column with
+    // the full value kept in title.
+    const orphan = makeRun({ employeeId: 'emp_9F42AAE299CD541FBBB68B0E33671' });
+    renderRuns(makeApi([okPage([orphan])]));
+    const cell = await screen.findByTestId('agent-v2-runs-employee');
+    expect(cell.getAttribute('title')).toBe('emp_9F42AAE299CD541FBBB68B0E33671');
+    expect(cell.className).toContain('who');
+    const nm = cell.querySelector('.nm');
+    expect(nm?.textContent).toBe('emp_9F42AAE299CD541FBBB68B0E33671');
+    // hard column boundary: the employee td clips, the name span ellipsizes
+    expect(cell.closest('td')?.className).toContain('lk-td-who');
+  });
+
   it('maps all six status enums to dot+text pills with the frozen color mapping', async () => {
     const statuses = ['pending', 'running', 'completed', 'failed', 'cancelled', 'interrupted'] as const;
     const labels = ['排队中', '运行中', '已完成', '失败', '已取消', '已中断'];
