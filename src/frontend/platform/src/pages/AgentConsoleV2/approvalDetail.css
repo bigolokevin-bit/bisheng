@@ -96,7 +96,12 @@
 .agent-app .a2d-na .a2d-nt { font-size: 14px; font-weight: 500; }
 .agent-app .a2d-na .a2d-ns { font-size: 12.5px; color: hsl(var(--muted-foreground)); max-width: 460px; line-height: 19px; }
 
-/* operations (M1 read-only) */
+/* operations (APR-03: real write path, gated by kind/lifecycle/identity) */
+.agent-app .a2d-banner { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; padding: 12px; border-radius: 8px; border: 1px solid hsl(var(--warning) / 0.35); background: hsl(var(--warning) / 0.08); }
+.agent-app .a2d-banner .a2d-i { margin-top: 2px; color: hsl(var(--warning)); flex: none; }
+.agent-app .a2d-banner-t { font-size: 13px; font-weight: 600; line-height: 19px; }
+.agent-app .a2d-banner-d { font-size: 12px; line-height: 18px; color: hsl(var(--muted-foreground)); margin-top: 2px; }
+.agent-app .a2d-writeerr { margin-top: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid hsl(var(--danger) / 0.35); background: hsl(var(--danger) / 0.08); font-size: 12.5px; line-height: 19px; color: hsl(var(--danger)); }
 .agent-app .a2d-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .agent-app .a2d-acts .a2d-sp { flex: 1; }
 .agent-app .a2d-vsep { width: 1px; height: 22px; background: var(--hairline); flex: none; }

@@ -1,24 +1,34 @@
-/* APR-02: read-only approval detail (/agent/approvals/:id). Data comes ONLY
+/* APR-02/03: approval detail (/agent/approvals/:id). Data comes ONLY
  * from AP3 GET /api/approval?id= (same-origin /agent-api); the frozen Approval
  * contract + CR-043 additive `detail` projection drive every field — missing
  * keys render — or an honest "unavailable" panel, never a fabricated value or
- * client-side diff. M1 read-only: approve/reject/revise ALL disabled, zero AP2
- * wiring. Countdown trusts only remainingSeconds (expiresAt = tooltip); terminal
- * 0 reads 「已结束」 (D-4). Unknown/cross-tenant ids share ONE 404/403 body (D-2);
- * binding effectiveFrom/runId/messageDigest are present-only (D-1). Machine codes
- * stay in titles; errors show localized copy + HTTP status only. */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+ * client-side diff. APR-03 wires the decision write path: approve/reject/revise
+ * POST to the BFF whitelist route only after a second confirm, and only for a
+ * live (non-terminal, unexpired) non-`message_send` approval where the current
+ * user is an approver who has not voted yet. `message_send` stays fully
+ * disabled behind an honest banner. Countdown trusts only remainingSeconds
+ * (expiresAt = tooltip); terminal 0 reads 「已结束」 (D-4). Unknown/cross-tenant
+ * ids share ONE 404/403 body (D-2); binding effectiveFrom/runId/messageDigest
+ * are present-only (D-1). Machine codes stay in titles; errors show localized
+ * copy + HTTP status only. */
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { approvalWriteEnabled } from '@/controllers/API/agentConsoleApprovals';
+import { userContext } from '@/contexts/userContext';
+
 import {
+  decisionErrorKey,
   fetchApprovalDetail,
   fmtId,
   fmtTime,
   makeFetcher,
+  postApprovalDecision,
   type ApprovalDetailBody,
   type ApprovalDetailVersion,
+  type DecisionVerdict,
   type Fetcher,
 } from './v2Data';
 
@@ -29,6 +39,7 @@ import {
 } from './approvalDetailKit';
 
 import { useConsoleCrumbTail } from './Shell';
+import { ApprovalDecisionDialog } from './ApprovalDecisionDialog';
 
 import './approvalDetail.css';
 
@@ -79,7 +90,57 @@ export function ApprovalDetailPage() {
   const [now, setNow] = useState(() => Date.now());
   const warnedKinds = useRef<Set<string>>(new Set());
 
+  // ---- APR-03 write state (single decision through the confirm dialog) ----
+  const ctx = useContext(userContext) as { user?: { user_id?: number | string } } | null;
+  const myId =
+    ctx?.user?.user_id === undefined || ctx?.user?.user_id === null
+      ? ''
+      : `human:${ctx.user.user_id}`;
+  const [decision, setDecision] = useState<DecisionVerdict | null>(null);
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [writeErr, setWriteErr] = useState<{ status: number; code?: string } | null>(null);
+
   const retry = useCallback(() => setToken((n) => n + 1), []);
+
+  // A new id resets the write area: no stale ballot state leaks across rows.
+  useEffect(() => {
+    setDecision(null);
+    setComment('');
+    setWriteErr(null);
+  }, [id]);
+
+  const openDecision = (verdict: DecisionVerdict) => {
+    setWriteErr(null);
+    setComment('');
+    setDecision(verdict);
+  };
+
+  const submitDecision = useCallback(async () => {
+    if (!decision || busy || !id) return;
+    setBusy(true);
+    setWriteErr(null);
+    const res = await postApprovalDecision(id, { verdict: decision, comment });
+    setBusy(false);
+    if (res.ok) {
+      setDecision(null);
+      setComment('');
+      retry();
+      return;
+    }
+    if (res.status === 401) {
+      window.location.assign('/login');
+      return;
+    }
+    setWriteErr({ status: res.status, code: res.code });
+    // The ballot/lifecycle moved under us (already decided, expired): close the
+    // dialog and reload the authoritative row instead of retrying blindly.
+    if (res.status === 409 || res.code === 'approval.already_decided' || res.code === 'approval.expired') {
+      setDecision(null);
+      setComment('');
+      retry();
+    }
+  }, [busy, comment, decision, id, retry]);
   // Back preserves the list filters: the APR-01 id link carries state.from, and
   // a real browser history entry (idx>0) also restores the prior list URL. Direct
   // entry / refresh with no prior entry falls back to the plain list.
@@ -205,6 +266,34 @@ export function ApprovalDetailPage() {
   const dur = remaining === null ? null : durationParts(remaining);
   const durText = dur ? t(dur.key, dur.opts) : '—';
   const ended = remaining !== null && remaining <= 0;
+
+  /* APR-03 write eligibility. Every input is a field the payload actually
+   * carries: build-time write switch, live lifecycle, non-outbound change kind,
+   * approver membership (`approvers[].userId`) and "I have not voted yet".
+   * There is no client-invented admin role: an unauthorized account still sees
+   * disabled controls and the BFF stays the final 403 gate. */
+  const writeFlag = approvalWriteEnabled();
+  const outbound = kind === 'message_send';
+  const isApprover = myId !== '' && (row.approvers ?? []).some((a) => a.userId === myId);
+  const alreadyVoted = myId !== '' && (row.decisions ?? []).some((d) => d.userId === myId);
+  const decidable =
+    writeFlag && row.status === 'pending' && !ended && !outbound && isApprover && !alreadyVoted;
+  const opsNote = outbound
+    ? apd('opsNoteMessageSendDesc')
+    : !writeFlag
+      ? apd('opsNoteWriteOff')
+      : row.status !== 'pending' || ended
+        ? apd('opsNoteEnded')
+        : !isApprover
+          ? apd('opsNoteNotApprover')
+          : alreadyVoted
+            ? apd('opsNoteVoted')
+            : apd('opsNoteWritable');
+  const writeErrorCopy = writeErr
+    ? t(`agentConsole.v2.decide.err.${decisionErrorKey(writeErr.status, writeErr.code)}`, {
+        code: writeErr.status,
+      })
+    : '';
 
   const detail = row.detail;
   const change = detail?.changeDetail;
@@ -563,32 +652,92 @@ export function ApprovalDetailPage() {
         ) : null}
       </div>
 
-      {/* operations — M1 read-only, ALL disabled, zero AP2 wiring */}
+      {/* operations — APR-03: real decision write, gated + confirmed */}
       <div className="a2d-card" data-testid="agent-v2-apd-ops">
         <div className="a2d-sec">
           <div className="a2-micro">{apd('opsTitle')}</div>
+          {outbound ? (
+            <div className="a2d-banner" role="status" data-testid="agent-v2-apd-outbound-banner">
+              <I className="a2d-i a2d-i16">{ISend}</I>
+              <div>
+                <div className="a2d-banner-t">{apd('outboundTitle')}</div>
+                <div className="a2d-banner-d">{apd('outboundDesc')}</div>
+              </div>
+            </div>
+          ) : null}
           <div className="a2d-acts">
-            <button type="button" className="a2d-btn dgs" disabled aria-disabled="true" title={apd('readonlyTitle')} data-testid="agent-v2-apd-reject">
+            <button
+              type="button"
+              className="a2d-btn dgs"
+              disabled={!decidable || busy}
+              aria-disabled={!decidable || busy}
+              title={decidable ? apd('rejectTitle') : opsNote}
+              onClick={() => openDecision('reject')}
+              data-testid="agent-v2-apd-reject"
+            >
               <I>{IX}</I>
               {apd('reject')}
             </button>
             <span className="a2d-sp" />
-            <button type="button" className="a2d-btn out" disabled aria-disabled="true" title={apd('readonlyTitle')} data-testid="agent-v2-apd-revise">
+            <button
+              type="button"
+              className="a2d-btn out"
+              disabled={!decidable || busy}
+              aria-disabled={!decidable || busy}
+              title={decidable ? apd('reviseTitle') : opsNote}
+              onClick={() => openDecision('revise')}
+              data-testid="agent-v2-apd-revise"
+            >
               <I>{IUndo}</I>
               {apd('revise')}
             </button>
             <span className="a2d-vsep" />
-            <button type="button" className="a2d-btn pri" disabled aria-disabled="true" title={apd('readonlyTitle')} data-testid="agent-v2-apd-approve">
+            <button
+              type="button"
+              className="a2d-btn pri"
+              disabled={!decidable || busy}
+              aria-disabled={!decidable || busy}
+              title={decidable ? apd('approveTitle') : opsNote}
+              onClick={() => openDecision('approve')}
+              data-testid="agent-v2-apd-approve"
+            >
               <I>{ICheck}</I>
               {apd('approve')}
             </button>
           </div>
-          <div className="a2d-opnote">
-            <I className="a2d-i a2d-i14">{ILock}</I>
-            <span>{isTerminal ? apd('opnoteTerminal') : apd('opnote')}</span>
+          <div className="a2d-opnote" data-testid="agent-v2-apd-ops-note">
+            <I className="a2d-i a2d-i14">{decidable ? IShield : ILock}</I>
+            <span>{opsNote}</span>
           </div>
+          {!decision && writeErr ? (
+            <div className="a2d-writeerr" role="alert" data-testid="agent-v2-apd-write-error">
+              {writeErrorCopy}
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {decision ? (
+        <ApprovalDecisionDialog
+          verdict={decision}
+          title={t('agentConsole.v2.decide.dialog.title', { verb: apd(`verdict.${decision}`) })}
+          target={row.approvalId}
+          kindLabel={kindLabel}
+          riskLabel={riskLabel}
+          riskNote={t('agentConsole.v2.decide.dialog.riskNote')}
+          withComment
+          comment={comment}
+          onComment={setComment}
+          busy={busy}
+          error={writeErr ? writeErrorCopy : undefined}
+          onCancel={() => {
+            setDecision(null);
+            setComment('');
+            setWriteErr(null);
+          }}
+          onConfirm={() => void submitDecision()}
+        />
+      ) : null}
 
       {/* footer caliber (target .pfoot) */}
       <div className="a2d-pfoot" data-testid="agent-v2-apd-footer">

@@ -1,0 +1,132 @@
+/* APR-03 decision confirm dialog. Scoped under .agent-app like every other
+ * console style; the overlay is fixed so it works from both the detail page and
+ * the list page. Auto-light/dark comes from the same tokens as the cards. */
+.a2dd-ovl {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(12, 16, 24, 0.44);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.agent-app .a2dd {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: hsl(var(--card));
+  box-shadow: 0 24px 60px rgba(12, 16, 24, 0.28);
+}
+
+.agent-app .a2dd-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px 0;
+}
+
+.agent-app .a2dd-ic {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: hsl(var(--surface));
+  color: hsl(var(--muted-foreground));
+}
+
+.agent-app .a2dd-ic-approve { background: hsl(var(--ok-soft, var(--surface))); color: hsl(var(--success, var(--foreground))); }
+.agent-app .a2dd-ic-reject { background: hsl(var(--danger-soft, var(--surface))); color: hsl(var(--danger)); }
+.agent-app .a2dd-ic-revise { background: hsl(var(--warning-soft, var(--surface))); color: hsl(var(--warning)); }
+
+.agent-app .a2dd-t {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  min-width: 0;
+}
+
+.agent-app .a2dd-bd { padding: 14px 20px 0; min-width: 0; }
+
+.agent-app .a2dd-kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 16px;
+  font-size: 12.5px;
+  line-height: 19px;
+}
+
+.agent-app .a2dd-kv dt { color: hsl(var(--micro-foreground)); white-space: nowrap; }
+.agent-app .a2dd-kv dd { min-width: 0; overflow-wrap: anywhere; }
+
+.agent-app .a2dd-risk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+}
+
+.agent-app .a2dd-risk {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: hsl(var(--surface));
+  font-size: 12.5px;
+  line-height: 19px;
+  color: hsl(var(--muted-foreground));
+}
+
+.agent-app .a2dd-field { display: block; margin-top: 12px; }
+.agent-app .a2dd-lbl { display: block; font-size: 12.5px; color: hsl(var(--muted-foreground)); margin-bottom: 6px; }
+
+.agent-app .a2dd-ta {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font: inherit;
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.agent-app .a2dd-ta:focus { outline: 2px solid hsl(var(--primary) / 0.35); outline-offset: 1px; }
+.agent-app .a2dd-ta[disabled] { opacity: 0.6; }
+
+.agent-app .a2dd-err {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--danger) / 0.35);
+  background: hsl(var(--danger) / 0.08);
+  font-size: 12.5px;
+  line-height: 19px;
+  color: hsl(var(--danger));
+  overflow-wrap: anywhere;
+}
+
+.agent-app .a2dd-ft {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+}
+
+@media (max-width: 767px) {
+  .a2dd-ovl { padding: 12px; align-items: flex-end; }
+  .agent-app .a2dd { max-height: calc(100vh - 24px); }
+  .agent-app .a2dd-hd { padding: 14px 14px 0; }
+  .agent-app .a2dd-bd { padding: 12px 14px 0; }
+  .agent-app .a2dd-ft { padding: 14px; }
+  .agent-app .a2dd-ft .a2d-btn { flex: 1; justify-content: center; }
+}

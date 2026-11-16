@@ -88,6 +88,10 @@ let approvalsBody: unknown = { items: [approval(A1), approval(A2), approval(AC, 
 let statsStatus = 200;
 let statsBody: unknown = { pending: 3, dueSoon: 1 };
 let urls: string[] = [];
+let methods: string[] = [];
+let bodies: Array<Record<string, unknown>> = [];
+let writeStatus = 200;
+let writeCode = 'console.forbidden';
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -100,15 +104,25 @@ function jsonResponse(status: number, body: unknown) {
 
 beforeEach(() => {
   urls = [];
+  methods = [];
+  bodies = [];
+  writeStatus = 200;
+  writeCode = 'console.forbidden';
   approvalsStatus = 200;
   approvalsBody = { items: [approval(A1), approval(A2), approval(AC, 'confirm')] };
   statsStatus = 200;
   statsBody = { pending: 3, dueSoon: 1 };
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       urls.push(url);
+      methods.push(init?.method ?? 'GET');
+      if (url.includes('/api/approval/decision')) {
+        bodies.push(JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>);
+        if (writeStatus === 200) return jsonResponse(200, { approvalId: 'x', status: 'approved' });
+        return jsonResponse(writeStatus, { code: writeCode, message: 'stub' });
+      }
       if (url.includes('/api/approval-stats')) {
         return jsonResponse(statsStatus, statsStatus === 200 ? statsBody : { code: 'upstream.blip' });
       }
@@ -130,6 +144,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 function renderPage(entry = '/agent/approvals') {
@@ -257,7 +272,7 @@ describe('APR-01 approvals pending list', () => {
     expect(empty.textContent).toContain('暂无待办审批');
   });
 
-  it('batch checkboxes and select-current-page drive the selected count; decide buttons stay disabled with reason', async () => {
+  it('batch checkboxes and select-current-page drive the selected count; decide buttons stay disabled when the build switch is off', async () => {
     renderPage();
     await screen.findAllByTestId('agent-v2-approval-row');
     const decide = screen.getByTestId('agent-v2-approvals-decide-approve');
@@ -265,11 +280,15 @@ describe('APR-01 approvals pending list', () => {
     const reject = screen.getByTestId('agent-v2-approvals-decide-reject');
     expect((reject as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByTestId('agent-v2-approvals-batch-note').textContent).toContain(
-      '批量决策本波未开放'
+      '批量决策未启用'
     );
     expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 0 项');
     fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
     expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 2 项');
+    // even with a valid selection the server-side-unbacked build cannot write
+    expect(screen.getByTestId('agent-v2-approvals-batch-note').textContent).toContain(
+      '本环境未开放在线决策'
+    );
     fireEvent.click(screen.getAllByTestId('agent-v2-approval-check')[0]);
     expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 1 项');
   });
@@ -307,5 +326,160 @@ describe('APR-01 approvals pending list', () => {
     const card = await screen.findByTestId('agent-v2-approvals-no-identity');
     expect(card.textContent).toContain('无法获取当前用户身份');
     expect(urls.some((u) => u.includes('/api/approvals'))).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* APR-03: batch decision write. The gate reads only fields the payload       */
+/* carries; a missing changeKind or an outbound row disables the batch rather */
+/* than guessing. Writes are sequential and stop at the first failure.        */
+/* ------------------------------------------------------------------------- */
+
+const AM = 'appr_MESSAGESEND000000000000000004';
+
+function messageSendApproval(id: string) {
+  return approval(id, 'business_action', {
+    action: 'message.send',
+    binding: {
+      subjectType: 'employee',
+      subjectId: 'emp_1',
+      changeKind: 'message_send',
+      targetHash: 'th_msg',
+    },
+  });
+}
+
+function decisionCalls(): string[] {
+  return urls.filter((u) => u.includes('/api/approval/decision'));
+}
+
+describe('APR-03 — batch decision write (build switch on)', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_AGENT_APPROVAL_WRITE', '1');
+  });
+
+  it('enables both buttons for a fully decidable selection and asks for a second confirm', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const approve = screen.getByTestId('agent-v2-approvals-decide-approve') as HTMLButtonElement;
+    expect(approve.disabled).toBe(true); // nothing selected yet
+
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    await waitFor(() => expect(approve.disabled).toBe(false));
+    expect((screen.getByTestId('agent-v2-approvals-decide-reject') as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByTestId('agent-v2-approvals-batch-note').textContent).toContain('逐单提交');
+
+    fireEvent.click(approve);
+    const dialog = await screen.findByTestId('agent-v2-decision-dialog');
+    expect(dialog.textContent).toContain('2');
+    expect(screen.getByTestId('agent-v2-decision-target').textContent).toContain('…');
+    // no comment field in batch mode
+    expect(screen.getByTestId('agent-v2-decision-dialog').querySelector('textarea')).toBeNull();
+    expect(decisionCalls()).toHaveLength(0);
+  });
+
+  it('cancelling the batch dialog posts nothing', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    fireEvent.click(await screen.findByTestId('agent-v2-approvals-decide-approve'));
+    await screen.findByTestId('agent-v2-decision-dialog');
+    fireEvent.click(screen.getByTestId('agent-v2-decision-cancel'));
+    await waitFor(() => expect(screen.queryByTestId('agent-v2-decision-dialog')).toBeNull());
+    expect(decisionCalls()).toHaveLength(0);
+    expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 2 项');
+  });
+
+  it('confirms sequentially, clears the selection and refreshes the queue', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const listGets = () => urls.filter((u) => u.includes('/api/approvals?')).length;
+    const before = listGets();
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    fireEvent.click(await screen.findByTestId('agent-v2-approvals-decide-approve'));
+    fireEvent.click(await screen.findByTestId('agent-v2-decision-confirm'));
+
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[0]).toEqual({ verdict: 'approve' });
+    expect(bodies[1]).toEqual({ verdict: 'approve' });
+    expect(decisionCalls()[0]).toContain(`id=${A1}`);
+    expect(decisionCalls()[1]).toContain(`id=${A2}`);
+
+    await screen.findByTestId('agent-v2-approvals-batch-ok');
+    expect(screen.getByTestId('agent-v2-approvals-batch-ok').textContent).toContain('2');
+    expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 0 项');
+    expect(screen.queryByTestId('agent-v2-decision-dialog')).toBeNull();
+    await waitFor(() => expect(listGets()).toBeGreaterThan(before));
+  });
+
+  it('reject submits the reject verdict for every selected row', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    fireEvent.click(await screen.findByTestId('agent-v2-approvals-decide-reject'));
+    fireEvent.click(await screen.findByTestId('agent-v2-decision-confirm'));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies.every((b) => b.verdict === 'reject')).toBe(true);
+  });
+
+  it('a mixed selection containing message_send keeps the batch disabled with the honest reason', async () => {
+    approvalsBody = { items: [approval(A1), messageSendApproval(AM)] };
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    const approve = screen.getByTestId('agent-v2-approvals-decide-approve') as HTMLButtonElement;
+    expect(approve.disabled).toBe(true);
+    expect(approve.title).toContain('外发类审批');
+    expect(screen.getByTestId('agent-v2-approvals-batch-note').textContent).toContain(
+      '所选包含外发类审批'
+    );
+    expect(decisionCalls()).toHaveLength(0);
+  });
+
+  it('a row without changeKind keeps the batch disabled — no invented kind', async () => {
+    approvalsBody = {
+      items: [
+        approval(A1),
+        approval(A2, 'business_action', {
+          binding: { subjectType: 'employee', subjectId: 'emp_1', targetHash: 'h' },
+        }),
+      ],
+    };
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    expect((screen.getByTestId('agent-v2-approvals-decide-approve') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('agent-v2-approvals-batch-note').textContent).toContain('缺少变更类型字段');
+  });
+
+  it('a row the user does not approve keeps the batch disabled', async () => {
+    approvalsBody = {
+      items: [approval(A1), approval(A2, 'business_action', { approvers: [{ userId: 'human:42' }] })],
+    };
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    expect((screen.getByTestId('agent-v2-approvals-decide-approve') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('agent-v2-approvals-batch-note').textContent).toContain('不是审批人');
+  });
+
+  it('stops at the first failure and reports the success count plus the cause', async () => {
+    writeStatus = 403;
+    writeCode = 'console.forbidden';
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    fireEvent.click(screen.getByTestId('agent-v2-approvals-select-all'));
+    fireEvent.click(await screen.findByTestId('agent-v2-approvals-decide-approve'));
+    fireEvent.click(await screen.findByTestId('agent-v2-decision-confirm'));
+
+    const result = await screen.findByTestId('agent-v2-approvals-batch-result');
+    expect(bodies).toHaveLength(1); // stopped after the first failure
+    expect(result.textContent).toContain('已成功 0 单');
+    expect(result.textContent).toContain('服务端拒绝了本次决策');
+    expect(result.textContent).toContain('HTTP 403');
+    expect(result.textContent).not.toContain('console.forbidden');
+    expect(screen.queryByTestId('agent-v2-decision-dialog')).toBeNull();
+    // the un-submitted rows stay selected for a retry
+    expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 2 项');
   });
 });

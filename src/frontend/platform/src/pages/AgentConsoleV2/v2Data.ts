@@ -591,6 +591,115 @@ export function fetchApprovalDetail(
   return fetch<ApprovalDetailBody>('/api/approval', { id: approvalId });
 }
 
+// ---------------------------------------------------------------------------
+// APR-03 (AP2 write): POST /api/approval/decision?id= through the BFF whitelist
+// route. The body is EXACTLY {verdict, comment?} — the shape `_validate_decision`
+// accepts; unknown keys are rejected upstream, so nothing else is ever sent.
+// The browser carries NO Authorization and no internal token on this call
+// (ADR-0010 boundary): the BFF is the only place that attaches the approver
+// identity (`X-User-Id: human:<uid>`) from the session cookie. The only headers
+// are the CSRF pair the BFF requires. Nothing here is optimistic: a failure
+// returns the parsed envelope so the caller can show localized copy.
+// ---------------------------------------------------------------------------
+
+export type DecisionVerdict = 'approve' | 'reject' | 'revise';
+
+export interface DecisionWriteBody {
+  verdict: DecisionVerdict;
+  comment?: string;
+}
+
+export async function postApprovalDecision(
+  approvalId: string,
+  decision: DecisionWriteBody
+): Promise<ApiRes<null>> {
+  if (!approvalId) return { ok: false, status: 0, data: null, code: 'console.missing_param' };
+  // A blank comment is omitted, never sent as '' (mirrors the frozen
+  // DecisionRequest: comment is optional and must be a non-empty string).
+  const body: DecisionWriteBody = { verdict: decision.verdict };
+  const comment = decision.comment?.trim();
+  if (comment) body.comment = comment;
+
+  const url = `/agent-api/api/approval/decision?id=${encodeURIComponent(approvalId)}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Console-Write': '1',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    return { ok: false, status: 0, data: null, code: 'console.network' };
+  }
+  const requestId = res.headers.get('X-Console-Request-Id') ?? undefined;
+  let parsed: unknown = null;
+  try {
+    parsed = await res.json();
+  } catch {
+    parsed = null;
+  }
+  if (!res.ok) {
+    const env = parsed as { code?: string; message?: string } | null;
+    return {
+      ok: false,
+      status: res.status,
+      data: null,
+      code: env?.code ?? `agent.http.${res.status}`,
+      message: env?.message,
+      requestId,
+    };
+  }
+  return { ok: true, status: res.status, data: null, requestId };
+}
+
+/**
+ * Map a failed decision response to a localized copy key. Machine codes are
+ * used ONLY to pick the copy — they never reach the screen (G15). The BFF's
+ * own gates are represented: 405 console.read_only = write route not registered
+ * (CONSOLE_APPROVAL_WRITE_ENABLED off), 403 = identity/grant or CSRF gate,
+ * 401 = session, 404 = folded approval.unavailable (unknown/consumed/not found).
+ */
+export function decisionErrorKey(status: number, code?: string): string {
+  switch (code) {
+    case 'console.read_only':
+      return 'readOnly';
+    case 'console.forbidden':
+    case 'console.csrf_origin':
+    case 'console.csrf_write_header':
+      return 'forbidden';
+    case 'approval.already_decided':
+      return 'alreadyDecided';
+    case 'approval.expired':
+      return 'expired';
+    case 'approval.not_approver':
+      return 'notApprover';
+    case 'approval.unavailable':
+      return 'unavailable';
+    case 'console.unsupported_media_type':
+    case 'request.invalid_body':
+    case 'console.missing_param':
+      return 'rejected';
+    case 'console.unauthenticated':
+      return 'session';
+    case 'console.network':
+      return 'network';
+    default:
+      break;
+  }
+  if (status === 0) return 'network';
+  if (status === 401) return 'session';
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'unavailable';
+  if (status === 405) return 'readOnly';
+  if (status === 409) return 'alreadyDecided';
+  if (status === 400 || status === 413 || status === 415 || status === 422) return 'rejected';
+  if (status >= 500) return 'unavailableService';
+  return 'failed';
+}
+
 /** Sparkline points from day buckets (last N); returns null when no data —
  *  callers must then show an honest empty note, never a flat fake curve. */
 export function sparkPoints(buckets: RunBucket[] | null | undefined, days: number): number[] | null {

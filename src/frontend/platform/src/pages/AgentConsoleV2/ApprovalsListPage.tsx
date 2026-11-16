@@ -1,7 +1,6 @@
-/* APR-01 approvals pending list (W4 card).
+/* APR-01 approvals pending list (W4 card) + APR-03 batch decision write.
  * Owned by the APR-01 page lane: /agent/approvals queue, count badge (AP8),
- * 待办/已决 tabs, batch selection with DISABLED decide buttons (no AP2
- * wiring this wave), URL state (?status, ?focus, ?cursor, ?limit).
+ * 待办/已决 tabs, batch selection, URL state (?status, ?focus, ?cursor, ?limit).
  * Data plane ONLY: AP4 /api/approvals?status=pending&limit=&cursor= and
  * AP8 /api/approval-stats?assignee=&dueWithinSeconds=86400 via the
  * same-origin /agent-api fetch — the dueSoon figure on screen is the SERVER
@@ -13,25 +12,38 @@
  * status=history (400 "status is invalid"), so the 已决 tab stays disabled
  * with an explicit honest reason instead of a fake fetch. confirm-type rows
  * never render in the pending queue even if a page carries one.
+ * APR-03 batch decide: enabled ONLY when every selected row is judgeable from
+ * fields the payload actually carries — non-terminal, changeKind present and
+ * not `message_send`, the current user listed in approvers[] and no ballot
+ * from them yet. Anything else (missing changeKind, mixed outbound, ended,
+ * not approver, already voted) disables both buttons with the honest reason;
+ * no gate is invented and no admin role is assumed (the BFF stays the 403
+ * gate). Each row is POSTed sequentially; the first failure stops the run,
+ * keeps the succeeded ids out of the selection, and reports the count + cause.
  * Error copy is localized with the HTTP status as the only interpolation
  * param — machine codes (request.missing_filter, …) never reach the screen.
- * Row ids link to the APR-02 read-only detail (/agent/approvals/:id); the rest
- * of the row stays non-interactive (no batch decide this wave). */
+ * Row ids link to the approval detail (/agent/approvals/:id). */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { userContext } from '@/contexts/userContext';
+import { approvalWriteEnabled } from '@/controllers/API/agentConsoleApprovals';
 import type { Approval } from '@/controllers/API/agentConsoleApprovals';
 
 import {
+  decisionErrorKey,
   fmtId,
   fmtTime,
   makeFetcher,
+  postApprovalDecision,
   type ApiRes,
   type ApprovalStats,
+  type DecisionVerdict,
   type Fetcher,
 } from './v2Data';
+
+import { ApprovalDecisionDialog } from './ApprovalDecisionDialog';
 
 // AP4 list body — keyset page; nextCursor only when more rows exist
 // (shape verified live + against services/domain approvals.list_approvals).
@@ -141,6 +153,13 @@ export function ApprovalsListPage() {
   const [listLoading, setListLoading] = useState(true);
   const [statsRes, setStatsRes] = useState<ApiRes<ApprovalStats> | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // APR-03 batch write state: the confirm dialog, in-flight progress, and the
+  // terminal result line (success count / first failure).
+  const [decision, setDecision] = useState<DecisionVerdict | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
+  const [batchFail, setBatchFail] = useState<{ done: number; index: number; status: number; code?: string } | null>(null);
+  const [batchOk, setBatchOk] = useState<number | null>(null);
   // display tick only: labels interpolate the server's remainingSeconds from
   // the moment the page payload was received (L6 F-1); no client expiry state
   const [now, setNow] = useState(() => Date.now());
@@ -204,6 +223,9 @@ export function ApprovalsListPage() {
   // selection resets when the queried page/tab/identity changes
   useEffect(() => {
     setSelected(new Set());
+    setBatchFail(null);
+    setBatchOk(null);
+    setDecision(null);
   }, [tab, cursor, pageLimit, assignee]);
 
   // ---- countdown tick only while the pending tab is open ----
@@ -245,6 +267,99 @@ export function ApprovalsListPage() {
       else rowIds.forEach((id) => next.add(id));
       return next;
     });
+  };
+
+  /* ---- APR-03 batch eligibility -------------------------------------------
+   * Conservative by construction: a gate is satisfied only from fields the
+   * row really carries. `noKind` (changeKind missing) and `outbound`
+   * (message_send) always disable the batch; nothing infers a kind or a role. */
+  const writeFlag = approvalWriteEnabled();
+  const myId = assignee;
+  const selectedRows = useMemo(
+    () => rows.filter((r) => selected.has(r.approvalId)),
+    [rows, selected]
+  );
+
+  type BatchGate =
+    | 'empty'
+    | 'writeOff'
+    | 'noKind'
+    | 'outbound'
+    | 'ended'
+    | 'notApprover'
+    | 'voted'
+    | 'ok';
+
+  const batchGate: BatchGate = useMemo(() => {
+    if (selectedRows.length === 0) return 'empty';
+    if (!writeFlag) return 'writeOff';
+    if (selectedRows.some((r) => !r.binding?.changeKind)) return 'noKind';
+    if (selectedRows.some((r) => r.binding.changeKind === 'message_send')) return 'outbound';
+    if (selectedRows.some((r) => r.status !== 'pending')) return 'ended';
+    if (selectedRows.some((r) => remainingSecondsOf(r, listReceivedAt, now) === 0)) return 'ended';
+    if (selectedRows.some((r) => !myId || !(r.approvers ?? []).some((a) => a.userId === myId))) {
+      return 'notApprover';
+    }
+    if (selectedRows.some((r) => (r.decisions ?? []).some((d) => d.userId === myId))) {
+      return 'voted';
+    }
+    return 'ok';
+  }, [listReceivedAt, myId, now, selectedRows, writeFlag]);
+
+  const batchNote = t(
+    `agentConsole.v2.apr.${
+      {
+        empty: 'batchNote',
+        writeOff: 'batchWriteOff',
+        noKind: 'batchNoKind',
+        outbound: 'batchMixedMessageSend',
+        ended: 'batchEnded',
+        notApprover: 'batchNotApprover',
+        voted: 'batchVoted',
+        ok: 'batchReady',
+      }[batchGate]
+    }`
+  );
+  const batchFailCopy = batchFail
+    ? t('agentConsole.v2.apr.batchFail', {
+        done: batchFail.done,
+        index: batchFail.index,
+        reason: t(
+          `agentConsole.v2.decide.err.${decisionErrorKey(batchFail.status, batchFail.code)}`,
+          { code: batchFail.status }
+        ),
+      })
+    : '';
+
+  const runBatch = async () => {
+    if (!decision || busy || batchGate !== 'ok') return;
+    setBusy(true);
+    setBatchFail(null);
+    setBatchOk(null);
+    const queue = [...selectedRows];
+    let done = 0;
+    for (let i = 0; i < queue.length; i += 1) {
+      setProgress({ done, total: queue.length });
+      const res = await postApprovalDecision(queue[i].approvalId, { verdict: decision });
+      if (!res.ok) {
+        setBusy(false);
+        setDecision(null);
+        setBatchFail({ done, index: i + 1, status: res.status, code: res.code });
+        // Only the un-submitted rows stay selected, so a retry can never
+        // re-decide something that already went through.
+        setSelected(new Set(queue.slice(done).map((r) => r.approvalId)));
+        setReloadToken((n) => n + 1);
+        if (res.status === 401) window.location.assign('/login');
+        return;
+      }
+      done += 1;
+    }
+    setBusy(false);
+    setProgress({ done, total: queue.length });
+    setDecision(null);
+    setBatchOk(done);
+    setSelected(new Set());
+    setReloadToken((n) => n + 1);
   };
 
   const handleNextPage = () => {
@@ -374,7 +489,7 @@ export function ApprovalsListPage() {
         </div>
       ) : (
         <>
-          {/* ---------- batch toolbar: selection works, decide DISABLED ---------- */}
+          {/* ---------- batch toolbar: APR-03 gated write, second confirm ---------- */}
           <div className="a2-card" data-testid="agent-v2-approvals-batch">
             <div className="a2-card-head">
               <span className="a2-meta" data-testid="agent-v2-approvals-selected-count">
@@ -385,8 +500,14 @@ export function ApprovalsListPage() {
                   type="button"
                   className="a2-btn"
                   data-testid="agent-v2-approvals-decide-approve"
-                  disabled
-                  title={t('agentConsole.v2.apr.batchNote')}
+                  disabled={batchGate !== 'ok' || busy}
+                  aria-disabled={batchGate !== 'ok' || busy}
+                  title={batchNote}
+                  onClick={() => {
+                    setBatchFail(null);
+                    setBatchOk(null);
+                    setDecision('approve');
+                  }}
                 >
                   {t('agentConsole.approvals.verdict.approve')}
                 </button>
@@ -394,17 +515,60 @@ export function ApprovalsListPage() {
                   type="button"
                   className="a2-btn"
                   data-testid="agent-v2-approvals-decide-reject"
-                  disabled
-                  title={t('agentConsole.v2.apr.batchNote')}
+                  disabled={batchGate !== 'ok' || busy}
+                  aria-disabled={batchGate !== 'ok' || busy}
+                  title={batchNote}
+                  onClick={() => {
+                    setBatchFail(null);
+                    setBatchOk(null);
+                    setDecision('reject');
+                  }}
                 >
                   {t('agentConsole.approvals.verdict.reject')}
                 </button>
               </div>
             </div>
             <p className="a2-micro" data-testid="agent-v2-approvals-batch-note">
-              {t('agentConsole.v2.apr.batchNote')}
+              {batchNote}
             </p>
+            {batchFail ? (
+              <p
+                className="a2-micro"
+                role="alert"
+                data-testid="agent-v2-approvals-batch-result"
+                style={{ color: 'hsl(var(--danger))' }}
+              >
+                {batchFailCopy}
+              </p>
+            ) : null}
+            {batchOk !== null ? (
+              <p className="a2-micro" role="status" data-testid="agent-v2-approvals-batch-ok">
+                {t('agentConsole.v2.apr.batchDone', { done: batchOk })}
+              </p>
+            ) : null}
           </div>
+
+          {decision ? (
+            <ApprovalDecisionDialog
+              verdict={decision}
+              title={t('agentConsole.v2.decide.dialog.batchTitle', {
+                verb: t(`agentConsole.v2.apd.verdict.${decision}`),
+                count: selectedRows.length,
+              })}
+              target={selectedRows.map((r) => fmtId(r.approvalId)).join('、')}
+              riskNote={t('agentConsole.v2.decide.dialog.batchRiskNote')}
+              withComment={false}
+              comment=""
+              onComment={() => undefined}
+              busy={busy}
+              busyNote={t('agentConsole.v2.apr.batchProgress', {
+                done: progress.done,
+                total: progress.total || selectedRows.length,
+              })}
+              onCancel={() => setDecision(null)}
+              onConfirm={() => void runBatch()}
+            />
+          ) : null}
 
           {/* ---------- queue table (id links to APR-02 detail) ---------- */}
           <div className="a2-card">
