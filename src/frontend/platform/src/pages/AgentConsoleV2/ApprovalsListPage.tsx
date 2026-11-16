@@ -15,9 +15,10 @@
  * never render in the pending queue even if a page carries one.
  * Error copy is localized with the HTTP status as the only interpolation
  * param — machine codes (request.missing_filter, …) never reach the screen.
- * Rows are NOT clickable: no detail page exists yet (APR-02). */
+ * Row ids link to the APR-02 read-only detail (/agent/approvals/:id); the rest
+ * of the row stays non-interactive (no batch decide this wave). */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { userContext } from '@/contexts/userContext';
@@ -119,6 +120,8 @@ function remainingSecondsOf(r: Approval, receivedAt: number, now: number): numbe
 export function ApprovalsListPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const listUrl = `${location.pathname}${location.search}`;
   const fetchApi: Fetcher = useMemo(() => makeFetcher(), []);
   const ctx = useContext(userContext) as { user?: { user_id?: number | string } } | null;
   const uid = String(ctx?.user?.user_id ?? '');
@@ -403,7 +406,7 @@ export function ApprovalsListPage() {
             </p>
           </div>
 
-          {/* ---------- queue table (rows NOT clickable: no detail page) ---------- */}
+          {/* ---------- queue table (id links to APR-02 detail) ---------- */}
           <div className="a2-card">
             <div className="a2-table-scroll">
               <table className="a2-table" data-testid="agent-v2-approvals-table">
@@ -457,7 +460,16 @@ export function ApprovalsListPage() {
                           />
                         </td>
                         <td className="a2-mono a2-cell-nowrap" title={r.approvalId}>
-                          {fmtId(r.approvalId)}
+                          {/* APR-02: the id opens the read-only detail; the list URL
+                              (filters/cursor) stays in history so 「返回」 restores it. */}
+                          <NavLink
+                            className="a2d-link"
+                            to={`/agent/approvals/${r.approvalId}`}
+                            state={{ from: listUrl }}
+                            data-testid="agent-v2-approval-detail-link"
+                          >
+                            {fmtId(r.approvalId)}
+                          </NavLink>
                         </td>
                         <td>
                           {r.action}

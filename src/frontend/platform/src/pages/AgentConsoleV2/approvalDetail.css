@@ -1,0 +1,139 @@
+/* APR-02 approval detail (/agent/approvals/:id) — scoped page vocabulary.
+ * Tokens come from agentConsoleV2.css (.agent-app); dark/light only swap the
+ * token block, never this file. Clones the EMP-03/APR-01 detail-suite shapes
+ * (field rows, pills, quote) and adds the detail-only grid / timeline / diff /
+ * na-panel / opnote / copy-id forms from apr02-target.html. No new colors. */
+
+.agent-app .a2d-backrow { display: flex; align-items: center; gap: 8px; }
+.agent-app .a2d-gh {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px;
+  background: transparent; color: hsl(var(--muted-foreground)); font-size: 12.5px; cursor: pointer;
+}
+.agent-app .a2d-gh:hover { background: var(--hover); color: hsl(var(--foreground)); }
+
+.agent-app .a2d-phead { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; min-width: 0; }
+.agent-app .a2d-h1 { font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.01em; margin: 0; overflow-wrap: anywhere; }
+.agent-app .a2d-tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.agent-app .a2d-tags .a2-pill { gap: 6px; }
+.agent-app .a2d-nd .a2d-i { width: 9px; height: 9px; }
+.agent-app .a2d-fresh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: hsl(var(--micro-foreground)); }
+.agent-app .a2d-fresh .a2-mono { color: hsl(var(--muted-foreground)); }
+
+.agent-app .a2d-i { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.agent-app .a2d-i13 { width: 13px; height: 13px; }
+.agent-app .a2d-i14 { width: 14px; height: 14px; }
+.agent-app .a2d-i20 { width: 20px; height: 20px; }
+
+/* card with header + rule + sections (target .card/.card-hd/.sec) */
+.agent-app .a2d-card { border: 1px solid var(--hairline); border-radius: 12px; background: hsl(var(--card)); min-width: 0; }
+.agent-app .a2d-card-hd { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 20px; }
+.agent-app .a2d-card-hd .a2d-t { font-size: 15px; font-weight: 600; line-height: 22px; }
+.agent-app .a2d-card-hd .a2d-sp { flex: 1; }
+.agent-app .a2d-hd-note { font-size: 11.5px; color: hsl(var(--micro-foreground)); overflow-wrap: anywhere; }
+.agent-app .a2d-rule { border-top: 1px solid var(--hairline); }
+.agent-app .a2d-sec { padding: 16px 20px; min-width: 0; }
+.agent-app .a2d-sec + .a2d-sec { border-top: 1px solid var(--hairline); }
+
+/* metadata field grid: 4 cols → 2 (<1024) → 1 (<768) */
+.agent-app .a2d-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 20px; padding: 16px 20px; }
+.agent-app .a2d-mfield { min-width: 0; }
+.agent-app .a2d-mfield.wide { grid-column: 1 / -1; }
+.agent-app .a2d-fl { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(var(--micro-foreground)); line-height: 14px; margin-bottom: 5px; }
+.agent-app .a2d-fv { font-size: 13.5px; line-height: 20px; overflow-wrap: anywhere; }
+.agent-app .a2d-fv.a2-mono { font-size: 12.5px; }
+.agent-app .a2d-u { font-size: 11.5px; color: hsl(var(--micro-foreground)); font-weight: 400; margin-left: 4px; }
+.agent-app .a2d-faint { color: hsl(var(--micro-foreground)); }
+.agent-app .a2d-who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.agent-app .a2d-ava { width: 20px; height: 20px; border-radius: 6px; background: hsl(var(--surface-2)); border: 1px solid var(--hairline); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: hsl(var(--muted-foreground)); flex: none; }
+.agent-app .a2d-appr { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.agent-app .a2d-xs { font-size: 11px; padding: 1px 8px; line-height: 16px; }
+.agent-app .a2d-quote { margin-top: 6px; padding: 12px 14px; border-left: 3px solid var(--accent-border); background: hsl(var(--surface)); border-radius: 0 8px 8px 0; font-size: 13px; line-height: 20px; color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; }
+
+/* copy id (truncation is visual only; full value copied) */
+.agent-app .a2d-cp { position: relative; display: inline-flex; align-items: center; gap: 2px; font-size: 12.5px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+.agent-app .a2d-cp.inline { display: inline; white-space: normal; overflow-wrap: anywhere; font-size: 12.5px; line-height: 1.7; }
+.agent-app .a2d-cc { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; color: hsl(var(--micro-foreground)); cursor: pointer; background: transparent; border: none; flex: none; vertical-align: middle; margin-left: 4px; }
+.agent-app .a2d-cc:hover { background: hsl(var(--surface-2)); color: hsl(var(--foreground)); }
+.agent-app .a2d-cp.copied .a2d-cc { color: hsl(var(--success)); }
+.agent-app .a2d-tp { position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: hsl(var(--surface-2)); border: 1px solid var(--hairline); color: hsl(var(--foreground)); font-size: 11.5px; line-height: 1; padding: 5px 8px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s; }
+.agent-app .a2d-cp.copied .a2d-tp, .agent-app .a2d-cp.failed .a2d-tp { opacity: 1; }
+
+/* before → after diff boxes + six-key table */
+.agent-app .a2d-diffto { display: flex; align-items: stretch; gap: 12px; margin-top: 10px; }
+.agent-app .a2d-box { flex: 1; min-width: 0; border: 1px solid var(--hairline); border-radius: 10px; background: hsl(var(--surface)); padding: 12px 14px; display: flex; flex-direction: column; gap: 5px; }
+.agent-app .a2d-box .a2d-a { font-size: 11px; color: hsl(var(--micro-foreground)); letter-spacing: 0.04em; }
+.agent-app .a2d-box .a2d-b { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.agent-app .a2d-box .a2d-c { font-size: 11.5px; line-height: 16px; color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; }
+.agent-app .a2d-box.to { border-color: var(--accent-border); }
+.agent-app .a2d-box.to .a2d-a { color: hsl(var(--accent)); }
+.agent-app .a2d-arr { align-self: center; color: hsl(var(--micro-foreground)); flex: none; }
+.agent-app .a2d-kvt { width: 100%; border-collapse: collapse; margin-top: 12px; }
+.agent-app .a2d-kvt th { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: hsl(var(--micro-foreground)); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--hairline); white-space: nowrap; }
+.agent-app .a2d-kvt td { font-size: 12.5px; padding: 9px 12px; border-bottom: 1px solid var(--hairline); vertical-align: top; overflow-wrap: anywhere; }
+.agent-app .a2d-kvt tr:last-child td { border-bottom: none; }
+.agent-app .a2d-kvt td.k { color: hsl(var(--micro-foreground)); width: 120px; white-space: nowrap; }
+.agent-app .a2d-vtag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: hsl(var(--micro-foreground)); margin-left: 6px; }
+
+/* decision timeline */
+.agent-app .a2d-tl { list-style: none; margin: 0; padding: 6px 0 2px; }
+.agent-app .a2d-ti { position: relative; padding: 0 0 18px 26px; min-width: 0; }
+.agent-app .a2d-ti:last-child { padding-bottom: 4px; }
+.agent-app .a2d-ti::before { content: ""; position: absolute; left: 7px; top: 16px; bottom: -2px; width: 1px; background: var(--hairline); }
+.agent-app .a2d-ti:last-child::before { display: none; }
+.agent-app .a2d-nd { position: absolute; left: 0; top: 4px; width: 15px; height: 15px; border-radius: 99px; background: hsl(var(--surface)); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: hsl(var(--micro-foreground)); }
+.agent-app .a2d-ti.ok .a2d-nd { border-color: hsl(var(--success)); color: hsl(var(--success)); }
+.agent-app .a2d-ti.dg .a2d-nd { border-color: hsl(var(--danger)); color: hsl(var(--danger)); }
+.agent-app .a2d-thd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.agent-app .a2d-nm { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.agent-app .a2d-tm { font-size: 11.5px; color: hsl(var(--micro-foreground)); }
+.agent-app .a2d-cm { font-size: 12.5px; color: hsl(var(--muted-foreground)); margin-top: 4px; overflow-wrap: anywhere; }
+.agent-app .a2d-term { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 20px; padding: 14px 20px; border-top: 1px solid var(--hairline); background: hsl(var(--surface)); border-radius: 0 0 11px 11px; }
+
+/* na / empty panels */
+.agent-app .a2d-na { margin: 14px 20px 16px; padding: 26px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; border-radius: 10px; background: hsl(var(--surface)); }
+.agent-app .a2d-na .a2d-ic { width: 40px; height: 40px; border-radius: 50%; background: hsl(var(--surface-2)); display: flex; align-items: center; justify-content: center; color: hsl(var(--micro-foreground)); margin-bottom: 2px; }
+.agent-app .a2d-na .a2d-nt { font-size: 14px; font-weight: 500; }
+.agent-app .a2d-na .a2d-ns { font-size: 12.5px; color: hsl(var(--muted-foreground)); max-width: 460px; line-height: 19px; }
+
+/* operations (M1 read-only) */
+.agent-app .a2d-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.agent-app .a2d-acts .a2d-sp { flex: 1; }
+.agent-app .a2d-vsep { width: 1px; height: 22px; background: var(--hairline); flex: none; }
+.agent-app .a2d-btn { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
+.agent-app .a2d-btn.pri { background: hsl(var(--primary)); color: var(--primary-foreground); }
+.agent-app .a2d-btn.out { border-color: var(--border); color: hsl(var(--foreground)); background: transparent; }
+.agent-app .a2d-btn.dgs { border-color: hsl(var(--danger)); color: hsl(var(--danger)); background: transparent; }
+.agent-app .a2d-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.agent-app .a2d-btn[disabled]:hover { background: transparent; }
+.agent-app .a2d-btn.pri[disabled]:hover { background: hsl(var(--primary)); }
+.agent-app .a2d-opnote { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: hsl(var(--surface)); font-size: 12px; line-height: 18px; color: hsl(var(--muted-foreground)); }
+.agent-app .a2d-opnote .a2d-i { margin-top: 2px; color: hsl(var(--micro-foreground)); }
+
+/* state screens: skeleton / empty / hidden / error */
+.agent-app .a2d-stage { padding: 48px 24px 56px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.agent-app .a2d-stage .a2d-ic { width: 44px; height: 44px; border-radius: 50%; background: hsl(var(--surface)); border: 1px solid var(--hairline); display: flex; align-items: center; justify-content: center; color: hsl(var(--micro-foreground)); margin-bottom: 6px; }
+.agent-app .a2d-stage .a2d-st { font-size: 15px; font-weight: 600; }
+.agent-app .a2d-stage .a2d-ss { font-size: 13px; color: hsl(var(--muted-foreground)); max-width: 440px; line-height: 19px; }
+.agent-app .a2d-stage .a2d-ss .a2-mono { color: hsl(var(--foreground)); font-size: 12px; }
+.agent-app .a2d-acts2 { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+.agent-app .a2d-skel { display: flex; flex-direction: column; gap: 16px; }
+.agent-app .a2d-sk { height: 12px; border-radius: 6px; background: hsl(var(--surface-2)); }
+.agent-app .a2d-skcard { border: 1px solid var(--hairline); border-radius: 12px; background: hsl(var(--card)); padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+@media (max-width: 1023px) {
+  .agent-app .a2d-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .agent-app .a2d-term { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .agent-app .a2d-h1 { font-size: 24px; line-height: 32px; }
+  .agent-app .a2d-meta { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+  .agent-app .a2d-term { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+  .agent-app .a2d-sec { padding: 14px; }
+  .agent-app .a2d-card-hd { padding: 14px; }
+  .agent-app .a2d-diffto { flex-direction: column; }
+  .agent-app .a2d-arr { transform: rotate(90deg); align-self: center; }
+  .agent-app .a2d-na { margin: 12px 14px 14px; }
+  .agent-app .a2d-stage { padding: 36px 16px 44px; }
+  .agent-app .a2d-kvt td.k { width: 88px; }
+}

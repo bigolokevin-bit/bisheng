@@ -7,6 +7,7 @@
  * this module never sums paginated rows to fake a total. Missing values render
  * as '—' (never 0.00, never a fake curve, never an internal placeholder).
  */
+import type { Approval, ApprovalBinding } from '@/controllers/API/agentConsoleApprovals';
 
 export interface ApiRes<T> {
   ok: boolean;
@@ -502,6 +503,79 @@ export function summarizeStations(items: WorkstationRow[] | null | undefined): S
     if (w.bindingType === 'dm') dms += 1;
   });
   return { groups, dms, crons, total: rows.length };
+}
+
+// ---------------------------------------------------------------------------
+// APR-02 (AP3): GET /api/approval?id= detail. The flat approval_public shape is
+// the frozen Approval contract (controllers/API/agentConsoleApprovals); CR-043
+// adds an OPTIONAL `detail` projection and message_send bindings carry extra
+// runId/messageDigest keys. Everything here is present-only: a missing key is
+// never fabricated, and `detail` absent means "unavailable", never zero.
+// ---------------------------------------------------------------------------
+
+/** One added grant inside changeDetail.addedGrants (canonical resource shape). */
+export interface ApprovalAddedGrant {
+  id?: string;
+  employeeId?: string;
+  scopeType?: string;
+  resourceSelector?: { types?: string[]; [key: string]: unknown };
+  actions?: string[];
+  expiresAt?: string | null;
+  source?: string;
+}
+
+/** CR-043 canonical six-key camel projection + derivation source label. */
+export interface ApprovalChangeDetail {
+  employeeId: string;
+  fromVersionId: string;
+  toVersionNo: number;
+  addedGrants: ApprovalAddedGrant[];
+  removedGrantIds: string[];
+  effectiveFrom: string;
+  source: string;
+}
+
+/** detail.versions row — NOTE: the projection carries NO version id key. */
+export interface ApprovalDetailVersion {
+  versionNo: number;
+  effectiveFrom?: string;
+  effectiveTo?: string | null;
+  status?: string;
+  budget?: unknown;
+  knowledgeCount?: number;
+}
+
+export interface ApprovalDetailEmployee {
+  employeeId: string;
+  name?: string | null;
+  title?: string | null;
+  lifecycleState?: string | null;
+  ownerUserId?: string | null;
+  currentVersionId?: string | null;
+}
+
+export interface ApprovalDetailProjection {
+  changeDetail: ApprovalChangeDetail;
+  versions?: ApprovalDetailVersion[];
+  employee?: ApprovalDetailEmployee;
+}
+
+/** message_send bindings add runId/messageDigest (present-only, D-1). */
+export interface ApprovalBindingFull extends ApprovalBinding {
+  runId?: string | null;
+  messageDigest?: string | null;
+}
+
+export interface ApprovalDetailBody extends Approval {
+  binding: ApprovalBindingFull;
+  detail?: ApprovalDetailProjection;
+}
+
+export function fetchApprovalDetail(
+  fetch: Fetcher,
+  approvalId: string
+): Promise<ApiRes<ApprovalDetailBody>> {
+  return fetch<ApprovalDetailBody>('/api/approval', { id: approvalId });
 }
 
 /** Sparkline points from day buckets (last N); returns null when no data —
