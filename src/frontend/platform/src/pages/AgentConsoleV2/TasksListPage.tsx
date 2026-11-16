@@ -627,17 +627,23 @@ export function TasksListPage() {
   }, [t, status, assigneeFilter, dueKey, sourceFacet, names, uid]);
 
   /* assignee display for T-03 (A-19: never a bare `employee:`/`human:`).
-     VG FAIL-3 (observer 2026-11-16): `human:<uid>` matching the current
-     identity renders avatar initial + display name (identity user_name /
-     name / username, fallback 「我」) + 「本人」 micro-badge — never the bare
-     uid nor a `…1` fragment. Resolved employees show directory name + badge;
-     the unresolved fallback is an em-dash. Any long id that must stay visible
-     (other humans, no name endpoint) is ellipsized inside the cell with the
-     full ref kept in the cell title — no id fragments are printed. */
+     VG FAIL-3 (observer 2026-11-16): the self assignee renders avatar initial
+     + display name (identity user_name / name / username, fallback 「我」) +
+     「本人」 micro-badge — never the bare uid nor a `…1` fragment. Resolved
+     employees show directory name + badge; the unresolved fallback is an
+     em-dash. Any long id that must stay visible (other humans, no name
+     endpoint) is ellipsized inside the cell with the full ref kept in the
+     cell title — no id fragments are printed.
+     Live-shape fix (VG re-check): T5 returns assignee as {type:"human",
+     id:"1"} — type/id are SEPARATE fields, so `assignee.type` is the
+     authoritative actor type; splitRef(id) only extracts the bare id and
+     stays as the fallback for the legacy combined `human:1` form. */
   const assigneeView = (
     r: TaskRow,
   ): { nm: string; id: string; isMe: boolean; mono: boolean; roleKey: string } => {
-    const { type, bare } = splitRef(r.assignee?.id);
+    const ref = splitRef(r.assignee?.id);
+    const type = r.assignee?.type || ref.type;
+    const bare = ref.bare;
     if (!bare) return { nm: '—', id: '', isMe: false, mono: false, roleKey: '' };
     const isMe = type === 'human' && uid !== '' && bare === uid;
     if (isMe) {

@@ -513,6 +513,41 @@ describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
     expect(who.getAttribute('title')).toBe('human:1');
   });
 
+  it('FAIL-3 live shape: T5 {type:"human",id:"1"} + string user_id resolves to self, never a bare 1', async () => {
+    // Live T5 carries type/id as SEPARATE fields (no `human:` prefix) and the
+    // shell identity user_id can be a string — the exact shape the first
+    // FAIL-3 round missed because the fixtures used the combined `human:1`.
+    tasksBody = {
+      items: [
+        task(T1, { assignee: { type: 'human', id: '1' } }),
+        task(T2, { assignee: { type: 'human', id: '1' } }),
+      ],
+    };
+    renderPage('/agent/tasks', '1', 'opsadmin');
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    for (const row of rows) {
+      const who = whoCell(row);
+      expect(who.textContent).toContain('opsadmin');
+      expect(who.textContent).toContain('本人');
+      expect(who.textContent).not.toContain('…');
+      expect(who.querySelector('[data-testid="agent-v2-task-assignee-avatar"]')?.textContent).toBe('o');
+      // no standalone bare uid anywhere in the cell
+      expect(who.textContent).not.toMatch(/(^|[^\w])1($|[^\w])/);
+    }
+    // the legacy combined `human:1` form stays covered by the default
+    // fixtures in the other FAIL-3 cases (splitRef fallback path)
+  });
+
+  it('FAIL-3 live shape: without an identity name the split-field self falls back to 我', async () => {
+    tasksBody = { items: [task(T1, { assignee: { type: 'human', id: '1' } })] };
+    renderPage('/agent/tasks', '1');
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const who = whoCell(rows[0]);
+    expect(who.textContent).toContain('我');
+    expect(who.textContent).toContain('本人');
+    expect(who.textContent).not.toMatch(/(^|[^\w])1($|[^\w])/);
+  });
+
   it('FAIL-3: without an identity name the self cell falls back to 我, not the bare uid', async () => {
     renderPage();
     const rows = await screen.findAllByTestId('agent-v2-task-row');
