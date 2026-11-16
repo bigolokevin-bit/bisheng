@@ -4576,6 +4576,8 @@
         "heatEmployee": "従業員",
         "heatPeak": "ピーク {{count}} 回/時",
         "heatNight": "夜間バッチ {{count}}",
+        "heatNightDesc": "0〜6時平均",
+        "heatNightNone": "窓内に夜間実行なし",
         "heatWeekTotal": "週合計 {{count}}",
         "heatTzNote": "タイムゾーン Asia/Shanghai",
         "heatCaliber": "件数のみ、金額は示しません",

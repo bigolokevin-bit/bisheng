@@ -66,7 +66,7 @@ const pendingKpi = { loading: true, ok: false, status: 0 };
 // default window to 28 days (§2).
 const RANGE_KEYS = ['7d', '28d', '90d'];
 const RANGE_DAYS: Record<string, number> = { '7d': 7, '28d': 28, '90d': 90 };
-const DEFAULT_RANGE = '28d';
+const DEFAULT_RANGE = '7d';
 const FOCUS_TESTID: Record<string, string> = {
   header: 'agent-v2-ov-block-header',
   kpis: 'agent-v2-ov-block-kpis',
@@ -1009,7 +1009,7 @@ function TrendCard({
     });
     chart = (
       <>
-        <svg width={W} height={H} role="img" aria-label={t('agentConsole.v2.ov.trendTitle') + ` ${windowLabel}`}>
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ maxWidth: W }} role="img" aria-label={t('agentConsole.v2.ov.trendTitle') + ` ${windowLabel}`}>
           {parts}
         </svg>
         {tip && bars[tip.i] ? (
@@ -1264,7 +1264,7 @@ function HeatCard({
                               className={`ov-hc${cls ? ` ${cls}` : ''}${now ? ' nw' : ''}`}
                               title={`${t(dayKey)} ${String(hour).padStart(2, '0')}:00 · ${
                                 cell.count > 0
-                                  ? t('agentConsole.v2.ov.heatCellCount', { count: cell.count })
+                                  ? t('agentConsole.v2.ov.heatCellCount', { weeks, count: cell.count })
                                   : t('agentConsole.v2.ov.heatCellNone')
                               }`}
                             />
@@ -1295,7 +1295,11 @@ function HeatCard({
                     <span className="sp" />
                     <b>{nightAvg}</b>
                   </div>
-                  <div className="d">{t('agentConsole.v2.ov.heatNightDesc')}</div>
+                  <div className="d">
+                    {grid && grid.nightTotal === 0
+                      ? t('agentConsole.v2.ov.heatNightNone')
+                      : t('agentConsole.v2.ov.heatNightDesc')}
+                  </div>
                 </div>
                 <div className="ov-hs">
                   <div className="l">

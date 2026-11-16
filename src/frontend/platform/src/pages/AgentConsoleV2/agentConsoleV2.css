@@ -921,7 +921,7 @@
 .agent-app .ov-tsum b { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-size: 13px; line-height: 16px; font-variant-numeric: tabular-nums; color: hsl(var(--foreground)); }
 .agent-app .ov-tsum b.wr { color: hsl(var(--warning)); }
 .agent-app .ov-tsum i { font-style: normal; color: hsl(var(--micro-foreground)); }
-.agent-app .ov-cbox { position: relative; padding: 6px 20px 4px; }
+.agent-app .ov-cbox { position: relative; padding: 6px 20px 4px; max-width: 100%; }
 .agent-app .ov-svg-lbl { font-family: 'JetBrains Mono Variable', ui-monospace, Menlo, monospace; font-size: 10px; fill: hsl(var(--micro-foreground)); }
 .agent-app .ov-grid { stroke: var(--ov-chart-grid); }
 .agent-app .ov-tip { position: absolute; z-index: 9; min-width: 158px; padding: 9px 11px; border-radius: 10px; background: hsl(var(--surface)); border: 1px solid var(--border); pointer-events: none; }
@@ -939,6 +939,10 @@
 .agent-app .ov-hwrap { overflow-x: auto; padding-bottom: 2px; }
 .agent-app .ov-heat { display: flex; gap: 28px; padding: 10px 20px 14px; align-items: flex-start; min-width: 760px; }
 .agent-app .ov-heat-g { flex: none; }
+/* OV-01 C1: heat grid keeps a ~744px intrinsic width; scroll it in place
+   instead of widening the document (375 overflow driver alongside trend svg). */
+.agent-app .ov-heat-g { max-width: 100%; overflow-x: auto; }
+.agent-app .ov-card { min-width: 0; }
 .agent-app .ov-hrow { display: flex; align-items: center; gap: 8px; }
 .agent-app .ov-hrow + .ov-hrow { margin-top: 2px; }
 .agent-app .ov-hl { width: 38px; flex: none; font-size: 10.5px; letter-spacing: 0.04em; color: hsl(var(--micro-foreground)); text-align: right; position: relative; }
