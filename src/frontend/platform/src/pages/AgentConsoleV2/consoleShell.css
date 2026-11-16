@@ -1,123 +1,132 @@
-/* Console v2 W1 shell chrome. Tokens come from agentConsoleV2.css (.agent-app
- * scope), so dark/light switching only repaints variables — zero layout shift. */
+/* Console v2 shell chrome — rebuilt against ov01-target.html §1 (OV-01 C1).
+ * All tokens resolve inside .agent-app (agentConsoleV2.css): the previous
+ * file referenced undefined vars (--line/--panel/--text-1/--bg-1), which is
+ * why the sidebar rendered as an unstyled black void below the nav.
+ * Desktop/tablet: 72px icon rail, settings + avatar pinned at the bottom.
+ * ≤767: the rail becomes a STICKY TOP horizontal-scroll strip (never a
+ * floating band mid-page) with the 「可左右滑动」 hint. */
 
 .agent-app .a2s-frame {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   min-height: 100vh;
   gap: 0;
 }
 
-.agent-app .a2s-frame.is-collapsed {
-  grid-template-columns: 72px minmax(0, 1fr);
-}
-
+/* ---------- 72px rail ---------- */
 .agent-app .a2s-rail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 16px 12px;
-  border-right: 1px solid var(--line);
-  background: var(--panel);
+  align-items: center;
+  gap: 4px;
+  padding: 14px 0 16px;
+  border-right: 1px solid var(--hairline);
+  background: hsl(var(--background));
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow-y: auto;
   min-width: 0;
+  z-index: 40;
 }
 
-.agent-app .a2s-rail-logo {
-  width: 36px;
-  height: 36px;
+.agent-app .a2s-i {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+  display: block;
+}
+
+.agent-app .a2s-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: hsl(var(--accent));
-  color: #fff;
+  font-size: 15px;
   font-weight: 700;
-  margin: 0 auto 12px;
+  margin-bottom: 14px;
   flex: none;
-}
-
-.agent-app .a2s-collapse {
-  align-self: center;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--text-2);
-  border-radius: 8px;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-  margin-bottom: 10px;
-  flex: none;
-}
-
-.agent-app .a2s-group {
-  font-size: 11px;
-  color: var(--text-3, var(--text-2));
-  padding: 12px 10px 4px;
-  text-transform: none;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
 }
 
 .agent-app .a2s-nav {
+  width: 58px;
+  height: 52px;
+  border-radius: 10px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border-radius: 8px;
-  color: var(--text-2);
+  justify-content: center;
+  gap: 3px;
+  color: hsl(var(--micro-foreground));
+  position: relative;
   text-decoration: none;
-  border-left: 2px solid transparent;
-  min-width: 0;
-  font-size: 13px;
-}
-
-.agent-app .a2s-nav .a2s-nav-glyph {
-  width: 18px;
-  text-align: center;
   flex: none;
-  font-size: 14px;
+  transition: background 0.12s, color 0.12s;
 }
 
-.agent-app .a2s-nav .a2s-nav-label {
-  white-space: nowrap;
+.agent-app .a2s-nav-label {
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  line-height: 12px;
+  max-width: 54px;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
-  min-width: 0;
 }
 
 .agent-app .a2s-nav:hover {
+  color: hsl(var(--foreground));
   background: var(--hover);
-  color: var(--text-1);
 }
 
 .agent-app .a2s-nav.is-active {
-  border-left-color: hsl(var(--accent));
-  background: var(--accent-soft);
-  color: hsl(var(--accent));
-  font-weight: 600;
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
 }
 
-.agent-app .is-collapsed .a2s-nav {
+.agent-app .a2s-nav.is-active::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 99px;
+  background: hsl(var(--accent));
+}
+
+/* spacer pins settings + avatar to the rail bottom (no black hole) */
+.agent-app .a2s-rail-sp {
+  flex: 1;
+  min-height: 8px;
+}
+
+.agent-app .a2s-me {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 9px 0;
-  border-left-width: 0;
-  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  flex: none;
 }
 
-.agent-app .is-collapsed .a2s-nav.is-active {
-  border-bottom-color: hsl(var(--accent));
-}
-
-.agent-app .is-collapsed .a2s-nav-label,
-.agent-app .is-collapsed .a2s-group {
+.agent-app .a2s-railhint {
   display: none;
 }
 
+/* ---------- main column + topbar ---------- */
 .agent-app .a2s-main {
   display: flex;
   flex-direction: column;
@@ -127,95 +136,173 @@
 .agent-app .a2s-topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--line);
-  /* Opaque header: the sticky topbar sits above scrolling content; the translucent panel token caused ghost text on narrow viewports (L0 observer). */
-  background: hsl(var(--card));
+  gap: 16px;
+  min-height: 56px;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--hairline);
+  background: hsl(var(--background));
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 50;
   min-width: 0;
-  flex-wrap: wrap;
+}
+
+.agent-app .a2s-sp {
+  flex: 1;
 }
 
 .agent-app .a2s-crumb {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
-  color: var(--text-2);
+  color: hsl(var(--micro-foreground));
   min-width: 0;
-  flex: 1 1 auto;
-  overflow-wrap: anywhere;
 }
 
 .agent-app .a2s-crumb-current {
-  color: var(--text-1);
-  font-weight: 600;
+  color: hsl(var(--foreground));
+  font-weight: 500;
 }
 
+/* search pill: surface base + kbd, focusable placeholder only */
 .agent-app .a2s-search {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 4px 10px;
-  background: var(--bg-1);
-  min-width: 0;
+  width: 260px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: hsl(var(--surface));
+  padding: 0 10px;
+  color: hsl(var(--micro-foreground));
   flex: 0 1 260px;
+  min-width: 0;
 }
 
 .agent-app .a2s-search input {
   border: 0;
   background: transparent;
-  color: var(--text-1);
-  font-size: 12px;
+  color: hsl(var(--foreground));
+  font-size: 12.5px;
   outline: none;
   width: 100%;
   min-width: 0;
 }
 
-.agent-app .a2s-search kbd {
-  font-family: var(--a2-mono, ui-monospace, monospace);
-  font-size: 10px;
-  color: var(--text-2);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 0 4px;
-  flex: none;
+.agent-app .a2s-search input::placeholder {
+  color: hsl(var(--micro-foreground));
 }
 
-.agent-app .a2s-chip {
+.agent-app .a2s-search kbd,
+.agent-app .a2s-search-kbd {
   font-size: 11px;
-  color: var(--text-2);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 2px 8px;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 5px;
+  color: hsl(var(--micro-foreground));
+  flex: none;
+  margin-left: auto;
+}
+
+/* env chip: neutral pill + success dot (never the purple accent) */
+.agent-app .a2s-chip {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 99px;
+  background: var(--neutral-pill-bg);
+  color: hsl(var(--neutral-pill-fg));
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
   flex: none;
 }
 
-.agent-app .a2s-account {
-  font-size: 12px;
-  color: var(--text-1);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 3px 10px;
-  max-width: 140px;
+.agent-app .a2s-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: hsl(var(--success));
+  flex: none;
+}
+
+/* theme toggle: icon button */
+.agent-app .a2s-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  flex: none;
+  transition: background 0.12s, color 0.12s;
+}
+
+.agent-app .a2s-ico:hover {
+  background: var(--hover);
+  color: hsl(var(--foreground));
+}
+
+/* user area: avatar + name + chevron */
+.agent-app .a2s-ume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 6px 0 2px;
+  border-radius: 8px;
+  color: hsl(var(--muted-foreground));
+  position: relative;
+  flex: none;
+  max-width: 200px;
+}
+
+.agent-app .a2s-ume:hover {
+  background: var(--hover);
+  color: hsl(var(--foreground));
+}
+
+.agent-app .a2s-ava {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  flex: none;
+}
+
+.agent-app .a2s-ume-nm {
+  font-size: 12.5px;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: none;
 }
 
 .agent-app .a2s-page {
-  padding: 20px;
+  padding: 28px 32px 40px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  max-width: 1420px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .agent-app .a2s-skeleton {
@@ -228,7 +315,7 @@
 .agent-app .a2s-sk-row {
   height: 14px;
   border-radius: 6px;
-  background: linear-gradient(90deg, var(--bg-1) 25%, var(--hover) 50%, var(--bg-1) 75%);
+  background: linear-gradient(90deg, hsl(var(--surface)) 25%, var(--hover) 50%, hsl(var(--surface)) 75%);
   background-size: 200% 100%;
   animation: a2s-shimmer 1.4s ease-in-out infinite;
 }
@@ -246,132 +333,110 @@
   }
 }
 
-/* 768-1023: icon rail (72px) even when not manually collapsed. Per parity spec
- * §2 the 1024-1439 band keeps the expanded 240px sidebar, so the label-hiding
- * breakpoint must not swallow 1280 (L6 round 3). */
+/* mid band keeps the icon rail (already 72px) */
 @media (max-width: 1023px) {
   .agent-app .a2s-frame {
     grid-template-columns: 72px minmax(0, 1fr);
   }
-
-  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav {
-    justify-content: center;
-    padding: 9px 0;
-    border-left-width: 0;
-    border-bottom: 2px solid transparent;
-  }
-
-  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav.is-active {
-    border-bottom-color: hsl(var(--accent));
-  }
-
-  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav-label,
-  .agent-app .a2s-frame:not(.is-collapsed) .a2s-group {
-    display: none;
-  }
 }
 
-/* 768-1023 keeps the icon rail; ≤767 collapses the rail to a bottom bar. */
+/* ≤767: rail = sticky TOP horizontal-scroll strip (target §responsive).
+ * DOM order puts the rail before the page, so it never floats mid-page. */
 @media (max-width: 767px) {
-  .agent-app .a2s-frame,
-  .agent-app .a2s-frame.is-collapsed {
+  .agent-app .a2s-frame {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .agent-app .a2s-rail {
-    order: 2;
-    /* Fixed (not sticky): in the single-column grid the rail's cell sits
-       after tall page content, so sticky only became visible at the very
-       bottom — it looked like a missing nav affordance (L6 round 2). */
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto;
-    z-index: 20;
-    background: hsl(var(--card));
+    position: sticky;
+    top: 0;
     height: auto;
+    width: 100%;
     flex-direction: row;
-    overflow-x: auto;
-    /* fix B (G8): edge fade signals that the rail scrolls sideways. */
-    -webkit-mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      black 12px,
-      black calc(100% - 12px),
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to right,
-      transparent 0,
-      black 12px,
-      black calc(100% - 12px),
-      transparent 100%
-    );
+    align-items: stretch;
+    gap: 4px;
+    padding: 8px 10px;
     border-right: 0;
-    border-top: 1px solid var(--line);
-    padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-    gap: 6px;
-    justify-content: flex-start;
+    border-bottom: 1px solid var(--hairline);
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
-  .agent-app .a2s-rail-head,
-  .agent-app .a2s-group-label {
+  .agent-app .a2s-rail::-webkit-scrollbar {
     display: none;
   }
 
-  /* Keep the group containers visible: the icon-rail band (<=1023px) hides
-   * `.a2s-frame:not(.is-collapsed) .a2s-group`, and that rule outranked the
-   * earlier fix here, so the bottom bar still collapsed to a 16px strip with
-   * zero visible nav items (L6 round 4). Match its specificity and win by
-   * source order; cover the collapsed frame too. */
-  .agent-app .a2s-frame .a2s-groups,
-  .agent-app .a2s-frame:not(.is-collapsed) .a2s-group,
-  .agent-app .a2s-frame.is-collapsed .a2s-group {
-    display: flex;
-    flex-direction: row;
-    gap: 6px;
+  .agent-app .a2s-logo {
+    display: none;
   }
 
-  .agent-app .a2s-nav,
-  .agent-app .is-collapsed .a2s-nav {
-    flex-direction: column;
-    gap: 2px;
-    width: 56px;
-    padding: 6px 2px;
-    border-left: 0;
-    border-bottom: 2px solid transparent;
-    justify-content: center;
-    text-align: center;
+  .agent-app .a2s-rail-sp {
+    display: none;
   }
 
-  .agent-app .a2s-nav .a2s-nav-label,
-  .agent-app .is-collapsed .a2s-nav .a2s-nav-label,
-  .agent-app .a2s-frame:not(.is-collapsed) .a2s-nav .a2s-nav-label {
-    display: block;
-    font-size: 10px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 52px;
+  .agent-app .a2s-nav {
+    width: auto;
+    min-width: 64px;
+    height: 48px;
+    padding: 0 10px;
+    flex: none;
   }
 
-  .agent-app .a2s-nav.is-active,
-  .agent-app .is-collapsed .a2s-nav.is-active {
-    border-left: 0;
-    border-bottom-color: hsl(var(--accent));
+  .agent-app .a2s-nav.is-active::after {
+    left: 50%;
+    top: auto;
+    bottom: -1px;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 3px;
   }
 
-  .agent-app .a2s-page {
-    /* keep content clear of the fixed bottom rail */
-    padding: 14px 14px 88px;
+  .agent-app .a2s-me {
+    margin-left: auto;
+    flex: none;
+    align-self: center;
+  }
+
+  .agent-app .a2s-railhint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    color: hsl(var(--micro-foreground));
+    flex: none;
+    padding: 0 6px 0 14px;
+    align-self: center;
+    position: sticky;
+    right: 0;
+    background: hsl(var(--background));
   }
 
   .agent-app .a2s-topbar {
-    padding: 10px 14px;
+    padding: 0 14px;
+    gap: 10px;
+    min-height: 52px;
+    flex-wrap: wrap;
+    top: 65px;
   }
 
   .agent-app .a2s-search {
-    flex-basis: 160px;
+    width: 36px;
+    flex: none;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .agent-app .a2s-search input,
+  .agent-app .a2s-search-kbd {
+    display: none;
+  }
+
+  .agent-app .a2s-ume-nm {
+    display: none;
+  }
+
+  .agent-app .a2s-page {
+    padding: 16px 14px 32px;
   }
 }
 
@@ -380,9 +445,9 @@
 .agent-app .a2s-page input,
 .agent-app .a2s-page select {
   font-size: 12px;
-  color: var(--text-1);
-  background: var(--bg-1);
-  border: 1px solid var(--line);
+  color: hsl(var(--foreground));
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
   border-radius: 6px;
   padding: 5px 8px;
 }

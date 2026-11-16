@@ -4446,7 +4446,7 @@
       "navTasks": "任务",
       "navAudit": "审计",
       "navSettings": "设置",
-      "shellSearchPlaceholder": "搜索员工与运行…",
+      "shellSearchPlaceholder": "搜索员工、审批、run id",
       "shellAccountAnonymous": "未登录",
       "shellCollapseNav": "折叠导航",
       "envPilot": "本地试点",
@@ -4482,8 +4482,8 @@
         "dataAt": "数据时间",
         "sessionExpired": "登录已失效，部分数据不可用",
         "kpiOnDuty": "在岗员工",
-        "kpiPending": "待审批",
-        "kpiWeekRuns": "{{window}}运行",
+        "kpiPending": "待我审批",
+        "kpiWeekRuns": "近 7 天运行",
         "kpiMonthCost": "本月成本",
         "noteTotal": "共 {{count}} 名在册",
         "noteDueSoon": "{{count}} 单将在 24 小时内到期",
@@ -4529,7 +4529,7 @@
         "heatCaliber": "颜色仅反映运行次数（时区 Asia/Shanghai）",
         "ovSubtitle": "全组织数字员工的在岗、运行、待办、成本与异常 · 只读监控面，处理请下钻对应模块",
         "updatedLine": "更新于 {{time}}（本页最晚成功响应）",
-        "windowNote": "窗口＝滚动近 {{short}} 与近 {{long}} 天，按 UTC 日界分桶（北京 08:00 换日），时间以北京时间显示",
+        "windowNote": "窗口＝滚动近 {{short}} 天与近 {{long}} 天，按 UTC 日界分桶（北京 08:00 换日），时间以北京时间显示",
         "kpiNoTrend": "无趋势源",
         "kpiNoDueToday": "今天没有到期单",
         "kpiOnDutyFoot": "共 {{total}} 名在册，无入职中",
@@ -4645,7 +4645,8 @@
           "run_succeeded": "运行成功",
           "run_failed": "运行失败",
           "run_finished": "运行结束"
-        }
+        },
+        "queueCountUnit": "{{count}} 项"
       },
       "shell": {
         "gOverview": "概览",
@@ -4805,7 +4806,8 @@
         "summaryLoading": "摘要加载中…",
         "summaryEmpty": "该运行暂无文本摘要",
         "loadMore": "加载更多"
-      }
+      },
+      "shellRailHint": "可左右滑动"
     },
     "approvals": {
       "filterStatus": "筛选状态",

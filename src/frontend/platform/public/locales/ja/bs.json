@@ -4446,7 +4446,7 @@
       "navTasks": "タスク",
       "navAudit": "監査",
       "navSettings": "設定",
-      "shellSearchPlaceholder": "従業員と実行を検索…",
+      "shellSearchPlaceholder": "従業員・承認・run id を検索",
       "shellAccountAnonymous": "未ログイン",
       "shellCollapseNav": "ナビゲーションをたたむ",
       "envPilot": "ローカル試行",
@@ -4482,8 +4482,8 @@
         "dataAt": "データ取得時刻",
         "sessionExpired": "セッション失効、一部データ利用不可",
         "kpiOnDuty": "稼働中従業員",
-        "kpiPending": "承認待ち",
-        "kpiWeekRuns": "{{window}}の実行",
+        "kpiPending": "自分の承認",
+        "kpiWeekRuns": "直近7日間の実行",
         "kpiMonthCost": "今月のコスト",
         "noteTotal": "登録計 {{count}} 名",
         "noteDueSoon": "{{count}} 件が24時間以内に期限切れ",
@@ -4526,7 +4526,8 @@
         "retry": "再試行",
         "blockUnavailable": "{{block}}を一時的に取得できません（HTTP {{code}}）",
         "heatEmpty": "直近{{count}}週間の活動はありません",
-        "heatCaliber": "色は実行回数のみ反映（タイムゾーン Asia/Shanghai）"
+        "heatCaliber": "色は実行回数のみ反映（タイムゾーン Asia/Shanghai）",
+        "queueCountUnit": "{{count}} 件"
       },
       "shell": {
         "gOverview": "概要",
@@ -4688,7 +4689,8 @@
         "summaryLoading": "要約読み込み中…",
         "summaryEmpty": "この実行にテキスト要約はありません",
         "loadMore": "さらに読み込む"
-      }
+      },
+      "shellRailHint": "横にスライド"
     },
     "approvals": {
       "filterStatus": "ステータス選択",

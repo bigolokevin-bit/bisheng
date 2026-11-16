@@ -66,7 +66,11 @@ const pendingKpi = { loading: true, ok: false, status: 0 };
 // default window to 28 days (§2).
 const RANGE_KEYS = ['7d', '28d', '90d'];
 const RANGE_DAYS: Record<string, number> = { '7d': 7, '28d': 28, '90d': 90 };
-const DEFAULT_RANGE = '7d';
+/* KPI-3 is a fixed rolling 7-day card regardless of the trend period
+ * (C1 audit item 5 + SPEC §3); the period chip only drives the trend card
+ * and the delta footnote. SPEC §2 pins the DEFAULT period to 28 days. */
+const KPI_RUN_DAYS = 7;
+const DEFAULT_RANGE = '28d';
 const FOCUS_TESTID: Record<string, string> = {
   header: 'agent-v2-ov-block-header',
   kpis: 'agent-v2-ov-block-kpis',
@@ -143,6 +147,7 @@ export function OverviewPage() {
   const [stats, setStats] = useState<BlockState<EmployeeStats>>(pendingKpi);
   const [approvals, setApprovals] = useState<BlockState<ApprovalStats>>(pendingKpi);
   const [runs, setRuns] = useState<BlockState<RunStatsBody>>(pendingKpi);
+  const [runs7, setRuns7] = useState<BlockState<RunStatsBody>>(pendingKpi);
   const [runsPrev, setRunsPrev] = useState<BlockState<RunStatsBody>>(pendingKpi);
   const [cost, setCost] = useState<BlockState<BudgetBody>>(pendingKpi);
   const [queueApprovals, setQueueApprovals] = useState<BlockState<QueueBody>>(pendingKpi);
@@ -187,6 +192,8 @@ export function OverviewPage() {
     setStats(pendingKpi);
     setApprovals(pendingKpi);
     setRuns(pendingKpi);
+    setRuns7(pendingKpi);
+    setRunsPrev(pendingKpi);
     setCost(pendingKpi);
     setQueueApprovals(pendingKpi);
     setQueueTasks(pendingKpi);
@@ -203,19 +210,22 @@ export function OverviewPage() {
       // span <=90 days and non-degenerate at the 90d clamp.
       const statDays = Math.min(rangeDays, 89);
       const windowCur = dayWindow(statDays);
-      const windowPrev = {
-        from: dayWindow(statDays * 2).from,
-        to: windowCur.from,
-      };
+      // KPI-3 + AL-5 use a FIXED rolling 7-day window (C1 audit item 5):
+      // the 28-day period chip only drives the trend card.
+      const window7 = dayWindow(KPI_RUN_DAYS);
+      const window7Prev = { from: dayWindow(KPI_RUN_DAYS * 2).from, to: window7.from };
       const window24 = {
         from: new Date(Date.now() - 86400000).toISOString(),
         to: new Date().toISOString(),
       };
-      const [s, a, r, rp, ids, qa, qt, qr, h, au] = await Promise.all([
+      const [s, a, r, r7, rp, ids, qa, qt, qr, h, au] = await Promise.all([
         fetchEmployeeStats(fetcher),
         uid ? fetchApprovalStats(fetcher, `human:${uid}`) : Promise.resolve(null),
         fetchRunStats(fetcher, { ...windowCur, bucket: 'day' }),
-        fetchRunStats(fetcher, { ...windowPrev, bucket: 'day' }),
+        // all-platform day buckets, NO employeeId filter (audit item 5:
+        // the overview total must be completed 13 + running 1 = 14)
+        fetchRunStats(fetcher, { ...window7, bucket: 'day' }),
+        fetchRunStats(fetcher, { ...window7Prev, bucket: 'day' }),
         fetchEmployeesPage(fetcher, { limit: COST_ID_LIMIT, expand: 'version' }),
         uid
           ? fetcher<QueueBody>('/api/approvals', {
@@ -255,6 +265,7 @@ export function OverviewPage() {
           : { loading: false, ok: a.ok, status: a.status, code: a.code, data: a.data }
       );
       setRuns({ loading: false, ok: r.ok, status: r.status, code: r.code, data: r.data });
+      setRuns7({ loading: false, ok: r7.ok, status: r7.status, code: r7.code, data: r7.data });
       setRunsPrev({ loading: false, ok: rp.ok, status: rp.status, code: rp.code, data: rp.data });
       setQueueApprovals(listKpi(qa));
       setQueueTasks(listKpi(qt));
@@ -287,9 +298,21 @@ export function OverviewPage() {
     (k) => k.status === 401 || k.code === 'console.unauthenticated'
   );
   const runSums = bucketSum(runs.data?.buckets);
-  // MUST 2: 14 = 13 succeeded + 0 failed + 1 running/unknown — the residual
-  // is always spelled out; buckets may also carry unknownRuns directly.
+  const run7Sums = bucketSum(runs7.data?.buckets);
+  /* MUST 2: 14 = 13 succeeded + 0 failed + 1 running/unknown — the residual
+   * is always spelled out; buckets may also carry unknownRuns directly.
+   * KPI-3 / heat rollup / AL-5 read the FIXED 7-day window (C1 item 5). */
   const unknownRuns = useMemo(() => {
+    if (!runs7.ok) return 0;
+    const direct = (runs7.data?.buckets ?? []).reduce(
+      (acc, b) => acc + (typeof b.unknownRuns === 'number' ? b.unknownRuns : 0),
+      0
+    );
+    const sums = bucketSum(runs7.data?.buckets);
+    const residual = Math.max(sums.runs - sums.succeeded - sums.failed, 0);
+    return Math.max(direct, residual);
+  }, [runs7]);
+  const unknownTrend = useMemo(() => {
     if (!runs.ok) return 0;
     const direct = (runs.data?.buckets ?? []).reduce(
       (acc, b) => acc + (typeof b.unknownRuns === 'number' ? b.unknownRuns : 0),
@@ -298,11 +321,12 @@ export function OverviewPage() {
     const residual = Math.max(runSums.runs - runSums.succeeded - runSums.failed, 0);
     return Math.max(direct, residual);
   }, [runs, runSums]);
-  const runsSpark = sparkPoints(runs.data?.buckets, rangeDays);
+  /* KPI-3 spark: REAL day buckets of the 7-day window (area, not flat). */
+  const runsSpark = sparkPoints(runs7.data?.buckets, KPI_RUN_DAYS);
   const costDaily = useMemo(() => {
-    if (!runs.data?.buckets) return null;
+    if (!runs7.data?.buckets) return null;
     const byDay = new Map<string, number>();
-    for (const b of runs.data.buckets) {
+    for (const b of runs7.data.buckets) {
       if (typeof b.costUsd === 'number' && Number.isFinite(b.costUsd)) {
         const day = isoDay(b.bucketStart);
         byDay.set(day, (byDay.get(day) ?? 0) + b.costUsd);
@@ -311,11 +335,11 @@ export function OverviewPage() {
     if (byDay.size === 0) return null;
     const out: number[] = [];
     const now = Date.now();
-    for (let i = rangeDays - 1; i >= 0; i -= 1) {
+    for (let i = KPI_RUN_DAYS - 1; i >= 0; i -= 1) {
       out.push(byDay.get(isoDay(new Date(now - i * 86400000).toISOString())) ?? 0);
     }
     return out;
-  }, [runs, rangeDays]);
+  }, [runs7]);
   const costSpark = cumulativeSeries(costDaily);
 
   const bj = beijingNow();
@@ -344,7 +368,7 @@ export function OverviewPage() {
   }, [runs, monthNow]);
 
   const prevSums = runsPrev.ok ? bucketSum(runsPrev.data?.buckets) : null;
-  const deltaRuns = prevSums ? runSums.runs - prevSums.runs : null;
+  const deltaRuns = prevSums ? run7Sums.runs - prevSums.runs : null;
 
   /* trend bars: R6 returns only non-empty buckets — missing days stay empty,
    * never back-filled with zeros (§2.4). */
@@ -391,13 +415,19 @@ export function OverviewPage() {
       const m = acc.get(day) as Map<string, number>;
       m.set(action, (m.get(action) ?? 0) + 1);
     }
-    const shortName = (a: string) => a.split('.').slice(0, 2).join('.');
+    /* C1 item 6/10: marker labels are localized names (never raw snake_case
+     * on the canvas); unknown actions fall back to the generic audit copy. */
+    const zhName = (a: string) => {
+      const key = `agentConsole.v2.ov.actions.${a.replace(/\./g, '_')}`;
+      const name = t(key);
+      return name === key ? t('agentConsole.v2.ov.eventUnknown') : name;
+    };
     for (const [day, m] of acc) {
-      const names = Array.from(m.keys()).slice(0, 2).map(shortName).join(' · ');
-      out.set(day, names);
+      const names = Array.from(new Set(Array.from(m.keys()).map(zhName))).slice(0, 2);
+      out.set(day, names.join(' · '));
     }
     return out;
-  }, [audit]);
+  }, [audit, t]);
 
   const heatGrid = useMemo(() => {
     if (!heat.ok || !heat.data) return null;
@@ -468,6 +498,7 @@ export function OverviewPage() {
             ))}
           </div>
           <button type="button" className="a2-btn ov-refresh" data-testid="agent-v2-ov-refresh" onClick={refresh}>
+            <Icon name="refresh" size={16} />
             {t('agentConsole.v2.ov.refresh')}
           </button>
         </div>
@@ -568,16 +599,16 @@ export function OverviewPage() {
           )}
         </div>
 
-        {/* 运行（窗口内） */}
+        {/* 近 7 天运行（固定 7 天窗口，不随期间段变化 — C1 item 5） */}
         <div className="ov-card ov-kpi" data-testid="agent-v2-ov-kpi-runs">
-          <NavLink className="ov-kpi-link" to="/agent/runs?src=ov" aria-label={`${windowLabel} →`} />
-          <span className="a2-micro">{t('agentConsole.v2.ov.kpiWeekRuns', { window: windowLabel })}</span>
+          <NavLink className="ov-kpi-link" to="/agent/runs?src=ov" aria-label={`${t('agentConsole.v2.ov.kpiWeekRuns')} →`} />
+          <span className="a2-micro">{t('agentConsole.v2.ov.kpiWeekRuns')}</span>
           <div className="ov-kr">
-            {runs.loading ? (
+            {runs7.loading ? (
               <span className="ov-v">…</span>
-            ) : runs.ok ? (
+            ) : runs7.ok ? (
               <>
-                <span className="ov-v">{runSums.runs}</span>
+                <span className="ov-v" data-testid="agent-v2-ov-kpi-runs-value">{run7Sums.runs}</span>
                 {runsSpark ? (
                   <KpiSpark points={runsSpark} testId="agent-v2-ov-kpi-runs-spark" />
                 ) : (
@@ -586,7 +617,7 @@ export function OverviewPage() {
               </>
             ) : null}
           </div>
-          {runs.ok ? (
+          {runs7.ok ? (
             <span className="ov-kn">
               {deltaRuns != null && deltaRuns !== 0 ? (
                 <span className={`ov-dtl ${deltaRuns > 0 ? 'up' : 'dwn'}`}>
@@ -597,11 +628,11 @@ export function OverviewPage() {
                 <span className="ov-dtl flat">—</span>
               )}
               {prevSums
-                ? t('agentConsole.v2.ov.trendVsPrevCount', { days: rangeDays, prev: prevSums.runs })
+                ? t('agentConsole.v2.ov.trendVsPrevCount', { days: KPI_RUN_DAYS, prev: prevSums.runs })
                 : t('agentConsole.v2.ov.kpiNoTrend')}
               {' · '}
-              {t('agentConsole.v2.trendSucceeded')} {runSums.succeeded} · {t('agentConsole.v2.trendFailed')}{' '}
-              {runSums.failed}
+              {t('agentConsole.v2.trendSucceeded')} {run7Sums.succeeded} · {t('agentConsole.v2.trendFailed')}{' '}
+              {run7Sums.failed}
               {unknownRuns > 0 ? (
                 <>
                   {' · '}
@@ -611,12 +642,12 @@ export function OverviewPage() {
                 </>
               ) : null}
             </span>
-          ) : runs.loading ? null : (
+          ) : runs7.loading ? null : (
             <span className="ov-kn">
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-runs-error">
                 {t('agentConsole.v2.ov.blockUnavailable', {
-                  block: t('agentConsole.v2.ov.kpiWeekRuns', { window: windowLabel }),
-                  code: runs.status,
+                  block: t('agentConsole.v2.ov.kpiWeekRuns'),
+                  code: runs7.status,
                 })}
               </span>
               <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-runs" onClick={refresh}>
@@ -666,7 +697,9 @@ export function OverviewPage() {
                           ? `${((sumItems(cost.data?.items) as number) / (quotaLimit(quotaRows) as number) * 100).toFixed(1)}%`
                           : '—',
                       used: fmtUsd(sumItems(cost.data?.items)),
-                      limit: fmtUsd(quotaLimit(quotaRows)),
+                      // target wording: 「USD 0.13 / 20.00」— the limit carries
+                      // no second USD prefix.
+                      limit: (quotaLimit(quotaRows) as number).toFixed(2),
                     })
                   : t('agentConsole.v2.ov.noteLedger')}
               </span>
@@ -736,7 +769,7 @@ export function OverviewPage() {
             rangeDays={rangeDays}
             windowLabel={windowLabel}
             sums={runSums}
-            unknown={unknownRuns}
+            unknown={unknownTrend}
             successRate={successRate}
             p95HasSample={p95HasSample}
             events={eventsByDay}
@@ -756,7 +789,7 @@ export function OverviewPage() {
         focusDow={bj.dow}
         focusHour={bj.hour}
         unknown={unknownRuns}
-        sums={runSums}
+        sums={run7Sums}
       />
 
       {/* ⑥ cost + ⑦ anomaly */}
@@ -775,7 +808,7 @@ export function OverviewPage() {
         </div>
         <div className="ov-c5">
           <AnomalyBlock
-            runs={runs}
+            runs={runs7}
             approvals={approvals}
             windowLabel={windowLabel}
             unknownRuns={unknownRuns}
@@ -916,7 +949,9 @@ function TrendCard({
   const { t } = useTranslation();
   const [boxRef, measured] = useElementWidth<HTMLDivElement>();
   const [tip, setTip] = useState<{ i: number; left: number } | null>(null);
-  const W = measured > 0 ? measured : 900;
+  /* C1 item 1: the svg is drawn ONLY at the measured container width — no
+   * 900px intrinsic fallback that widens the document at 1440/375. */
+  const W = measured;
   const H = 224;
   const pl = 34;
   const pr = 12;
@@ -929,7 +964,7 @@ function TrendCard({
   const maxTot = Math.max(5, Math.ceil(Math.max(1, ...(bars ?? []).map((d) => d.ok + d.run + d.fail)) / 5) * 5);
 
   let chart: React.ReactNode = null;
-  if (bars) {
+  if (bars && W > 0) {
     const parts: React.ReactNode[] = [];
     for (let k = 0; k <= 3; k += 1) {
       const y = pt + (ih * k) / 3;
@@ -972,20 +1007,36 @@ function TrendCard({
             width={bw + 4}
             height={ih + 4}
             fill="none"
-            stroke="var(--hairline)"
+            stroke="var(--border)"
             strokeDasharray="2 3"
+            data-testid="agent-v2-ov-trend-today-frame"
             rx={4}
           />
         );
       }
       const ev = events.get(d.day);
       if (ev) {
-        const late = i >= bars.length - 8;
+        /* C1 item 6: anchor the label INSIDE the canvas — flip to 'end'
+         * near the right edge and centre-clamp when even that overflows,
+         * so labels never pile up into gibberish at the margin. */
+        const est = ev.length * 10.5 + 10;
+        const minX = pl + 4;
+        const maxX = W - pr - 4;
+        let tx = cx + 5;
+        let anchor: 'start' | 'end' | 'middle' = 'start';
+        if (tx + est > maxX) {
+          tx = cx - 5;
+          anchor = 'end';
+        }
+        if (anchor === 'end' && tx - est < minX) {
+          tx = (minX + maxX) / 2;
+          anchor = 'middle';
+        }
         parts.push(
           <g key={`ev${i}`}>
             <line x1={cx} x2={cx} y1={pt - 8} y2={pt + ih} stroke="var(--ov-chart-marker)" strokeDasharray="3 4" />
             <circle cx={cx} cy={pt - 8} r={2} fill="var(--ov-chart-marker)" />
-            <text x={late ? cx - 5 : cx + 5} y={pt - 11} textAnchor={late ? 'end' : 'start'} className="ov-svg-lbl">
+            <text x={tx} y={pt - 11} textAnchor={anchor} className="ov-svg-lbl">
               {ev}
             </text>
           </g>
@@ -1009,7 +1060,7 @@ function TrendCard({
     });
     chart = (
       <>
-        <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ maxWidth: W }} role="img" aria-label={t('agentConsole.v2.ov.trendTitle') + ` ${windowLabel}`}>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block', maxWidth: '100%' }} role="img" aria-label={t('agentConsole.v2.ov.trendTitle') + ` ${windowLabel}`}>
           {parts}
         </svg>
         {tip && bars[tip.i] ? (
@@ -1169,17 +1220,21 @@ function HeatCard({
   sums: { runs: number; succeeded: number; failed: number };
 }) {
   const { t } = useTranslation();
+  /* C1 item 7: ABSOLUTE count → tier mapping (same curve as the target),
+   * so 1→l1, 5→l2, 8→l3 always colour identically against real buckets;
+   * a max-proportional scale used to recolour the same 8-count differently. */
   const level = (count: number) => {
     if (count <= 0) return '';
-    if (!grid) return '';
-    const m = grid.max;
-    if (count <= Math.max(1, m * 0.15)) return 'l1';
-    if (count <= m * 0.35) return 'l2';
-    if (count <= m * 0.6) return 'l3';
-    if (count <= m * 0.85) return 'l4';
+    if (count <= 2) return 'l1';
+    if (count <= 5) return 'l2';
+    if (count <= 9) return 'l3';
+    if (count <= 14) return 'l4';
     return 'l5';
   };
-  const nightAvg = grid ? (grid.nightTotal / (7 * weeks)).toFixed(1) : null;
+  /* Contradiction fix: the number and the note now come from the SAME
+   * nightTotal — 0 renders 「0 次/时 + 窗口内没有夜间运行」, never 0.4 vs 无. */
+  const nightZero = !grid || grid.nightTotal === 0;
+  const nightAvg = nightZero ? '0' : (grid.nightTotal / (7 * weeks)).toFixed(1);
   const peakRowTotal = grid?.peak
     ? grid.rows.filter((r) => r.dow === grid.peak?.dow).reduce((acc, r) => acc + r.count, 0)
     : 0;
@@ -1294,9 +1349,10 @@ function HeatCard({
                     <span className="a2-micro">{t('agentConsole.v2.ov.heatNight')}</span>
                     <span className="sp" />
                     <b>{nightAvg}</b>
+                    <span className="u">{t('agentConsole.v2.ov.heatUnit')}</span>
                   </div>
-                  <div className="d">
-                    {grid && grid.nightTotal === 0
+                  <div className="d" data-testid="agent-v2-ov-heat-night-note">
+                    {nightZero
                       ? t('agentConsole.v2.ov.heatNightNone')
                       : t('agentConsole.v2.ov.heatNightDesc')}
                   </div>

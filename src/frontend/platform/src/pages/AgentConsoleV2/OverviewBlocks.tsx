@@ -104,6 +104,14 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
       <path d="M16 17H8" />
     </>
   ),
+  refresh: (
+    <>
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.36 2.64L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.36-2.64L3 16" />
+      <path d="M8 16H3v5" />
+    </>
+  ),
 };
 
 export function Icon({
@@ -267,14 +275,26 @@ const STATUS_KEY: Record<string, string> = {
   open: 'open',
   in_progress: 'in_progress',
   running: 'running',
+  approve: 'approved',
   approved: 'approved',
+  reject: 'rejected',
   rejected: 'rejected',
   succeeded: 'succeeded',
+  success: 'succeeded',
   failed: 'failed',
   cancelled: 'cancelled',
   canceled: 'canceled',
   paused: 'paused',
 };
+
+/* C1 item 8: operators render as bare names (opsadmin / runtime / system).
+ * The audit bodies carry prefixed actor ids (human:opsadmin, service:…),
+ * so strip the principal prefix for display only — never fabricate. */
+export function displayActor(raw: string | null): string | null {
+  if (!raw) return null;
+  const m = /^(human|service|system|agent):(.+)$/.exec(raw);
+  return m ? m[2] : raw;
+}
 
 type TFn = (k: string, o?: Record<string, unknown>) => string;
 
@@ -328,7 +348,9 @@ export function QueueBlock({
     <div className="ov-card" data-testid="agent-v2-ov-queue">
       <div className="ov-card-hd">
         <span className="t">{t('agentConsole.v2.ov.queueTitle')}</span>
-        <span className="c" data-testid="agent-v2-ov-queue-count">{total}</span>
+        <span className="c" data-testid="agent-v2-ov-queue-count">
+          {t('agentConsole.v2.ov.queueCountUnit', { count: total })}
+        </span>
         <span className="sp" />
         <span className="hd-note">{t('agentConsole.v2.ov.queueCaliber')}</span>
       </div>
@@ -549,7 +571,7 @@ export function CostBudgetBlock({
                 <div className="l">
                   <span className="a2-micro">{t('agentConsole.v2.ov.quotaMicro')}</span>
                   <b className="a2-mono">
-                    {fmtUsd(used)} / {fmtUsd(limit)} · {t('agentConsole.v2.ov.quotaRemain', { v: fmtUsd(Math.max(limit - (used ?? 0), 0)) })}
+                    {fmtUsd(used)} / {limit.toFixed(2)} · {t('agentConsole.v2.ov.quotaRemain', { v: fmtUsd(Math.max(limit - (used ?? 0), 0)) })}
                   </b>
                 </div>
                 <QuotaSegments
@@ -834,7 +856,7 @@ export function ActivityBlock({
         <span className="c">{t('agentConsole.v2.ov.activityTitleNote')}</span>
         <span className="sp" />
         <NavLink className="ov-lnk" to="/agent/audit">
-          {t('agentConsole.v2.navAudit')}
+          {t('agentConsole.v2.ov.openAuditCenter')}
           <Icon name="arrow" size={13} />
         </NavLink>
       </div>
@@ -893,8 +915,8 @@ export function ActivityBlock({
                           {row.action ? <span className="raw a2-mono">{row.action}</span> : null}
                         </div>
                       </td>
-                      <td className="ov-hide-sm ov-clip" title={firstString(row.raw, ['actorUserId', 'actor', 'userId']) ?? undefined}>
-                        {firstString(row.raw, ['actorUserId', 'actor', 'userId']) ?? '—'}
+                      <td className="ov-hide-sm ov-clip" title={displayActor(firstString(row.raw, ['actorUserId', 'actor', 'actorId', 'userId'])) ?? undefined}>
+                        {displayActor(firstString(row.raw, ['actorUserId', 'actor', 'actorId', 'userId'])) ?? '—'}
                       </td>
                       <td>
                         <span className={`ov-pill ${tone} xs`}>

@@ -1,0 +1,12 @@
+# OV-01 build2 block-1 (shell+header) readout — 2026-11-16 12:2x, dev 5399 + BFF 8092 + ego lite CDP
+
+GEOM1440={"sw":1440,"cw":1425,"iw":1440}  # sw==iw；cw 差 15px＝纵向滚动条占位（ACCEPTANCE §7 G7 / SPEC §0 同口径豁免，非横向溢出）
+GEOM375={"sw":375,"cw":375}               # 严格相等 ✓（移动仿真 overlay 滚动条）
+TARGET1440={"sw":1440,"cw":1440}          # 参考屏同宽渲染（去除评审条后 top:0 补偿）
+SHOTW1440=1440px  SHOTW375=375px          # fullPage 图宽精确 ✓
+
+GEO1440={"rail":{"w":72,"h":900},"topbar":{"h":56},"crumb":"控制台 › 总览","search":"搜索员工、审批、run id","chip":"本地试点","themeBtn":true,"ume":true,"menuOpenByDefault":false,"refresh":"刷新+SVG图标","updated":"更新于 11-16 12:20（本页最晚成功响应）","windowNote":"滚动近 7 天与近 28 天，按 UTC 日界分桶（北京 08:00 换日）","range28pressed":true,"title":"控制台总览"}
+GEO375={"railW":375,"railStickyTopScroll":true,"railHintVisible":true,"searchIconOnlyW":36,"umeNameHidden":true}
+KPI={"onduty":2,"pending":0,"runs7d":14,"cost":"USD 0.13","quotaFoot":"30 格＝30 天 · 占月预算 0.7%（USD 0.13 / 20.00）","heatCells":168,"trendSvg":true}
+
+PAIRS=左=ov01-target.html 渲染 右=实页 5399/agent 深色 fullPage 同宽并排
