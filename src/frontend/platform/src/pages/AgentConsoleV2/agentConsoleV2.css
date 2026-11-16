@@ -256,6 +256,28 @@
   background: currentColor;
   flex-shrink: 0;
 }
+/* VG FAIL-2 (TSK-01): status dots pin the five-state tone explicitly so a
+   filter chip's `.active` accent background can never repaint the dot.
+   待办/已取消 neutral gray · 进行中 amber · 受阻 red · 已完成 green. */
+.agent-app .a2-pill-dot.dot-neutral { background: hsl(var(--neutral-pill-fg)); }
+.agent-app .a2-pill-dot.dot-warn { background: hsl(var(--warning)); }
+.agent-app .a2-pill-dot.dot-danger { background: hsl(var(--danger)); }
+.agent-app .a2-pill-dot.dot-ok { background: hsl(var(--success)); }
+/* VG FAIL-3 (TSK-01): 20px initial avatar in the who cell (baseline T-03) —
+   neutral surface, never the accent hue. */
+.agent-app .a2-who-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: hsl(var(--surface-2));
+  color: hsl(var(--foreground));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex: none;
+}
 /* Lifecycle filter chips use `.active` (L6 round 4: the selected tab had no
  * visual state, so url/search shots rendered pixel-identical). */
 .agent-app .a2-pill.active {

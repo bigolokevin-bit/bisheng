@@ -162,9 +162,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderPage(entry = '/agent/tasks', uid: number | string | undefined = 1) {
+function renderPage(entry = '/agent/tasks', uid: number | string | undefined = 1, userName?: string) {
   return render(
-    <userContext.Provider value={{ user: uid === undefined ? undefined : { user_id: uid } } as never}>
+    <userContext.Provider
+      value={
+        {
+          user: uid === undefined ? undefined : { user_id: uid, ...(userName ? { user_name: userName } : {}) },
+        } as never
+      }
+    >
       <MemoryRouter initialEntries={[entry]}>
         <TasksListPage />
       </MemoryRouter>
@@ -414,5 +420,123 @@ describe('TSK-01 read-only task board (reconciled)', () => {
     expect(text).not.toContain('agentConsole.');
     expect(text).not.toContain('undefined');
     expect(text).not.toContain('[object Object]');
+  });
+});
+
+/* Observer VG FAIL 1–4 (2026-11-16), display layer only. */
+describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
+  const sourceCell = (row: HTMLElement) =>
+    row.querySelector('[data-testid="agent-v2-task-source"]') as HTMLElement;
+  const whoCell = (row: HTMLElement) =>
+    row.querySelector('[data-testid="agent-v2-task-assignee"]') as HTMLElement;
+
+  it('FAIL-1: source column is always Chinese; console→手动创建, unknown→其他; refs only in title, no sub-id line', async () => {
+    tasksBody = {
+      items: [
+        task(T1, { source: { channel: 'console', messageId: 'tsk-pi-000000001116', runId: null } }),
+        task(T2, { source: { channel: 'smoke_signal', messageId: 'om_9999888877776666', runId: null } }),
+        task(T3), // feishu + om_1111222233334444 from the shared fixture
+      ],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const s1 = sourceCell(rows[0]);
+    const s2 = sourceCell(rows[1]);
+    const s3 = sourceCell(rows[2]);
+    expect(s1.textContent).toContain('手动创建');
+    expect(s1.textContent).not.toContain('console');
+    expect(s2.textContent).toContain('其他');
+    expect(s2.textContent).not.toContain('smoke_signal');
+    expect(s3.textContent).toContain('飞书消息');
+    // the second-line sub-id is gone; raw channel + message ref live in title
+    for (const s of [s1, s2, s3]) {
+      expect(s.textContent).not.toContain('…');
+      expect(s.textContent).not.toContain('tsk-pi');
+      expect(s.textContent).not.toContain('om_');
+    }
+    const t1 = s1.querySelector('span[title]')?.getAttribute('title') ?? '';
+    expect(t1).toContain('channel=console');
+    expect(t1).toContain('tsk-pi-000000001116');
+    expect(screen.queryByLabelText('复制来源消息 ID')).toBeNull();
+  });
+
+  it('FAIL-2: five-state tones (neutral/amber/red/green/neutral+—), chip dots match, no accent', async () => {
+    tasksBody = {
+      items: [
+        task(T1, { status: 'open' }),
+        task(T2, { status: 'in_progress' }),
+        task(T3, { status: 'blocked' }),
+        task(T4, { status: 'done' }),
+        task('tk_01HZZ0000000000000000ABCD05', { status: 'cancelled' }),
+      ],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const pill = (i: number) =>
+      rows[i].querySelector('[data-testid="agent-v2-task-status"] .a2-pill') as HTMLElement;
+    expect(pill(0).className).not.toContain('is-'); // 待办 neutral
+    expect(pill(1).className).toContain('is-warn'); // 进行中 amber
+    expect(pill(2).className).toContain('is-danger'); // 受阻 red
+    expect(pill(3).className).toContain('is-ok'); // 已完成 green
+    expect(pill(4).className).not.toContain('is-'); // 已取消 neutral
+    expect(pill(4).textContent).toContain('—');
+    expect(pill(4).textContent).toContain('已取消');
+    rows.forEach((r) => {
+      expect(
+        (r.querySelector('[data-testid="agent-v2-task-status"] .a2-pill') as HTMLElement).className
+      ).not.toContain('is-accent');
+    });
+    // filter chip dots carry the same tone classes as the table pills
+    const dot = (s: string) =>
+      screen.getByTestId(`agent-v2-tsk-chip-${s}`).querySelector('.a2-pill-dot') as HTMLElement;
+    expect(dot('open').className).toContain('dot-neutral');
+    expect(dot('in_progress').className).toContain('dot-warn');
+    expect(dot('blocked').className).toContain('dot-danger');
+    expect(dot('done').className).toContain('dot-ok');
+    expect(screen.getByTestId('agent-v2-tsk-chip-cancelled').querySelector('.a2-pill-dot')).toBeNull();
+    // the dot tone survives the chip's .active selected state
+    fireEvent.click(screen.getByTestId('agent-v2-tsk-chip-blocked'));
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-v2-tsk-chip-blocked').getAttribute('aria-pressed')).toBe('true');
+    });
+    expect(dot('blocked').className).toContain('dot-danger');
+  });
+
+  it('FAIL-3: human:self renders avatar initial + identity name + 本人 badge, never uid fragments', async () => {
+    renderPage('/agent/tasks', 1, 'opsadmin');
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const who = whoCell(rows[0]);
+    expect(who.textContent).toContain('opsadmin');
+    expect(who.textContent).toContain('本人');
+    expect(who.textContent).not.toContain('…1');
+    expect(who.querySelector('[data-testid="agent-v2-task-assignee-avatar"]')?.textContent).toBe('o');
+    expect(who.getAttribute('title')).toBe('human:1');
+  });
+
+  it('FAIL-3: without an identity name the self cell falls back to 我, not the bare uid', async () => {
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const who = whoCell(rows[0]);
+    expect(who.textContent).toContain('我');
+    expect(who.textContent).not.toContain('…1');
+    expect(who.querySelector('[data-testid="agent-v2-task-assignee-avatar"]')?.textContent).toBe('我');
+  });
+
+  it('FAIL-3: other-human long ids ellipsize in-cell with the full ref kept in title', async () => {
+    tasksBody = { items: [task(T1, { assignee: { type: 'human', id: 'human:999999999999' } })] };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-task-row');
+    const who = whoCell(rows[0]);
+    const mono = who.querySelector('.a2-mono') as HTMLElement;
+    expect(mono.style.textOverflow).toBe('ellipsis');
+    expect(who.getAttribute('title')).toBe('human:999999999999');
+    expect(who.textContent).not.toContain('…');
+  });
+
+  it('FAIL-4: footer carries the sideways-scroll hint line', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-task-row');
+    const hint = screen.getByTestId('agent-v2-tsk-scroll-hint');
+    expect(hint.textContent).toContain('表格可左右滑动');
   });
 });

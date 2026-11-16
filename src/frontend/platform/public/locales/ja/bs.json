@@ -4675,6 +4675,7 @@
         "expand": "詳細を展開",
         "footerCaliber": "状態判定はタスク契約のみ準拠；阻止と取消は一文理由付き；超過は導出表示；時刻は北京時間",
         "footerKeys": "カーソル分页 · 各ページ上限 200",
+        "footerScroll": "テーブルは左右にスクロールできます",
         "forbiddenTitle": "タスクボードはまだ表示できません",
         "freshAt": "更新時刻 {{time}}",
         "hdOrder": "契約フィールド順；ページ並替なし",
@@ -4695,6 +4696,7 @@
         "srcFeishu": "Feishu メッセージ",
         "srcFeishuCell": "Feishu",
         "srcNote": "出所フィルターはクライアント facet（読み込み済みページのみ）",
+        "srcOther": "その他",
         "due7d": "7日以内に期限",
         "statusLabel": {
           "open": "未着手",

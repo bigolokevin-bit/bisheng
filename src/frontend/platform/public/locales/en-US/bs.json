@@ -4847,6 +4847,7 @@
         "expand": "Expand details",
         "footerCaliber": "Status follows the task contract only; blocked and cancelled carry a one-line reason; overdue is a derived view; times shown in Beijing time",
         "footerKeys": "Cursor pagination · page limit 200",
+        "footerScroll": "Table scrolls sideways",
         "forbiddenTitle": "You cannot see the task board yet",
         "freshAt": "Updated {{time}}",
         "hdOrder": "Ordered by contract fields; no client sorting",
@@ -4867,6 +4868,7 @@
         "srcFeishu": "Feishu message",
         "srcFeishuCell": "Feishu",
         "srcNote": "Source filter is a client facet over loaded pages only",
+        "srcOther": "Other",
         "due7d": "Due within 7 days",
         "statusLabel": {
           "open": "To do",

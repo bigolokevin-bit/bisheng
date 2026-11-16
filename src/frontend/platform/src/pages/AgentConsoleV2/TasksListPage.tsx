@@ -45,14 +45,26 @@ const PAGE_LIMIT = 20;
  * neutral-pill + mono raw rendering of T-02 ⑤, never a guessed mapping. */
 const TASK_STATUSES = ['open', 'in_progress', 'blocked', 'done', 'cancelled'] as const;
 
-/* tsk01-target pill tones (dot + text, color never alone, A-18):
- * open/in_progress accent, blocked warn, done ok, cancelled neutral. */
+/* VG FAIL-2 (observer 2026-11-16) five-state tones — no accent (blue-purple)
+ * on any status: 待办 neutral gray, 进行中 warning amber, 受阻 danger red,
+ * 已完成 success green, 已取消 neutral gray + 「—」 marker. */
 const STATUS_TONE: Record<string, string> = {
-  open: 'is-accent',
-  in_progress: 'is-accent',
-  blocked: 'is-warn',
+  open: '',
+  in_progress: 'is-warn',
+  blocked: 'is-danger',
   done: 'is-ok',
   cancelled: '',
+};
+
+/* VG FAIL-2: filter-chip dots carry the SAME tone as the table pills. The
+ * dot color is pinned per status so the shell's `.active` selected-chip
+ * background can never repaint a dot into the accent hue. */
+const STATUS_DOT: Record<string, string> = {
+  open: 'dot-neutral',
+  in_progress: 'dot-warn',
+  blocked: 'dot-danger',
+  done: 'dot-ok',
+  cancelled: 'dot-neutral',
 };
 
 /* F-04: preset shortcuts ONLY — the request carries a single dueBefore
@@ -146,6 +158,13 @@ const ICON_PATHS: Record<string, JSX.Element> = {
       <line x1="3" x2="21" y1="10" y2="10" />
     </>
   ),
+  moveH: (
+    <>
+      <polyline points="18 8 22 12 18 16" />
+      <polyline points="6 8 2 12 6 16" />
+      <line x1="2" x2="22" y1="12" y2="12" />
+    </>
+  ),
   chevD: <path d="m6 9 6 6 6-6" />,
   chevL: <path d="m15 18-6-6 6-6" />,
   chevR: <path d="m9 18 6-6-6-6" />,
@@ -204,13 +223,17 @@ interface FselProps {
   children: (close: () => void) => JSX.Element;
 }
 
-/* G1 FAIL 2: the four contract channels have localized names; an unknown enum
-   still renders raw (A-14 ⑤ — nothing is invented). */
+/* VG FAIL-1 (observer 2026-11-16): the source column is ALWAYS Chinese —
+ * feishu→飞书消息, chat→对话, manual→手动创建, system→系统计划,
+ * console→手动创建 (console-created rows are manual by caliber); any unknown
+ * enum renders 「其他」 and the raw value survives only in the cell title.
+ * A bare `console` (or any raw enum) must never reach the screen. */
 const SRC_LABEL_KEY: Record<string, string> = {
   feishu: 'agentConsole.v2.tsk.srcFeishu',
   chat: 'agentConsole.v2.tsk.srcChat',
   manual: 'agentConsole.v2.tsk.srcManual',
   system: 'agentConsole.v2.tsk.srcSystem',
+  console: 'agentConsole.v2.tsk.srcManual',
 };
 
 function Fsel({ testid, label, display, icon, disabled, children }: FselProps) {
@@ -314,10 +337,12 @@ export function TasksListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const fetchApi: Fetcher = useMemo(() => makeFetcher(), []);
   const ctx = useContext(userContext) as
-    | { user?: { user_id?: number | string; user_name?: string } }
+    | { user?: { user_id?: number | string; user_name?: string; name?: string; username?: string } }
     | null;
   const uid = String(ctx?.user?.user_id ?? '');
-  const userName = ctx?.user?.user_name ? String(ctx.user.user_name) : '';
+  /* VG FAIL-3: identity display name — user_name first, name/username as
+     fallbacks; the who cell falls back to 「我」, never the bare uid. */
+  const userName = String(ctx?.user?.user_name || ctx?.user?.name || ctx?.user?.username || '');
 
   /* F-01 default scope=mine (假定 A-02); no uid ⇒ 「我的」 disabled with an
      explicit reason sentinel. */
@@ -526,11 +551,15 @@ export function TasksListPage() {
     return null; // unknown enum → defensive mono rendering (T-02 ⑤)
   };
 
-  const channelName = (ch: string) => (SRC_LABEL_KEY[ch] ? t(SRC_LABEL_KEY[ch]) : ch);
+  /* VG FAIL-1: unknown channels read 「其他」 everywhere (facet, condition
+     line, cells); the raw enum is kept for titles only. */
+  const channelName = (ch: string) =>
+    SRC_LABEL_KEY[ch] ? t(SRC_LABEL_KEY[ch]) : t('agentConsole.v2.tsk.srcOther');
 
   /* F-05 facet options come from what the loaded page actually carries —
-     no speculative channels are pre-rendered (A-14 ⑤). */
-  const okItems = okView?.items ?? [];
+     no speculative channels are pre-rendered (A-14 ⑤). Memoized so the
+     derived useMemos below keep stable dependencies (lint: exhaustive-deps). */
+  const okItems = useMemo(() => okView?.items ?? [], [okView]);
   const pageChannels = useMemo(() => {
     const set = new Set<string>();
     okItems.forEach((r) => {
@@ -592,17 +621,19 @@ export function TasksListPage() {
     }
     if (dueKey) parts.push(`${t('agentConsole.v2.tsk.filterDue')} = ${t(`agentConsole.v2.tsk.due${dueKey === '7d' ? '7d' : dueKey === 'today' ? 'Today' : 'Overdue'}`)}`);
     if (sourceFacet)
-      parts.push(`${t('agentConsole.v2.tsk.filterSource') || '来源'} = ${channelName(sourceFacet)}`);
+      parts.push(`${t('agentConsole.v2.tsk.filterSource')} = ${channelName(sourceFacet)}`);
     return parts.join(' · ');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t, status, assigneeFilter, dueKey, sourceFacet, names, uid]);
 
   /* assignee display for T-03 (A-19: never a bare `employee:`/`human:`).
-     G1 FAIL 6 — three shapes only: 员工 (directory name + role badge),
-     本人 (current user), and the unresolved-directory fallback which shows an
-     em-dash plus a traceable short id instead of a bare `emp_x2` on screen.
-     Per the baseline the who cell carries avatar initial + name + role badge
-     only, so a resolved employee no longer prints its id at all. */
+     VG FAIL-3 (observer 2026-11-16): `human:<uid>` matching the current
+     identity renders avatar initial + display name (identity user_name /
+     name / username, fallback 「我」) + 「本人」 micro-badge — never the bare
+     uid nor a `…1` fragment. Resolved employees show directory name + badge;
+     the unresolved fallback is an em-dash. Any long id that must stay visible
+     (other humans, no name endpoint) is ellipsized inside the cell with the
+     full ref kept in the cell title — no id fragments are printed. */
   const assigneeView = (
     r: TaskRow,
   ): { nm: string; id: string; isMe: boolean; mono: boolean; roleKey: string } => {
@@ -611,8 +642,8 @@ export function TasksListPage() {
     const isMe = type === 'human' && uid !== '' && bare === uid;
     if (isMe) {
       return {
-        nm: userName || bare,
-        id: last6(bare),
+        nm: userName || t('agentConsole.v2.tsk.me'),
+        id: '',
         isMe: true,
         mono: false,
         roleKey: 'agentConsole.v2.tsk.roleSelf',
@@ -624,8 +655,9 @@ export function TasksListPage() {
         ? { nm: name, id: '', isMe: false, mono: false, roleKey: 'agentConsole.v2.tsk.roleEmployee' }
         : { nm: '—', id: '', isMe: false, mono: true, roleKey: 'agentConsole.v2.tsk.roleEmployee' };
     }
-    // human others: no human-name endpoint — mono uid stays honest, no role word
-    return { nm: bare, id: last6(bare), isMe: false, mono: true, roleKey: '' };
+    // human others: no human-name endpoint — mono uid stays honest (ellipsis
+    // + title in the cell), no role word, no fragment
+    return { nm: bare, id: '', isMe: false, mono: true, roleKey: '' };
   };
 
   /* ---------- body by state ---------- */
@@ -857,7 +889,11 @@ export function TasksListPage() {
                   style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
                 >
                   <span>
-                    <span className="a2-pill">{statusText(r.status ?? '') ?? r.status ?? '—'}</span>
+                    <span
+                      className={`a2-pill${STATUS_TONE[r.status ?? ''] ? ` ${STATUS_TONE[r.status ?? '']}` : ''}`}
+                    >
+                      {statusText(r.status ?? '') ?? r.status ?? '—'}
+                    </span>
                   </span>
                   <span
                     title={r.taskId}
@@ -1024,7 +1060,8 @@ export function TasksListPage() {
                 {s === 'cancelled' ? (
                   <span className="a2-mono">—</span>
                 ) : (
-                  <span className="a2-pill-dot" aria-hidden />
+                  /* VG FAIL-2: chip dot = the table pill's status tone */
+                  <span className={`a2-pill-dot ${STATUS_DOT[s]}`} aria-hidden />
                 )}
                 {t(`agentConsole.v2.tsk.statusLabel.${s}`, s)}{' '}
                 <b>{okItems.filter((r) => r.status === s).length}</b>
@@ -1248,6 +1285,16 @@ export function TasksListPage() {
         <span className="a2-sp" />
         <span className="a2-micro">{t('agentConsole.v2.tsk.footerKeys')}</span>
       </div>
+      {/* VG FAIL-4 (375): the table scrolls inside its card while the page
+          stays overflow-free — say so once, under the footer caliber. */}
+      <p
+        className="a2-micro"
+        data-testid="agent-v2-tsk-scroll-hint"
+        style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}
+      >
+        <Icon name="moveH" size={13} />
+        {t('agentConsole.v2.tsk.footerScroll')}
+      </p>
     </div>
   );
 }
@@ -1345,7 +1392,12 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
         <td className="a2-cell-nowrap" data-testid="agent-v2-task-status" title={r.status}>
           {stLabel ? (
             <span className={`a2-pill${STATUS_TONE[r.status] ? ` ${STATUS_TONE[r.status]}` : ''}`}>
-              <span className="a2-pill-dot" aria-hidden />
+              {r.status === 'cancelled' ? (
+                /* VG FAIL-2: 已取消 = neutral gray + 「—」, same as its chip */
+                <span className="a2-mono">—</span>
+              ) : (
+                <span className={`a2-pill-dot ${STATUS_DOT[r.status] ?? ''}`} aria-hidden />
+              )}
               {stLabel}
             </span>
           ) : (
@@ -1354,48 +1406,59 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
             </span>
           )}
         </td>
-        {/* T-03 assignee */}
+        {/* T-03 assignee — VG FAIL-3: 20px initial avatar + display name +
+            role micro-badge; long ids ellipsize in-cell, full ref in title */}
         <td className="a2-cell-nowrap" data-testid="agent-v2-task-assignee" title={r.assignee?.id}>
-          <span className={av.mono ? 'a2-mono' : undefined}>{av.nm}</span>
-          {av.roleKey && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%', minWidth: 0 }}>
+            {!av.mono && av.nm !== '—' && (
+              <span className="a2-who-avatar" aria-hidden data-testid="agent-v2-task-assignee-avatar">
+                {av.nm.slice(0, 1)}
+              </span>
+            )}
             <span
-              className="a2-pill"
-              style={{ marginLeft: 6, fontSize: 11, padding: '1px 8px' }}
-              data-testid="agent-v2-task-assignee-role"
+              className={av.mono ? 'a2-mono' : undefined}
+              style={
+                av.mono
+                  ? {
+                      maxWidth: 160,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-block',
+                      verticalAlign: 'bottom',
+                    }
+                  : undefined
+              }
             >
-              {t(av.roleKey)}
+              {av.nm}
             </span>
-          )}
-          {av.id ? <span className="a2-mono a2-micro">{` ${av.id}`}</span> : null}
+            {av.roleKey && (
+              <span
+                className="a2-pill"
+                style={{ fontSize: 11, padding: '1px 8px', flex: 'none' }}
+                data-testid="agent-v2-task-assignee-role"
+              >
+                {t(av.roleKey)}
+              </span>
+            )}
+            {av.id ? <span className="a2-mono a2-micro">{` ${av.id}`}</span> : null}
+          </span>
         </td>
-        {/* T-06 source: channel + copyable msg id; runId → runs deep link */}
+        {/* T-06 source — VG FAIL-1: one Chinese channel line only; the raw
+            enum and the message reference live in the title, never as a
+            second-line sub-id. runId keeps its runs deep link. */}
         <td className="a2-cell-nowrap" data-testid="agent-v2-task-source">
           {src.channel ? (
             <div>
               <span
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                title={`channel=${src.channel}`}
+                title={`channel=${src.channel}${src.messageId ? ` · ${src.messageId}` : ''}`}
               >
                 <Icon name="msg" size={13} />
-                {SRC_LABEL_KEY[src.channel] ? (
-                  t(SRC_LABEL_KEY[src.channel])
-                ) : (
-                  <span className="a2-mono">{src.channel}</span>
-                )}
+                {SRC_LABEL_KEY[src.channel]
+                  ? t(SRC_LABEL_KEY[src.channel])
+                  : t('agentConsole.v2.tsk.srcOther')}
               </span>
-              {src.messageId && (
-                <div className="a2-mono a2-micro" title={src.messageId}>
-                  <button
-                    type="button"
-                    onClick={() => onCopy(src.messageId as string, `m:${r.taskId}`)}
-                    aria-label={t('agentConsole.v2.tsk.copyMsgId')}
-                    style={{ background: 'none', border: 'none', color: 'inherit', font: 'inherit', padding: 0 }}
-                  >
-                    {fmtId(src.messageId)}
-                  </button>
-                  {copiedKey === `m:${r.taskId}` ? ` ${t('agentConsole.v2.tsk.copied')}` : ''}
-                </div>
-              )}
               {src.runId && (
                 <NavLink
                   className="a2-mono a2-micro"

@@ -4792,6 +4792,7 @@
         "expand": "展开详情",
         "footerCaliber": "状态判定只认任务契约；受阻与取消均带一句话原因；已逾期=派生判断；时间显示北京时间",
         "footerKeys": "游标分页 · 每页上限 200",
+        "footerScroll": "表格可左右滑动",
         "forbiddenTitle": "您还看不到任务板",
         "freshAt": "更新于 {{time}}",
         "hdOrder": "按契约字段排序；本页不提供排序控件",
@@ -4812,6 +4813,7 @@
         "srcFeishu": "飞书消息",
         "srcFeishuCell": "飞书",
         "srcNote": "来源筛选为客户端 facet，仅覆盖已加载页面",
+        "srcOther": "其他",
         "due7d": "近 7 天截止",
         "statusLabel": {
           "open": "待办",
