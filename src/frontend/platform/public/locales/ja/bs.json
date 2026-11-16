@@ -4681,6 +4681,8 @@
         "triggerChannel": "チャネル",
         "triggerTask": "タスク",
         "triggerUpstream": "上流トリガー",
+        "unavailable": "取得不可",
+        "cursorStale": "カーソルが無効になりました。再試行してください",
         "running": "実行中",
         "expandSummary": "要約を表示",
         "summaryLoading": "要約読み込み中…",

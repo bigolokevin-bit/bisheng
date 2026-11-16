@@ -4681,6 +4681,8 @@
         "triggerChannel": "渠道",
         "triggerTask": "任务",
         "triggerUpstream": "上游触发",
+        "unavailable": "不可得",
+        "cursorStale": "游标已失效，请重试",
         "running": "进行中",
         "expandSummary": "查看摘要",
         "summaryLoading": "摘要加载中…",

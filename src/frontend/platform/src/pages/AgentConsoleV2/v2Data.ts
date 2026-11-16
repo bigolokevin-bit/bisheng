@@ -338,6 +338,43 @@ export function fetchEmployeeVersions(
   return fetch<VersionListBody>('/api/employee-versions', { id: employeeId, limit });
 }
 
+/* RUN-TAB-DATA measured R2 (run-detail) keys — all optional: an absent key
+ * renders as — / unknown, never a fabricated value. lastEventSeq feeds the
+ * lazy summary recipe below. */
+export interface RunDetailBody {
+  runId?: string;
+  status?: string;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  costUsd?: number | null;
+  costStatus?: string | null;
+  employeeVersionNo?: number | string | null;
+  reasonCode?: string | null;
+  lastEventSeq?: number | string | null;
+}
+
+export function fetchRunDetail(
+  fetch: Fetcher,
+  runId: string
+): Promise<ApiRes<RunDetailBody>> {
+  return fetch<RunDetailBody>('/api/run-detail', { id: runId });
+}
+
+/* R3 run-events: the summary lane reads ONLY the tail event
+ * (sinceSeq = lastEventSeq - 1, limit 1) and shows payload.output;
+ * anything else stays 不可得 (RUN-TAB-DATA: never invent a summary). */
+export interface RunEventsBody {
+  items?: Array<{ payload?: unknown; seq?: number | string | null }>;
+}
+
+export function fetchRunEventsSummary(
+  fetch: Fetcher,
+  runId: string,
+  sinceSeq: number
+): Promise<ApiRes<RunEventsBody>> {
+  return fetch<RunEventsBody>('/api/run-events', { runId, sinceSeq, limit: 1 });
+}
+
 // ---------- utilities ----------
 
 /** Run fn over items with at most `cap` in flight; preserves input order. */

@@ -4736,6 +4736,8 @@
         "triggerChannel": "Channel",
         "triggerTask": "Task",
         "triggerUpstream": "Upstream",
+        "unavailable": "Unavailable",
+        "cursorStale": "Cursor expired — please retry",
         "running": "Running",
         "expandSummary": "Show summary",
         "summaryLoading": "Loading summary…",

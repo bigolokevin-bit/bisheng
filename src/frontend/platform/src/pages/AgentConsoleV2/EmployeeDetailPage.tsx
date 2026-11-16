@@ -21,8 +21,11 @@ import {
   fetchEffectiveConfig,
   fetchEmployeeDetail,
   fetchEmployeeVersions,
+  fetchRunDetail,
+  fetchRunEventsSummary,
   fetchRunStats,
   fetchWorkstations,
+  fmtId,
   fmtTime,
   fmtUsd,
   makeFetcher,
@@ -128,6 +131,16 @@ export function EmployeeDetailPage() {
   const [pending, setPending] = useState<Box<ApprovalStats> | null>(null);
   const [tasks, setTasks] = useState<Box<OverviewQueueBody>>(IDLE as Box<OverviewQueueBody>);
   const [runRows, setRunRows] = useState<Box<OverviewQueueBody>>(IDLE as Box<OverviewQueueBody>);
+  /* RUN-TAB-DATA: page 1 lives in runRows; later cursor pages accumulate in
+   * runExtra. The total count is never displayed (contract rule). */
+  const [runExtra, setRunExtra] = useState<UnknownRecord[]>([]);
+  const [runsCursor, setRunsCursor] = useState<string | null>(null);
+  const [runsStale, setRunsStale] = useState(false);
+  const [runsMoreBusy, setRunsMoreBusy] = useState(false);
+  const [runsMoreError, setRunsMoreError] = useState<number | null>(null);
+  const [runSummary, setRunSummary] = useState<
+    Record<string, { state: 'loading' | 'text' | 'na'; text?: string }>
+  >({});
   const [audit, setAudit] = useState<Box<{ events?: UnknownRecord[] }>>(
     IDLE as Box<{ events?: UnknownRecord[] }>
   );
@@ -143,6 +156,65 @@ export function EmployeeDetailPage() {
     if (next === 'overview') params.delete('tab');
     else params.set('tab', next);
     setSearchParams(params);
+  };
+
+  const runList = [...(runRows.data?.items ?? []), ...runExtra];
+
+  /* RUN-TAB-DATA lazy summary: R2 lastEventSeq → /api/run-events with
+   * sinceSeq = lastEventSeq - 1, limit 1; only the tail event's
+   * payload.output is shown. Anything missing renders 不可得 — the summary
+   * is never fabricated. */
+  const expandRunSummary = async (runId: string) => {
+    if (!runId) return;
+    setRunSummary((prev) => ({ ...prev, [runId]: { state: 'loading' } }));
+    const d = await fetchRunDetail(fetch, runId);
+    const rawSeq = d.ok ? d.data?.lastEventSeq : null;
+    const seq =
+      rawSeq != null && Number.isFinite(Number(rawSeq)) ? Number(rawSeq) : null;
+    if (seq === null) {
+      setRunSummary((prev) => ({ ...prev, [runId]: { state: 'na' } }));
+      return;
+    }
+    const e = await fetchRunEventsSummary(fetch, runId, seq - 1);
+    const items = e.ok ? (e.data?.items ?? []) : [];
+    const last = items.length > 0 ? items[items.length - 1] : null;
+    const payload = (last && typeof last.payload === 'object' && last.payload !== null
+      ? last.payload
+      : {}) as UnknownRecord;
+    const out = str(payload, ['output', 'text']);
+    setRunSummary((prev) => ({
+      ...prev,
+      [runId]: out ? { state: 'text', text: out } : { state: 'na' },
+    }));
+  };
+
+  /* Load-more consumes nextCursor. Upstream silently re-returns page 1 for
+   * stale/expired cursors (L2 6862bae), so an overlapping runId set stops
+   * loading with the localized stale copy — no infinite auto-load. */
+  const loadMoreRuns = async () => {
+    if (!runsCursor || runsMoreBusy || runsStale) return;
+    setRunsMoreBusy(true);
+    setRunsMoreError(null);
+    const res = await fetch<OverviewQueueBody>('/api/runs', {
+      employeeId: id,
+      limit: 20,
+      cursor: runsCursor,
+    });
+    setRunsMoreBusy(false);
+    if (!res.ok) {
+      setRunsMoreError(res.status);
+      return;
+    }
+    const seen = new Set(
+      runList.map((r) => str(r, ['runId', 'id'])).filter(Boolean)
+    );
+    const incoming = res.data?.items ?? [];
+    if (incoming.some((r) => seen.has(str(r, ['runId', 'id'])))) {
+      setRunsStale(true);
+      return;
+    }
+    setRunExtra((prev) => [...prev, ...incoming]);
+    setRunsCursor(res.data?.nextCursor ?? null);
   };
 
   useEffect(() => {
@@ -189,6 +261,11 @@ export function EmployeeDetailPage() {
       setPending(ap8 === null ? null : box(ap8));
       setTasks(box(t5));
       setRunRows(box(r5));
+      setRunExtra([]);
+      setRunsCursor(r5.ok ? (r5.data?.nextCursor ?? null) : null);
+      setRunsStale(false);
+      setRunsMoreError(null);
+      setRunSummary({});
       setAudit(box(a3));
       setUpdatedAt(fmtTime(new Date().toISOString()));
     })();
@@ -657,24 +734,121 @@ export function EmployeeDetailPage() {
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-runslist"
             />
-          ) : (runRows.data?.items ?? []).length === 0 ? (
+          ) : runList.length === 0 ? (
             <p className="a2-meta" data-testid="agent-v2-ed-runs-empty">
               {t('agentConsole.v2.ed.runsEmpty')}
             </p>
           ) : (
-            (runRows.data?.items ?? []).map((it, i) => (
-              <div
-                key={str(it, ['runId', 'id']) || i}
-                className="a2-card-item"
-                data-testid="agent-v2-ed-run-row"
-              >
-                <span className="a2-mono">{str(it, ['runId', 'id']) || '—'}</span>
-                <p className="a2-meta">
-                  <span className="a2-mono">{str(it, ['status']) || '—'}</span>
-                  {it.employeeVersionNo != null ? ` · v${String(it.employeeVersionNo)}` : ''}
+            <>
+              {runList.map((it, i) => {
+                const runId = str(it, ['runId', 'id']);
+                const started = str(it, ['startedAt', 'createdAt']);
+                const ended = str(it, ['endedAt']);
+                /* duration = endedAt − startedAt; unfinished shows —, a
+                 * running row says 进行中. Never an estimate. */
+                let duration = '—';
+                if (started && ended) {
+                  const ms = Date.parse(ended) - Date.parse(started);
+                  if (Number.isFinite(ms) && ms >= 0) {
+                    const sec = Math.round(ms / 1000);
+                    duration =
+                      sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`;
+                  }
+                } else if (started && str(it, ['status']) === 'running') {
+                  duration = t('agentConsole.v2.ed.running');
+                }
+                /* costStatus=unknown shows the literal unknown; a missing
+                 * cost shows — — never 0 (RUN-TAB-DATA law). */
+                const cost =
+                  typeof it.costUsd === 'number'
+                    ? fmtUsd(it.costUsd)
+                    : it.costStatus === 'unknown'
+                      ? 'unknown'
+                      : '—';
+                /* conservative trigger labels from id presence only. */
+                const trigger = it.channelEventId
+                  ? t('agentConsole.v2.ed.triggerChannel')
+                  : it.taskId
+                    ? t('agentConsole.v2.ed.triggerTask')
+                    : it.previousRunId || it.upstreamRunId
+                      ? t('agentConsole.v2.ed.triggerUpstream')
+                      : t('agentConsole.v2.ed.unavailable');
+                const summary = runId ? runSummary[runId] : undefined;
+                return (
+                  <div
+                    key={runId || i}
+                    className="a2-card-item"
+                    data-testid="agent-v2-ed-run-row"
+                  >
+                    <span className="a2-mono" title={runId || undefined}>
+                      {runId ? fmtId(runId) : '—'}
+                    </span>
+                    <p className="a2-meta">
+                      <span className="a2-mono">{str(it, ['status']) || '—'}</span>
+                      {it.employeeVersionNo != null
+                        ? ` · v${String(it.employeeVersionNo)}`
+                        : ''}
+                    </p>
+                    <p className="a2-meta" data-testid="agent-v2-ed-run-fields">
+                      {started ? fmtTime(started) : '—'} →{' '}
+                      {ended ? fmtTime(ended) : '—'} · {duration} · {cost} ·{' '}
+                      {t('agentConsole.v2.ed.colTrigger')} {trigger}
+                    </p>
+                    <p className="a2-meta">
+                      <button
+                        type="button"
+                        className="a2-btn"
+                        data-testid="agent-v2-ed-run-expand-btn"
+                        onClick={() => void expandRunSummary(runId)}
+                      >
+                        {t('agentConsole.v2.ed.expandSummary')}
+                      </button>
+                    </p>
+                    {summary && summary.state === 'loading' ? (
+                      <p className="a2-micro">
+                        {t('agentConsole.v2.ed.summaryLoading')}
+                      </p>
+                    ) : null}
+                    {summary && summary.state === 'text' ? (
+                      <p className="a2-micro" data-testid="agent-v2-ed-run-summary">
+                        {summary.text}
+                      </p>
+                    ) : null}
+                    {summary && summary.state === 'na' ? (
+                      <p className="a2-micro" data-testid="agent-v2-ed-run-summary">
+                        {t('agentConsole.v2.ed.unavailable')}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+              {runsStale ? (
+                <p className="a2-meta" data-testid="agent-v2-ed-runs-stale">
+                  {t('agentConsole.v2.ed.cursorStale')}
                 </p>
-              </div>
-            ))
+              ) : null}
+              {runsMoreError !== null ? (
+                <p className="a2-meta" data-testid="agent-v2-ed-runs-more-error">
+                  {t('agentConsole.v2.ov.blockUnavailable', {
+                    block: t('agentConsole.v2.ed.runsTitle'),
+                    code: runsMoreError,
+                  })}
+                </p>
+              ) : null}
+              {!runsStale && runsCursor ? (
+                <p className="a2-meta">
+                  <button
+                    type="button"
+                    className="a2-btn"
+                    data-testid="agent-v2-ed-runs-more"
+                    disabled={runsMoreBusy}
+                    onClick={() => void loadMoreRuns()}
+                  >
+                    {t('agentConsole.v2.ed.loadMore')}
+                  </button>
+                </p>
+              ) : null}
+            </>
           )}
         </div>
       ) : null}
