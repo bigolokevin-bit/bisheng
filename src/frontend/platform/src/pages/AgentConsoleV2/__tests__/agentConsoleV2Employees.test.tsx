@@ -116,13 +116,25 @@ let urls: string[] = [];
 let employeesNextCursor: string | null = null;
 let employeesStatus = 200;
 let employeesEnriched = true;
+// EMP-01 r5 (G15): endpoint failure toggles for the error-state cases.
+// statsFail injects the real machine code run.invalid_query on E14 and
+// budgetFail injects budget.range_too_large on P9 — both must stay off-screen.
+let statsFail = false;
+let budgetFail = false;
+
+// BFF-shaped error body for the given HTTP status (never leak into copy).
+function errorCodeFor(status: number) {
+  if (status === 401) return 'console.unauthenticated';
+  if (status === 403) return 'console.forbidden';
+  return 'console.upstream';
+}
 
 function routeRequest(url: string) {
   urls.push(url);
   if (url.includes('/api/employees')) {
     if (employeesStatus !== 200) {
       return jsonResponse(employeesStatus, {
-        code: employeesStatus === 403 ? 'console.forbidden' : 'console.upstream',
+        code: errorCodeFor(employeesStatus),
         message: 'stubbed failure',
       });
     }
@@ -131,9 +143,16 @@ function routeRequest(url: string) {
       ...(employeesNextCursor ? { nextCursor: employeesNextCursor } : {}),
     });
   }
-  if (url.includes('/api/employee-stats')) return jsonResponse(200, statsBody);
+  if (url.includes('/api/employee-stats')) {
+    return statsFail
+      ? jsonResponse(500, { code: 'run.invalid_query', message: 'stubbed failure' })
+      : jsonResponse(200, statsBody);
+  }
   if (url.includes('/api/approval-stats')) return jsonResponse(200, { pending: 3, dueSoon: 1 });
   if (url.includes('/api/budget-usage')) {
+    if (budgetFail) {
+      return jsonResponse(500, { code: 'budget.range_too_large', message: 'stubbed failure' });
+    }
     return jsonResponse(200, employeesEnriched ? budgetBody : { items: [], missingEmployeeIds: [] });
   }
   if (url.includes('/api/run-activity')) return jsonResponse(200, activityBody);
@@ -190,6 +209,8 @@ beforeEach(() => {
   employeesStatus = 200;
   employeesEnriched = true;
   employeesNextCursor = null;
+  statsFail = false;
+  budgetFail = false;
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL) => routeRequest(String(input)))
@@ -374,5 +395,77 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
       expect(employeesUrls().some((u) => u.includes('cursor=cur_page2'))).toBe(true)
     );
     expect(screen.getByTestId('route-search').textContent).toContain('cursor=cur_page2');
+  });
+
+  // EMP-01 r5 (G15): internal machine codes (console.*, run.*, budget.*,
+  // agent.http.*) and the raw requestId must never reach the visible text.
+  describe('error copy never carries internal machine codes (G15)', () => {
+    const pageText = () =>
+      (screen.getByTestId('agent-v2-employees-page').textContent ?? '');
+
+    const assertNoLeak = (codes: string[]) => {
+      for (const leak of [...codes, 'agent.http', 'req_test_w2']) {
+        expect(pageText()).not.toContain(leak);
+      }
+    };
+
+    it('403 shows readable no-permission copy; requestId only via copy-diag', async () => {
+      employeesStatus = 403;
+      renderPage();
+      const card = await screen.findByTestId('agent-v2-employees-403');
+      expect(card.textContent).toContain('agentConsole.v2.emp.noPermission');
+      expect(card.textContent).toContain('agentConsole.v2.emp.forbiddenHint');
+      // default state: nothing in the body, no inline requestId
+      expect(card.textContent).not.toContain('req_test_w2');
+      assertNoLeak(['console.forbidden', 'console.upstream']);
+      expect(screen.getByTestId('agent-v2-employees-retry')).toBeInTheDocument();
+      // requestId is reachable only through the explicit diagnostic control
+      const writeText = vi.fn(async () => {});
+      Object.defineProperty(window.navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+      fireEvent.click(screen.getByTestId('agent-v2-employees-diag'));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith('req_test_w2'));
+      expect(writeText.mock.calls.flat().join('')).not.toContain('console.forbidden');
+    });
+
+    it('401 maps to the session-expired state without leaking console.unauthenticated', async () => {
+      employeesStatus = 401;
+      renderPage();
+      const card = await screen.findByTestId('agent-v2-employees-auth');
+      expect(card.textContent).toContain('agentConsole.v2.emp.authExpired');
+      expect(card.textContent).toContain('agentConsole.v2.emp.authHint');
+      assertNoLeak(['console.unauthenticated']);
+      expect(screen.getByTestId('agent-v2-employees-retry')).toBeInTheDocument();
+    });
+
+    it('500 list failure keeps a retry and recovers the table when healthy', async () => {
+      employeesStatus = 500;
+      renderPage();
+      const card = await screen.findByTestId('agent-v2-employees-error');
+      expect(card.textContent).toContain('agentConsole.v2.errorQuery');
+      expect(card.textContent).toContain('agentConsole.v2.ov.blockUnavailable');
+      assertNoLeak(['console.upstream']);
+      employeesStatus = 200;
+      fireEvent.click(screen.getByTestId('agent-v2-employees-retry'));
+      await waitFor(() =>
+        expect(screen.getByTestId('agent-v2-employees-table')).toBeInTheDocument()
+      );
+    });
+
+    it('KPI failures show localized block copy, never run.invalid_query / budget.range_too_large', async () => {
+      statsFail = true;
+      budgetFail = true;
+      renderPage();
+      await screen.findByTestId('agent-v2-kpi-onduty-error');
+      await screen.findByTestId('agent-v2-kpi-cost-error');
+      expect(screen.getByTestId('agent-v2-kpi-onduty-error').textContent).toContain(
+        'agentConsole.v2.ov.blockUnavailable'
+      );
+      assertNoLeak(['run.invalid_query', 'budget.range_too_large']);
+      // the list itself is healthy — a KPI failure must not fake a page error
+      await screen.findByTestId('agent-v2-employees-table');
+    });
   });
 });
