@@ -887,9 +887,15 @@ export function ActivityBlock({
           </button>
         </div>
       ) : rows.length === 0 ? (
-        <p className="ov-empty-line" data-testid="agent-v2-ov-activity-empty">
-          {t('agentConsole.v2.ov.activityEmpty')}
-        </p>
+        <div className="ov-buds">
+          <p className="ov-empty-line" data-testid="agent-v2-ov-activity-empty">
+            {t('agentConsole.v2.ov.activityEmpty')}
+          </p>
+          <NavLink className="ov-lnk" to="/agent/audit" data-testid="agent-v2-ov-activity-go-audit">
+            {t('agentConsole.v2.ov.openAuditCenter')}
+            <Icon name="arrow" size={13} />
+          </NavLink>
+        </div>
       ) : (
         <>
           <div className="ov-tblwrap">

@@ -38,3 +38,5 @@ HEAT: 168 真格(current-cell=1)；小时轴每3时对齐；绝对档位；峰�
 # ---- BLOCK2-COST r3 — 13:02 实页：非 loading 真数据 USD 0.13 / 20.00 · 0.7% · 剩余 19.87 · 外推现网值（当月已过16天）；30 格 title 三态；每员工 f2b540 1.2% USD0.12/10.00、a22649 0.1% USD0.01/10.00；无假 0；pair-cost-{1440,375}-dark.png
 
 # ---- BLOCK2-ANOMALY r3 — 13:02 实页：chip「1 条」；AL-5 info+规则号+看运行；扫描五规则（0）（0）（0/13）（0/2）（1）；积压 pending==0→(0) 推导；阈值固定声明；无告警中心链接；pair-anomaly-{1440,375}-dark.png
+
+# ---- BLOCK2-ACTIVITY r3 — 13:02 实页：近24h 无审计事件=诚实空态「近 24 小时没有审计事件」+「打开审计中心」链接(go-audit testid)；openAuditCenter 裸 key 已修；无 snake_case 裸奔；pair-activity-{1440,375}-dark.png
