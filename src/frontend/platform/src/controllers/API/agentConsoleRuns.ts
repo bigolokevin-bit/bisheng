@@ -111,6 +111,13 @@ export interface AgentConsoleRunsApi {
     sinceSeq?: number;
     limit?: number;
   }): Promise<ApiResult<RunEventList>>;
+  /**
+   * R2 single-run detail (BFF GET /api/run-detail?id= → /v1/runs/{runId}).
+   * RUN-01 uses it ONLY as a per-row lazy fill for nullable list columns
+   * (costUsd/costStatus/employeeVersionNo/endedAt) — never batch, never
+   * prefetch, never blocking the first paint. R3 events belong to RUN-02.
+   */
+  getRunDetail(params: { id: string }): Promise<ApiResult<Run>>;
 }
 
 export interface HttpAgentConsoleRunsApiOptions {
@@ -192,6 +199,12 @@ export function createHttpAgentConsoleRunsApi(
         throw new UpstreamError('agent.runs.missing_required_param');
       }
       return request<RunEventList>('/api/run-events', { runId, sinceSeq, limit });
+    },
+    async getRunDetail({ id }) {
+      if (!id) {
+        throw new UpstreamError('agent.runs.missing_required_param');
+      }
+      return request<Run>('/api/run-detail', { id });
     },
   };
 }

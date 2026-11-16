@@ -23,7 +23,7 @@ export function ListSkeleton({ ariaLabel, note }: { ariaLabel: string; note: str
       </div>
       <div className="card" style={{ padding: 0 }} aria-hidden="true">
         {widths.map((w, i) => (
-          // eslint-disable-next-line react/no-array-index-key -- static skeleton rows
+          // Static skeleton rows: index keys are stable (no reordering).
           <div className="srow-skel" key={i}>
             <div className="bar" style={{ width: w }} />
             <div className="bar" style={{ width: 72 }} />

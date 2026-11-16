@@ -1,18 +1,17 @@
-/* eslint-disable no-restricted-syntax -- fixtures are the real captures and assertions the real zh-Hans copy (P0-5 lesson: copy the capture verbatim) */
+/* eslint-disable no-restricted-syntax -- fixtures mirror the R5 capture shape; assertions pin the real zh-Hans copy */
 /**
- * P0-6 v2-4: 「运行与追踪」 section (R5 run list + R3 event timeline) rendered
- * through the real page shell with the real zh-Hans resources.
+ * RUN-01 `/agent/runs` — the target-aligned read-only run list (RunsSection
+ * on the shared listkit suite), rendered with the real zh-Hans resources.
  *
- * Fixtures are copied VERBATIM from
- * openspec/changes/l4-console-v2-trace/evidence/
- *   r5-runs.json   → RUN (all 20 captured fields, camelCase is law)
- *   r3-page1.json  → PAGE1 (limit=2 page: seq 1..2, nextSeq 2, hasMore true)
- *   r3-page2.json  → PAGE2 (sinceSeq=2 page: seq 3..5, nextSeq 5, hasMore false)
- *   r3-events.json → ALL_EVENTS (the whole stream)
- * The pilot tenant has no tool_call/tool_result events (design.md 风险与裁定),
- * so the pairing fixtures use the contract payload shape {stepSeq, toolName}.
+ * Covers the C1/C2 assertions that are unit-testable (RUN01-TARGET-SPEC §9):
+ * 10 fixed columns, honest value rendering (raw cost / literal unknown /
+ * no fabricated duration), filter→request mapping with since always sent,
+ * URL query restore, explicit nextCursor consumption, the §7 replay guard
+ * (equivalent coverage to EMP-03's stale-cursor test, not a reuse), the five
+ * states incl. 400/403/404, and the R2 per-row lazy fill with inline retry.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('@/components/bs-ui/message', () => ({
@@ -24,7 +23,7 @@ vi.mock('react-i18next', async () => {
     default: Record<string, unknown>;
   };
   const dict = mod.default;
-  const t = (key: unknown, def?: unknown): string => {
+  const t = (key: unknown, opts?: unknown): string => {
     const value = String(key)
       .split('.')
       .reduce<unknown>(
@@ -34,583 +33,494 @@ vi.mock('react-i18next', async () => {
             : undefined,
         dict,
       );
-    if (typeof value === 'string') return value;
-    if (typeof def === 'string') return def;
-    return String(key);
+    let text = typeof value === 'string' ? value : String(key);
+    if (opts && typeof opts === 'object') {
+      for (const [k, v] of Object.entries(opts as Record<string, unknown>)) {
+        text = text.split(`{{${k}}}`).join(String(v));
+      }
+    }
+    return text;
   };
   return { useTranslation: () => ({ t }) };
 });
 
-import { AgentConsoleV2Page } from '../AgentConsoleV2Page';
-import { userContext } from '@/contexts/userContext';
+import { AuthError, type AgentConsoleApi } from '@/controllers/API/agent';
 import type {
   AgentConsoleRunsApi,
   Run,
-  RunEvent,
-  RunEventList,
+  RunsListResult,
 } from '@/controllers/API/agentConsoleRuns';
+import type { ApiResult } from '@/controllers/API/agent';
+
+import { RunsSection } from '../RunsSection';
 
 // ---------------------------------------------------------------- fixtures
 
-/** evidence/r5-runs.json → items[0], verbatim. */
-const RUN: Run = {
-  runId: 'rn_01M7822XN781D2S9JASH5TX1XZ',
-  tenantId: 't_seakoi_pilot',
-  employeeId: 'emp_9F42AAE299D541FBBB6ECE3671',
-  employeeVersionNo: 1,
-  policySnapshotRef: 'pol_dev_pilot',
-  upstreamRunId: 'run_4b0c801e2cd14e40ab9e998fabb61dae',
-  channelEventId: null,
-  taskId: null,
-  previousRunId: null,
-  attemptNo: 1,
-  status: 'completed',
-  reasonCode: 'run.upstream_completed',
-  budgetCapUsd: 10.0,
-  costUsd: 0.009875,
-  costStatus: 'upstream',
-  startedAt: '2026-11-12T14:20:16.457Z',
-  endedAt: '2026-11-12T14:21:29.951Z',
-  lastEventSeq: 5,
-  createdAt: '2026-11-12T14:20:16.457Z',
-  updatedAt: '2026-11-12T14:21:29.951Z',
-};
+const EMP_XIAOLI = 'emp_86A81CE8FF6F42E187BCF2B540';
+const EMP_XIAOMA = 'emp_5B3C7A9D1E2F4068B5C3D7E9';
 
-const EMP = {
-  employeeId: RUN.employeeId,
-  id: RUN.employeeId,
-  tenantId: RUN.tenantId,
-  name: 'Koi Claw',
-  title: 'assistant',
-  lifecycleState: 'active',
-  currentVersionId: 'ver_1',
-  ownerUserId: 'opsadmin',
-  createdAt: '2026-01-01T00:00:00Z',
-  updatedAt: '2026-11-13T00:00:00Z',
-};
-
-const PULLED = '2026-11-12T14:21:29.951Z';
-
-/** evidence/r3-page1.json — verbatim. */
-const PAGE1: RunEventList = {
-  items: [
-    {
-      runId: 'rn_01M7822XN781D2S9JASH5TX1XZ',
-      seq: 1,
-      eventType: 'message',
-      payload: {
-        delta: '我',
-        event: 'message.delta',
-        run_id: 'run_4b0c801e2cd14e40ab9e998fabb61dae',
-        seq: 0,
-        timestamp: 1794493219.081192,
-        upstreamEvent: 'message.delta',
-        upstreamSeq: 0,
-      },
-      occurredAt: '2026-11-12T14:20:19.081Z',
-      pulledAt: '2026-11-12T14:21:29.951Z',
-    },
-    {
-      runId: 'rn_01M7822XN781D2S9JASH5TX1XZ',
-      seq: 2,
-      eventType: 'message',
-      payload: {
-        delta: '收到的模型',
-        event: 'message.delta',
-        run_id: 'run_4b0c801e2cd14e40ab9e998fabb61dae',
-        seq: 1,
-        timestamp: 1794493219.110207,
-        upstreamEvent: 'message.delta',
-        upstreamSeq: 1,
-      },
-      occurredAt: '2026-11-12T14:20:19.110Z',
-      pulledAt: '2026-11-12T14:21:29.951Z',
-    },
-  ],
-  nextSeq: 2,
-  hasMore: true,
-};
-
-/** evidence/r3-page2.json — verbatim. */
-const PAGE2: RunEventList = {
-  items: [
-    {
-      runId: 'rn_01M7822XN781D2S9JASH5TX1XZ',
-      seq: 3,
-      eventType: 'message',
-      payload: {
-        delta: '是 qwen',
-        event: 'message.delta',
-        run_id: 'run_4b0c801e2cd14e40ab9e998fabb61dae',
-        seq: 2,
-        timestamp: 1794493219.1669781,
-        upstreamEvent: 'message.delta',
-        upstreamSeq: 2,
-      },
-      occurredAt: '2026-11-12T14:20:19.166Z',
-      pulledAt: '2026-11-12T14:21:29.951Z',
-    },
-    {
-      runId: 'rn_01M7822XN781D2S9JASH5TX1XZ',
-      seq: 4,
-      eventType: 'message',
-      payload: {
-        delta: '-plus。',
-        event: 'message.delta',
-        run_id: 'run_4b0c801e2cd14e40ab9e998fabb61dae',
-        seq: 3,
-        timestamp: 1794493219.232705,
-        upstreamEvent: 'message.delta',
-        upstreamSeq: 3,
-      },
-      occurredAt: '2026-11-12T14:20:19.232Z',
-      pulledAt: '2026-11-12T14:21:29.951Z',
-    },
-    {
-      runId: 'rn_01M7822XN781D2S9JASH5TX1XZ',
-      seq: 5,
-      eventType: 'completed',
-      payload: {
-        completed: true,
-        event: 'run.completed',
-        interrupted: false,
-        output: '我收到的模型是 qwen-plus。',
-        partial: false,
-        reasonCode: 'run.upstream_completed',
-        run_id: 'run_4b0c801e2cd14e40ab9e998fabb61dae',
-        runtime: { model: '', provider: '', route_source: 'global' },
-        seq: 4,
-        timestamp: 1794493219.588205,
-        upstreamEvent: 'run.completed',
-        upstreamSeq: 4,
-        usage: { input_tokens: 12290, output_tokens: 9, total_tokens: 12299 },
-      },
-      occurredAt: '2026-11-12T14:20:19.588Z',
-      pulledAt: '2026-11-12T14:21:29.951Z',
-    },
-  ],
-  nextSeq: 5,
-  hasMore: false,
-};
-
-/** evidence/r3-events.json — the whole stream in one page (hasMore false). */
-const ALL_EVENTS: RunEventList = {
-  items: [...PAGE1.items, ...PAGE2.items],
-  nextSeq: 5,
-  hasMore: false,
-};
-
-// contract-shape tool fixtures (see header note)
-function ev(runId: string, seq: number, eventType: string, payload: Record<string, unknown>): RunEvent {
+function makeRun(over: Partial<Run> = {}): Run {
   return {
-    runId,
-    seq,
-    eventType,
-    payload,
-    occurredAt: `2026-11-12T14:20:2${seq % 10}.000Z`,
-    pulledAt: PULLED,
+    runId: 'rn_01M7DF41FG124YHW9PR66CJ7HW',
+    tenantId: 't_seakoi_pilot',
+    employeeId: EMP_XIAOLI,
+    employeeVersionNo: 12,
+    policySnapshotRef: 'pol_1',
+    upstreamRunId: 'up_1',
+    channelEventId: 'om_x2a9f3c7b8d41c',
+    taskId: null,
+    previousRunId: null,
+    attemptNo: 1,
+    status: 'completed',
+    reasonCode: null,
+    budgetCapUsd: null,
+    costUsd: 0.009875,
+    costStatus: 'upstream',
+    startedAt: '2026-11-16T08:52:10+08:00',
+    endedAt: '2026-11-16T08:56:42+08:00',
+    lastEventSeq: 5,
+    createdAt: '2026-11-16T08:52:10+08:00',
+    updatedAt: '2026-11-16T08:56:42+08:00',
+    ...over,
   };
 }
 
-/** settled (step 1) + pending (step 2) pairing over one run. */
-const TOOL_RUN: Run = { ...RUN, runId: 'rn_TOOLSFIXTURE0000000001A', lastEventSeq: 4 };
-const TOOL_EVENTS: RunEventList = {
-  items: [
-    ev(TOOL_RUN.runId, 1, 'tool_call', { stepSeq: 1, toolName: 'search', args: { q: 'pilot' } }),
-    ev(TOOL_RUN.runId, 2, 'tool_result', { stepSeq: 1, toolName: 'search', ok: true }),
-    ev(TOOL_RUN.runId, 3, 'tool_call', { stepSeq: 2, toolName: 'web_fetch', args: { url: 'https://h1ee.cn' } }),
-    ev(TOOL_RUN.runId, 4, 'completed', { completed: true, reasonCode: 'run.upstream_completed' }),
-  ],
-  nextSeq: 4,
-  hasMore: false,
+const RUN_A = makeRun();
+const RUN_B = makeRun({
+  runId: 'rn_01M7DEY86XMD8J2SJZES4TGPWJ',
+  employeeId: EMP_XIAOMA,
+  status: 'failed',
+  costUsd: 0.0023,
+  costStatus: 'estimated',
+  startedAt: '2026-11-15T22:41:12+08:00',
+  endedAt: '2026-11-15T22:43:00+08:00',
+});
+
+function okPage(items: Run[], nextCursor: string | null = null): ApiResult<RunsListResult> {
+  return { ok: true, status: 200, data: { items, nextCursor } };
+}
+
+function failPage(status: number, code = 'agent.http.x'): ApiResult<RunsListResult> {
+  return { ok: false, status, data: null, code };
+}
+
+type MockedRunsApi = AgentConsoleRunsApi & {
+  listRuns: Mock;
+  listEvents: Mock;
+  getRunDetail: Mock;
 };
 
-/** duplicate-call + orphan-result + post-terminal over one run. */
-const ANOM_RUN: Run = {
-  ...RUN,
-  runId: 'rn_ANOMALYFIXTURE0000000002B',
-  status: 'interrupted',
-  costStatus: null,
-  costUsd: null,
-  lastEventSeq: 5,
-};
-const ANOM_EVENTS: RunEventList = {
-  items: [
-    ev(ANOM_RUN.runId, 1, 'tool_call', { stepSeq: 1, toolName: 'search', args: { q: 'a' } }),
-    ev(ANOM_RUN.runId, 2, 'tool_call', { stepSeq: 1, toolName: 'search', args: { q: 'a' } }),
-    ev(ANOM_RUN.runId, 3, 'tool_result', { stepSeq: 3, toolName: 'notify', ok: true }),
-    ev(ANOM_RUN.runId, 4, 'completed', { completed: true, reasonCode: 'run.upstream_completed' }),
-    ev(ANOM_RUN.runId, 5, 'message', { delta: 'late output after terminal' }),
-  ],
-  nextSeq: 5,
-  hasMore: false,
-};
-
-/** running, no endedAt, no cost: nothing may be fabricated. */
-const RUNNING_RUN: Run = {
-  ...RUN,
-  runId: 'rn_RUNNINGFIXTURE000000003C',
-  status: 'running',
-  endedAt: null,
-  costUsd: null,
-  costStatus: null,
-  lastEventSeq: 0,
-};
-
-/** completed run whose cost is an estimate. */
-const EST_RUN: Run = { ...RUN, runId: 'rn_ESTIMATEFIXTURE00000004D', costStatus: 'estimated' };
-
-/** run that reports zero events upstream. */
-const NOEVENT_RUN: Run = { ...RUN, runId: 'rn_NOEVENTFIXTURE0000000005E', lastEventSeq: 0 };
-
-// ---------------------------------------------------------------- helpers
-
-const ok = <T,>(data: T) => ({ ok: true, status: 200, data });
-
-type EventsSource = RunEventList | ((sinceSeq?: number) => RunEventList);
-
-function makeRunsApi(opts: { runs?: Run[]; events?: Record<string, EventsSource> } = {}) {
-  const listRuns = vi.fn().mockImplementation(async () => ok({ items: opts.runs ?? [RUN], nextCursor: null }));
-  const listEvents = vi.fn().mockImplementation(async (p: { runId: string; sinceSeq?: number }) => {
-    const src = opts.events?.[p.runId];
-    if (!src) throw new Error(`no R3 fixture for ${p.runId}`);
-    return ok(typeof src === 'function' ? src(p.sinceSeq) : src);
-  });
-  return { api: { listRuns, listEvents } as unknown as AgentConsoleRunsApi, listRuns, listEvents };
+function makeApi(pages: Array<ApiResult<RunsListResult>>): MockedRunsApi {
+  const listRuns = vi.fn();
+  for (const p of pages) listRuns.mockResolvedValueOnce(p);
+  // Any extra call resolves to an empty last page so accidental auto-loads
+  // are visible as extra calls rather than hangs.
+  listRuns.mockResolvedValue(okPage([], null));
+  return {
+    listRuns,
+    listEvents: vi.fn().mockResolvedValue({ ok: true, status: 200, data: { items: [], nextSeq: null, hasMore: false } }),
+    getRunDetail: vi.fn().mockResolvedValue({ ok: false, status: 404, data: null, code: 'agent.http.404' }),
+  };
 }
 
 const consoleApi = {
-  listEmployees: vi.fn().mockResolvedValue({ items: [EMP] }),
-  countPendingApprovals: vi.fn().mockResolvedValue(ok({ count: 0 })),
-  getEmployee: vi.fn().mockResolvedValue(ok(EMP)),
-  getEffectiveConfig: vi.fn().mockResolvedValue(ok({ employee: EMP, grants: [] })),
-  getWorkstations: vi.fn().mockResolvedValue(ok({ items: [] })),
-} as never;
+  listEmployees: vi.fn().mockResolvedValue({
+    items: [
+      { employeeId: EMP_XIAOLI, name: '小鲤' },
+      { employeeId: EMP_XIAOMA, name: '小码' },
+    ],
+  }),
+} as unknown as AgentConsoleApi;
 
-const approvalsApi = { listApprovals: vi.fn().mockResolvedValue({ items: [] }) } as never;
-
-const trendsApi = {
-  getRunStats: vi.fn().mockResolvedValue(ok({ buckets: [] })),
-  getRunActivity: vi.fn().mockResolvedValue(ok({ cells: [] })),
-  getBudgetUsage: vi.fn().mockResolvedValue(ok({ items: [] })),
-} as never;
-
-afterEach(() => {
-  cleanup();
-});
-
-function mount(api: AgentConsoleRunsApi) {
+function renderRuns(api: AgentConsoleRunsApi, initialEmployeeId?: string | null) {
   return render(
-    <userContext.Provider
-      value={{ user: { user_id: 1, web_menu: ['admin', 'agent'] }, setUser: vi.fn(), savedComponents: [], addSavedComponent: vi.fn(), checkComponentsName: vi.fn(), delComponent: vi.fn() } as never}
-    >
-      <AgentConsoleV2Page consoleApi={consoleApi} approvalsApi={approvalsApi} trendsApi={trendsApi} runsApi={api} />
-    </userContext.Provider>,
+    <RunsSection api={api} consoleApi={consoleApi} initialEmployeeId={initialEmployeeId} />,
   );
 }
 
-/** Rail entry (the surface must be reachable from the shell, not only mounted). */
-async function openRuns(api: AgentConsoleRunsApi) {
-  mount(api);
-  await screen.findByText('Koi Claw');
-  fireEvent.click(screen.getByLabelText('运行'));
-  const section = await screen.findByTestId('agent-v2-runs');
-  await waitFor(() => expect(section.textContent).not.toContain('加载中…'));
-  return section;
-}
+beforeEach(() => {
+  window.history.replaceState(null, '', '/agent/runs');
+  (consoleApi.listEmployees as ReturnType<typeof vi.fn>).mockResolvedValue({
+    items: [
+      { employeeId: EMP_XIAOLI, name: '小鲤' },
+      { employeeId: EMP_XIAOMA, name: '小码' },
+    ],
+  });
+});
 
-async function openCard(runId: string, api: AgentConsoleRunsApi) {
-  const section = await openRuns(api);
-  const short = `${runId.slice(0, 4)}…${runId.slice(-4)}`;
-  const id = await within(section).findByText(short);
-  const card = id.closest('[data-testid="agent-v2-runs-card"]') as HTMLElement;
-  fireEvent.click(within(card).getByTestId('agent-v2-runs-toggle'));
-  // the R3 round-trip settles inside waitFor's act()
-  await waitFor(() => expect(within(card).queryByTestId('agent-v2-ev-loading')).toBeNull());
-  return card;
-}
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  window.history.replaceState(null, '', '/agent/runs');
+});
 
 // ---------------------------------------------------------------- tests
 
-describe('console v2 runs section (P0-6 v2-4)', () => {
-  // (a) rail + run card fields
-  it('rail ▶ opens the runs section and renders the captured run card fields', async () => {
-    const section = await openRuns(makeRunsApi().api);
-    const card = within(section).getByTestId('agent-v2-runs-card');
-    // status pill: completed → is-ok with the reused contract label
-    const pill = within(card).getByTestId('agent-v2-runs-status');
-    expect(pill.textContent).toBe('已完成');
-    expect(pill.className).toContain('is-ok');
-    // mono truncated runId, full value only in title
-    const id = within(card).getByTestId('agent-v2-runs-id');
-    expect(id.textContent).toBe('rn_0…X1XZ');
-    expect(id.getAttribute('title')).toBe(RUN.runId);
-    expect(id.textContent).not.toContain(RUN.runId);
-    // employee name from E11, MM-DD HH:mm via the slice(0,16) idiom
-    expect(within(card).getByTestId('agent-v2-runs-employee').textContent).toBe('Koi Claw');
-    expect(within(card).getByTestId('agent-v2-runs-time').textContent).toBe('2026-11-12 14:20');
-    // 73.494s → 1m13s, cost kept verbatim (never re-rounded to 0.00)
-    expect(within(card).getByTestId('agent-v2-runs-duration').textContent).toBe('1m13s');
-    expect(within(card).getByTestId('agent-v2-runs-cost').textContent).toBe('0.009875');
-    const costPill = within(card).getByTestId('agent-v2-runs-cost-status');
-    expect(costPill.textContent).toBe('上游实测');
-    expect(costPill.className).toContain('is-ok');
-    // nothing leaks the tenant/policy internals as labels
-    expect(within(section).queryByText('t_seakoi_pilot')).toBeNull();
+describe('RUN-01 runs list — structure & honest values', () => {
+  it('renders the 10 columns in the fixed AC §3 order', async () => {
+    renderRuns(makeApi([okPage([RUN_A])]));
+    await screen.findByTestId('agent-v2-runs-row');
+    const heads = screen.getAllByRole('columnheader').map((h) => h.textContent);
+    expect(heads).toEqual(['运行', '员工', '状态', '耗时', '成本（USD）', '来源', '版本', '开始', '结束', '操作']);
   });
 
-  it('a running run with no end and no cost renders 「—」 instead of a fabricated duration or pill', async () => {
-    const section = await openRuns(makeRunsApi({ runs: [RUNNING_RUN] }).api);
-    const card = within(section).getByTestId('agent-v2-runs-card');
-    const pill = within(card).getByTestId('agent-v2-runs-status');
-    expect(pill.textContent).toBe('运行中');
-    expect(pill.className).toContain('is-warn');
-    expect(within(card).getByTestId('agent-v2-runs-duration').textContent).toBe('—');
-    expect(within(card).getByTestId('agent-v2-runs-cost').textContent).toBe('—');
-    expect(within(card).getByTestId('agent-v2-runs-cost-status').textContent).toBe('—');
-    expect(card.querySelectorAll('.a2-pill')).toHaveLength(1);
+  it('truncates runId visually, keeps the full value in title, copies it keyboard-reachably', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderRuns(makeApi([okPage([RUN_A])]));
+    const id = await screen.findByTestId('agent-v2-runs-id');
+    expect(id.textContent).toContain('rn_01M7…J7HW');
+    expect(id.getAttribute('title')).toBe(RUN_A.runId);
+    const btn = within(id).getByRole('button', { name: '复制运行 ID' });
+    fireEvent.click(btn);
+    expect(writeText).toHaveBeenCalledWith(RUN_A.runId);
+    expect(id.textContent).toContain('已复制');
   });
 
-  it('an estimated costStatus shows the warn pill', async () => {
-    const section = await openRuns(makeRunsApi({ runs: [EST_RUN] }).api);
-    const costPill = within(section).getByTestId('agent-v2-runs-cost-status');
-    expect(costPill.textContent).toBe('估算');
-    expect(costPill.className).toContain('is-warn');
-  });
-
-  it('logs loudly and renders raw for a status outside the contract six', async () => {
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const odd = { ...RUN, runId: 'rn_ODDSTATUSFIXTURE00000006F', status: 'retired' } as unknown as Run;
-    const section = await openRuns(makeRunsApi({ runs: [odd] }).api);
-    expect(within(section).getByTestId('agent-v2-runs-status').textContent).toBe('retired');
-    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('unknown run status'), 'retired');
-    errSpy.mockRestore();
-  });
-
-  // (b) request discipline
-  it('always requests R5 with an ISO 近7天 since and limit 50 — never unconditionally', async () => {
-    const { api, listRuns } = makeRunsApi();
-    await openRuns(api);
-    const isoRe = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-    expect(listRuns).toHaveBeenCalledWith(
-      expect.objectContaining({ since: expect.stringMatching(isoRe), limit: 50 }),
-    );
-    // not a bare YYYY-MM-DD (upstream parses those as local midnight and had
-    // been dropping today's runs in P0-5)
-    for (const call of listRuns.mock.calls) {
-      expect(typeof call[0].since).toBe('string');
-      expect(call[0].since).toMatch(isoRe);
-      expect(call[0].limit).toBe(50);
-    }
-    const since = listRuns.mock.calls[0][0].since as string;
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    expect(Date.parse(since)).toBeLessThanOrEqual(todayStart.getTime());
-    expect(Date.parse(since)).toBeGreaterThanOrEqual(todayStart.getTime() - 7 * 86400000);
-  });
-
-  it('the status segment narrows the query and keeps the since window', async () => {
-    const { api, listRuns } = makeRunsApi({ runs: [] });
-    const section = await openRuns(api);
-    fireEvent.click(within(section).getByTestId('agent-v2-runs-status-failed'));
-    await waitFor(() =>
-      expect(listRuns).toHaveBeenLastCalledWith(
-        expect.objectContaining({ status: 'failed', limit: 50, since: expect.any(String) }),
-      ),
-    );
-    expect(within(section).getByTestId('agent-v2-runs-status-failed').getAttribute('aria-pressed')).toBe('true');
-    expect(within(section).getByTestId('agent-v2-runs-empty').textContent).toBe('所选范围内没有运行记录');
-  });
-
-  it('the employee select comes from E11 and narrows the query', async () => {
-    const { api, listRuns } = makeRunsApi();
-    const section = await openRuns(api);
-    const select = within(section).getByTestId('agent-v2-runs-filter-employee') as HTMLSelectElement;
-    expect(select.value).toBe('');
-    fireEvent.change(select, { target: { value: EMP.employeeId } });
-    await waitFor(() =>
-      expect(listRuns).toHaveBeenLastCalledWith(
-        expect.objectContaining({ employeeId: EMP.employeeId, since: expect.any(String) }),
-      ),
-    );
-  });
-
-  // (c) timeline from the real R3 capture
-  it('expanding renders the captured stream ascending with message/completed rows', async () => {
-    const { api, listEvents } = makeRunsApi({ events: { [RUN.runId]: ALL_EVENTS } });
-    const card = await openCard(RUN.runId, api);
-    const rows = within(card).getAllByTestId('agent-v2-ev-row');
-    expect(rows).toHaveLength(5);
-    expect(rows.map((r) => within(r).getByTestId('agent-v2-ev-seq').textContent)).toEqual(['1', '2', '3', '4', '5']);
-    expect(rows.map((r) => within(r).getByTestId('agent-v2-ev-type').textContent)).toEqual([
-      'message',
-      'message',
-      'message',
-      'message',
-      'completed',
-    ]);
-    for (const r of rows) expect(within(r).getByTestId('agent-v2-ev-time').textContent).toBe('2026-11-12 14:20');
-    expect(listEvents).toHaveBeenCalledWith({ runId: RUN.runId, limit: 50 });
-    // the pilot stream has no tool events → no step rows are invented
-    expect(within(card).queryByTestId('agent-v2-ev-steps')).toBeNull();
-  });
-
-  it('payload JSON is collapsed inside <details> and keeps the captured copy', async () => {
-    const api = makeRunsApi({ events: { [RUN.runId]: ALL_EVENTS } }).api;
-    const card = await openCard(RUN.runId, api);
-    const details = within(card).getAllByTestId('agent-v2-ev-payload') as HTMLDetailsElement[];
-    expect(details).toHaveLength(5);
-    expect(details.every((d) => d.open === false)).toBe(true);
-    expect(within(details[0]).getByText('数据')).toBeTruthy();
-    expect(details[0].textContent).toContain('"delta": "我"');
-    expect(details[4].textContent).toContain('"reasonCode": "run.upstream_completed"');
-    expect(details[4].textContent).toContain('"total_tokens": 12299');
-  });
-
-  // (d) pagination
-  it('加载更多 requests sinceSeq=nextSeq and merges both pages without dupes or gaps', async () => {
-    const { api, listEvents } = makeRunsApi({
-      events: { [RUN.runId]: (sinceSeq?: number) => (sinceSeq === undefined ? PAGE1 : PAGE2) },
+  it('maps all six status enums to dot+text pills with the frozen color mapping', async () => {
+    const statuses = ['pending', 'running', 'completed', 'failed', 'cancelled', 'interrupted'] as const;
+    const labels = ['排队中', '运行中', '已完成', '失败', '已取消', '已中断'];
+    const tones = ['wr', 'wr', 'ok', 'dg', 'dg', 'dg'];
+    const rows = statuses.map((s, i) => makeRun({ runId: `rn_01M7STATUS00000000000000${i}X`, status: s }));
+    renderRuns(makeApi([okPage(rows)]));
+    await screen.findAllByTestId('agent-v2-runs-row');
+    const pills = screen.getAllByTestId('agent-v2-runs-status');
+    pills.forEach((p, i) => {
+      expect(p.textContent).toBe(labels[i]);
+      expect(p.className).toContain(tones[i]);
+      expect(p.querySelector('.dot')).not.toBeNull();
     });
-    const card = await openCard(RUN.runId, api);
-    expect(within(card).getAllByTestId('agent-v2-ev-row')).toHaveLength(2);
-    const more = within(card).getByTestId('agent-v2-ev-load-more');
-    expect(more.textContent).toBe('加载更多');
-    fireEvent.click(more);
-    await waitFor(() => expect(within(card).getAllByTestId('agent-v2-ev-row')).toHaveLength(5));
-    expect(listEvents).toHaveBeenNthCalledWith(2, { runId: RUN.runId, sinceSeq: 2, limit: 50 });
-    const seqs = within(card)
-      .getAllByTestId('agent-v2-ev-row')
-      .map((r) => within(r).getByTestId('agent-v2-ev-seq').textContent);
-    expect(seqs).toEqual(['1', '2', '3', '4', '5']);
-    expect(new Set(seqs).size).toBe(5);
-    // hasMore is false now: the affordance disappears, nothing is faked
-    expect(within(card).queryByTestId('agent-v2-ev-load-more')).toBeNull();
   });
 
-  it('a re-sent seq is merged once, never duplicated', async () => {
-    const { api } = makeRunsApi({
-      events: {
-        [RUN.runId]: (sinceSeq?: number) =>
-          sinceSeq === undefined ? PAGE1 : { items: [...PAGE1.items, ...PAGE2.items], nextSeq: 5, hasMore: false },
-      },
-    });
-    const card = await openCard(RUN.runId, api);
-    fireEvent.click(within(card).getByTestId('agent-v2-ev-load-more'));
-    await waitFor(() => expect(within(card).getAllByTestId('agent-v2-ev-row')).toHaveLength(5));
-    const seqs = within(card)
-      .getAllByTestId('agent-v2-ev-row')
-      .map((r) => within(r).getByTestId('agent-v2-ev-seq').textContent);
-    expect(seqs).toEqual(['1', '2', '3', '4', '5']);
+  it('logs unknown status enums loudly and renders the raw value (never a guessed label)', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    renderRuns(makeApi([okPage([makeRun({ status: 'weird_new_state' as Run['status'] })])]));
+    const pill = await screen.findByTestId('agent-v2-runs-status');
+    expect(pill.textContent).toBe('weird_new_state');
+    expect(spy).toHaveBeenCalledWith('[AgentConsoleV2] unknown run status:', 'weird_new_state');
+    spy.mockRestore();
   });
 
-  // (e) tool pairing display
-  it('tool_call/tool_result pairs display settled and pending badges with the result seq', async () => {
-    const api = makeRunsApi({ runs: [TOOL_RUN], events: { [TOOL_RUN.runId]: TOOL_EVENTS } }).api;
-    const card = await openCard(TOOL_RUN.runId, api);
-    const steps = within(card).getAllByTestId('agent-v2-ev-step');
-    expect(steps).toHaveLength(2);
-    expect(within(steps[0]).getByTestId('agent-v2-ev-step-state').textContent).toBe('已配对');
-    expect(within(steps[0]).getByTestId('agent-v2-ev-step-state').className).toContain('is-ok');
-    expect(within(steps[1]).getByTestId('agent-v2-ev-step-state').textContent).toBe('等待结果');
-    expect(within(steps[1]).getByTestId('agent-v2-ev-step-state').className).toContain('is-warn');
-    expect(within(steps[0]).getByText('search')).toBeTruthy();
-    expect(within(steps[0]).getByText('#2')).toBeTruthy();
-    expect(within(steps[1]).getByText('web_fetch')).toBeTruthy();
-    expect(within(steps[1]).getByText('—')).toBeTruthy();
-    expect(within(card).queryAllByTestId('agent-v2-ev-anomaly')).toHaveLength(0);
+  it('computes duration from endedAt−startedAt and shows — for unfinished runs', async () => {
+    renderRuns(
+      makeApi([
+        okPage([
+          RUN_A,
+          makeRun({ runId: 'rn_01M7RUNNING0000000000000X', status: 'running', endedAt: null, costUsd: null, costStatus: 'unknown' }),
+        ]),
+      ]),
+    );
+    const cells = await screen.findAllByTestId('agent-v2-runs-duration');
+    expect(cells[0].textContent).toBe('4m32s');
+    expect(cells[0].getAttribute('title')).toBe(`${RUN_A.startedAt} → ${RUN_A.endedAt}`);
+    expect(cells[1].textContent).toBe('—');
+    expect(cells[1].getAttribute('title')).toBe('未结束：不编造耗时');
   });
 
-  it('duplicate calls, orphan results and post-terminal events are badged, not dropped', async () => {
-    const api = makeRunsApi({ runs: [ANOM_RUN], events: { [ANOM_RUN.runId]: ANOM_EVENTS } }).api;
-    const card = await openCard(ANOM_RUN.runId, api);
-    // every captured event stays on screen (5 rows), ascending
-    expect(within(card).getAllByTestId('agent-v2-ev-row')).toHaveLength(5);
-    const anomalies = within(card).getAllByTestId('agent-v2-ev-anomaly');
-    expect(anomalies.map((a) => a.textContent)).toEqual(['重复调用', '无对应调用']);
-    expect(within(card).getByTestId('agent-v2-ev-post-terminal').textContent).toBe('终态后事件');
-    const steps = within(card).getAllByTestId('agent-v2-ev-step');
-    expect(steps).toHaveLength(2);
-    expect(within(steps[1]).getByTestId('agent-v2-ev-step-anomaly').textContent).toBe('重复调用');
-    expect(within(card).getByTestId('agent-v2-ev-steps')).toBeTruthy();
+  it('renders cost verbatim, literal unknown, and double-null — (never 0.00, never 0 for unknown)', async () => {
+    renderRuns(
+      makeApi([
+        okPage([
+          RUN_A, // 0.009875 upstream
+          RUN_B, // 0.0023 estimated
+          makeRun({ runId: 'rn_01M7UNKNOWN0000000000000X', costUsd: null, costStatus: 'unknown' }),
+          makeRun({ runId: 'rn_01M7NULLNULL000000000000X', costUsd: null, costStatus: null, status: 'pending', endedAt: null }),
+        ]),
+      ]),
+    );
+    const cells = await screen.findAllByTestId('agent-v2-runs-cost');
+    expect(cells[0].textContent).toContain('0.009875');
+    expect(cells[0].textContent).toContain('上游实测');
+    expect(cells[1].textContent).toContain('0.0023');
+    expect(cells[1].textContent).toContain('估算');
+    expect(cells[2].textContent).toContain('unknown');
+    expect(cells[2].textContent).not.toContain('0');
+    expect(cells[3].textContent).toContain('—');
   });
 
-  // (f) empty / error states
-  it('an empty run list renders the honest empty state and no cards', async () => {
-    const section = await openRuns(makeRunsApi({ runs: [] }).api);
-    expect(within(section).getByTestId('agent-v2-runs-empty').textContent).toBe('所选范围内没有运行记录');
-    expect(within(section).queryAllByTestId('agent-v2-runs-card')).toHaveLength(0);
+  it('shows the channel message reference truncated (not a channel name), — when absent', async () => {
+    renderRuns(makeApi([okPage([RUN_A, makeRun({ runId: 'rn_01M7NOSRC00000000000000X', channelEventId: null })])]));
+    const cells = await screen.findAllByTestId('agent-v2-runs-source');
+    expect(cells[0].textContent).toContain('om_x2a…d41c');
+    expect(cells[0].querySelector('.src')?.getAttribute('title')).toBe(
+      '渠道消息引用 channelEventId=om_x2a9f3c7b8d41c',
+    );
+    expect(cells[1].textContent).toBe('—');
   });
 
-  it('a run reporting lastEventSeq 0 says 这次运行没有事件 and asks for no events', async () => {
-    const { api, listEvents } = makeRunsApi({ runs: [NOEVENT_RUN], events: {} });
-    const card = await openCard(NOEVENT_RUN.runId, api);
-    expect(within(card).getByTestId('agent-v2-ev-empty').textContent).toBe('这次运行没有事件');
-    expect(listEvents).not.toHaveBeenCalled();
+  it('renders version as the raw integer and times as Asia/Shanghai MM-DD HH:mm', async () => {
+    renderRuns(makeApi([okPage([RUN_A])]));
+    await screen.findByTestId('agent-v2-runs-row');
+    expect(screen.getByTestId('agent-v2-runs-version').textContent).toBe('12');
+    expect(screen.getByTestId('agent-v2-runs-version').getAttribute('title')).toBe('员工版本号 12');
+    expect(screen.getByTestId('agent-v2-runs-start').textContent).toBe('11-16 08:52');
+    expect(screen.getByTestId('agent-v2-runs-end').textContent).toBe('11-16 08:56');
+    expect(screen.getByTestId('agent-v2-runs-start').getAttribute('title')).toBe(RUN_A.startedAt);
   });
 
-  it('a nonzero lastEventSeq whose stream comes back empty also shows the empty state', async () => {
-    const streamless = { ...RUN, runId: 'rn_EMPTYSTREAMFIXTURE00007G' };
-    const api = makeRunsApi({
-      runs: [streamless],
-      events: { [streamless.runId]: { items: [], nextSeq: null, hasMore: false } },
-    }).api;
-    const card = await openCard(streamless.runId, api);
-    expect(within(card).getByTestId('agent-v2-ev-empty').textContent).toBe('这次运行没有事件');
-  });
-
-  it('a failed runs query degrades to its own error block and 重试 refetches', async () => {
-    const { api, listRuns } = makeRunsApi();
-    listRuns.mockRejectedValueOnce(new Error('r5 down'));
-    const section = await openRuns(api);
-    expect(within(section).getByTestId('agent-v2-runs-error').textContent).toContain('运行记录加载失败');
-    expect(within(section).queryByTestId('agent-v2-runs-empty')).toBeNull();
-    expect(within(section).queryAllByTestId('agent-v2-runs-card')).toHaveLength(0);
-    const callsBefore = listRuns.mock.calls.length;
-    fireEvent.click(within(section).getByTestId('agent-v2-runs-retry'));
-    await waitFor(() => expect(within(section).getAllByTestId('agent-v2-runs-card')).toHaveLength(1));
-    expect(listRuns.mock.calls.length).toBe(callsBefore + 1);
-    expect(listRuns.mock.calls[listRuns.mock.calls.length - 1][0].since).toEqual(expect.any(String));
-  });
-
-  it('a failed event stream errors only its own timeline and retries in place', async () => {
-    const { api, listEvents } = makeRunsApi({ events: { [RUN.runId]: ALL_EVENTS } });
-    listEvents.mockRejectedValueOnce(new Error('r3 down'));
-    const card = await openCard(RUN.runId, api);
-    expect(within(card).getByTestId('agent-v2-ev-error').textContent).toBe('事件流加载失败');
-    expect(within(card).queryAllByTestId('agent-v2-ev-row')).toHaveLength(0);
-    fireEvent.click(within(card).getByTestId('agent-v2-ev-retry'));
-    await waitFor(() => expect(within(card).getAllByTestId('agent-v2-ev-row')).toHaveLength(5));
-    expect(listEvents).toHaveBeenCalledTimes(2);
-  });
-
-  it('an unknown employeeId falls back to the raw id, never a guessed name', async () => {
-    const foreign = { ...RUN, runId: 'rn_FOREIGNFIXTURE000000008H', employeeId: 'emp_DELETED000000000000000' };
-    const section = await openRuns(makeRunsApi({ runs: [foreign] }).api);
-    expect(within(section).getByTestId('agent-v2-runs-employee').textContent).toBe('emp_DELETED000000000000000');
-  });
-
-  // (g) detail entry point
-  it('detail 「查看运行」 switches to the runs section prefiltered by that employee', async () => {
-    const { api, listRuns } = makeRunsApi();
-    mount(api);
-    await screen.findByText('Koi Claw');
-    fireEvent.click(screen.getAllByText('详情')[0]);
+  it('keeps 「查看」 disabled with the RUN-02 reason and has zero write entries', async () => {
+    renderRuns(makeApi([okPage([RUN_A])]));
     const view = await screen.findByTestId('agent-v2-runs-view');
-    fireEvent.click(view);
-    const section = await screen.findByTestId('agent-v2-runs');
-    await waitFor(() =>
-      expect(listRuns).toHaveBeenCalledWith(
-        expect.objectContaining({ employeeId: EMP.employeeId, since: expect.any(String), limit: 50 }),
-      ),
+    expect(view).toBeDisabled();
+    expect(view.getAttribute('title')).toBe('运行详情页（RUN-02）尚未上线，暂不可查看');
+    const writeish = screen
+      .getAllByRole('button')
+      .filter((b) => /重跑|中止|删除|新建|批量|创建/.test(b.textContent ?? ''));
+    expect(writeish).toHaveLength(0);
+    expect(document.body.textContent).not.toContain('待接入');
+  });
+
+  it('never renders a total/denominator copy — only 已加载/本页 counts', async () => {
+    renderRuns(makeApi([okPage([RUN_A, RUN_B], 'c1')]));
+    await screen.findAllByTestId('agent-v2-runs-row');
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('已加载 2 条');
+    expect(text).toContain('本页 2 条');
+    expect(text).not.toMatch(/共\s*\d+\s*条|显示\s*\d+[–-]\d+/);
+  });
+});
+
+describe('RUN-01 runs list — filters, URL, cursor', () => {
+  it('always sends since (default 7d) and limit 20 on the first request', async () => {
+    const api = makeApi([okPage([RUN_A])]);
+    renderRuns(api);
+    await screen.findByTestId('agent-v2-runs-row');
+    const params = api.listRuns.mock.calls[0][0];
+    expect(params.limit).toBe(20);
+    expect(params.employeeId).toBeUndefined();
+    expect(params.status).toBeUndefined();
+    const sinceMs = Date.parse(params.since);
+    const expected = Date.now() - 7 * 24 * 3600_000;
+    expect(Math.abs(sinceMs - expected)).toBeLessThan(60_000);
+  });
+
+  it('maps status chips / since seg / limit select to real request params and writes the URL', async () => {
+    const api = makeApi([okPage([RUN_A]), okPage([RUN_B]), okPage([]), okPage([])]);
+    renderRuns(api);
+    await screen.findByTestId('agent-v2-runs-row');
+
+    fireEvent.click(screen.getByTestId('lk-chip-failed'));
+    await waitFor(() => expect(api.listRuns).toHaveBeenCalledTimes(2));
+    expect(api.listRuns.mock.calls[1][0].status).toBe('failed');
+    expect(window.location.search).toContain('status=failed');
+
+    fireEvent.click(screen.getByTestId('lk-seg-24h'));
+    await waitFor(() => expect(api.listRuns).toHaveBeenCalledTimes(3));
+    const sinceMs = Date.parse(api.listRuns.mock.calls[2][0].since);
+    expect(Math.abs(sinceMs - (Date.now() - 24 * 3600_000))).toBeLessThan(60_000);
+    expect(window.location.search).toContain('since=24h');
+
+    // limit select: open the listbox popup and pick 50.
+    fireEvent.click(screen.getByTestId('agent-v2-runs-filter-limit'));
+    fireEvent.click(within(screen.getByTestId('agent-v2-runs-filter-limit-pop')).getByText('每页 50'));
+    await waitFor(() => expect(api.listRuns).toHaveBeenCalledTimes(4));
+    expect(api.listRuns.mock.calls[3][0].limit).toBe(50);
+    expect(window.location.search).toContain('limit=50');
+  });
+
+  it('restores all five params from the URL and treats the cursor as a fresh first request', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/agent/runs?employeeId=${EMP_XIAOLI}&status=failed&since=24h&limit=50&cursor=abc123&src=ov`,
     );
-    // the preset is visible in the filter, not only in the request
-    await waitFor(() =>
-      expect((within(section).getByTestId('agent-v2-runs-filter-employee') as HTMLSelectElement).value).toBe(
-        EMP.employeeId,
-      ),
-    );
-    // still exactly one R5 request, and it carried the employee
-    expect(listRuns).toHaveBeenCalledTimes(1);
+    const api = makeApi([okPage([RUN_B])]);
+    renderRuns(api);
+    await screen.findByTestId('agent-v2-runs-row');
+    expect(api.listRuns.mock.calls[0][0]).toMatchObject({
+      employeeId: EMP_XIAOLI,
+      status: 'failed',
+      limit: 50,
+      cursor: 'abc123',
+    });
+    // foreign marker preserved, not consumed
+    expect(window.location.search).toContain('src=ov');
+    // employee select shows the resolved name (带值态)
+    expect(screen.getByTestId('agent-v2-runs-filter-employee').textContent).toContain('员工：小鲤');
+  });
+
+  it('consumes nextCursor explicitly, merges pages, and disables 下一页 on the last page', async () => {
+    const api = makeApi([okPage([RUN_A], 'c1'), okPage([RUN_B], null)]);
+    renderRuns(api);
+    await screen.findByTestId('agent-v2-runs-row');
+    const next = screen.getByTestId('lk-next');
+    expect(next).not.toBeDisabled();
+    fireEvent.click(next);
+    await screen.findAllByTestId('agent-v2-runs-row');
+    expect(api.listRuns).toHaveBeenCalledTimes(2);
+    expect(api.listRuns.mock.calls[1][0].cursor).toBe('c1');
+    expect(screen.getAllByTestId('agent-v2-runs-row')).toHaveLength(2);
+    expect(window.location.search).toContain('cursor=c1');
+    await waitFor(() => expect(screen.getByTestId('lk-next')).toBeDisabled());
+    expect(screen.getByTestId('lk-next').getAttribute('title')).toBe('已是最后一页');
+  });
+
+  it('replay guard: an overlapping next page stops merging, shows the stale copy, and never auto-requests a third time', async () => {
+    // Bad cursor: upstream silently answers with the FIRST page body (200).
+    const api = makeApi([okPage([RUN_A, RUN_B], 'bad'), okPage([RUN_A, RUN_B], 'bad')]);
+    renderRuns(api);
+    await screen.findAllByTestId('agent-v2-runs-row');
+    fireEvent.click(screen.getByTestId('lk-next'));
+    await screen.findByTestId('lk-stale');
+    // ① stopped merging — still exactly the first page's rows
+    expect(screen.getAllByTestId('agent-v2-runs-row')).toHaveLength(2);
+    // ② localized stale copy on screen
+    expect(screen.getByTestId('lk-stale').textContent).toContain('游标已失效，请重试');
+    // ③ exactly two requests — no third automatic request
+    expect(api.listRuns).toHaveBeenCalledTimes(2);
+    // back to page 1 only via the explicit button
+    fireEvent.click(screen.getByTestId('lk-reload-first'));
+    await waitFor(() => expect(api.listRuns).toHaveBeenCalledTimes(3));
+    expect(api.listRuns.mock.calls[2][0].cursor).toBeUndefined();
+  });
+
+  it('clears filters back to defaults and re-queries page 1', async () => {
+    window.history.replaceState(null, '', `/agent/runs?employeeId=${EMP_XIAOLI}&status=failed`);
+    const api = makeApi([okPage([]), okPage([RUN_A])]);
+    renderRuns(api);
+    await screen.findByTestId('lk-empty');
+    const clear = screen.getByTestId('lk-clear');
+    expect(clear).not.toBeDisabled();
+    fireEvent.click(clear);
+    await screen.findByTestId('agent-v2-runs-row');
+    expect(api.listRuns.mock.calls[1][0].employeeId).toBeUndefined();
+    expect(api.listRuns.mock.calls[1][0].status).toBeUndefined();
+    expect(window.location.search).not.toContain('employeeId=');
+    expect(window.location.search).not.toContain('status=');
+  });
+});
+
+describe('RUN-01 runs list — five states', () => {
+  it('shows the static skeleton with the honesty note while loading', async () => {
+    const api = makeApi([]);
+    api.listRuns.mockReturnValue(new Promise(() => undefined));
+    renderRuns(api);
+    expect(screen.getByTestId('lk-skeleton')).toBeTruthy();
+    expect(document.body.textContent).toContain('首次加载不设固定超时假上限');
+    // let the E11 candidates promise settle inside act (no post-test update)
+    await waitFor(() => expect(consoleApi.listEmployees).toHaveBeenCalled());
+  });
+
+  it('empty with filters keeps the filter bar and offers 清空筛选条件', async () => {
+    window.history.replaceState(null, '', `/agent/runs?employeeId=${EMP_XIAOLI}&status=failed`);
+    renderRuns(makeApi([okPage([])]));
+    await screen.findByTestId('lk-empty');
+    expect(screen.getByTestId('lk-filterbar')).toBeTruthy();
+    expect(screen.getByTestId('lk-empty').textContent).toContain('暂无运行');
+    expect(screen.getByTestId('lk-empty').textContent).toContain('小鲤 · 失败 · 近 7 天');
+    expect(screen.getByTestId('lk-loaded').textContent).toContain('0');
+    expect(screen.getByTestId('lk-empty-action').textContent).toBe('清空筛选条件');
+  });
+
+  it('empty without filters uses the plain copy and no action', async () => {
+    renderRuns(makeApi([okPage([])]));
+    await screen.findByTestId('lk-empty');
+    expect(screen.getByTestId('lk-empty').textContent).toContain('数字员工开始执行后');
+    expect(screen.queryByTestId('lk-empty-action')).toBeNull();
+  });
+
+  it('400 missing-filter renders the localized variant with HTTP 400 and no machine code', async () => {
+    renderRuns(makeApi([failPage(400, 'request.missing_filter')]));
+    await screen.findByTestId('agent-v2-runs-error');
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('请求缺少筛选条件（HTTP 400）');
+    expect(text).not.toContain('request.missing_filter');
+    expect(screen.getByTestId('agent-v2-runs-retry')).toBeTruthy();
+  });
+
+  it('5xx renders the error stage with the HTTP code, retry and overview link', async () => {
+    renderRuns(makeApi([failPage(500, 'runtime.internal')]));
+    await screen.findByTestId('agent-v2-runs-error');
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('运行列表没能加载出来');
+    expect(text).toContain('HTTP 500');
+    expect(text).toContain('没有展示上一次的缓存数据');
+    expect(text).not.toContain('runtime.internal');
+    expect(screen.getByText('先回总览看看')).toBeTruthy();
+  });
+
+  it.each([403, 404])('%i renders the same forbidden body with only the HTTP code differing', async (code) => {
+    renderRuns(makeApi([failPage(code, 'console.forbidden')]));
+    await screen.findByTestId('agent-v2-runs-forbidden');
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('您还看不到运行列表');
+    expect(text).toContain(`HTTP ${code}`);
+    expect(text).not.toContain('console.forbidden');
+    expect(screen.queryByTestId('agent-v2-runs-row')).toBeNull();
+    expect(screen.getByTestId('agent-v2-runs-forbidden-retry')).toBeTruthy();
+  });
+
+  it('401 redirects to login instead of rendering an in-page state', async () => {
+    const assign = vi.fn();
+    const original = window.location;
+    // jsdom location is not navigable; swap in a stub carrying the parts the
+    // section reads (search/pathname) plus the assign spy.
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...original, search: '', pathname: '/agent/runs', assign },
+    });
+    try {
+      const api = makeApi([]);
+      api.listRuns.mockRejectedValue(new AuthError());
+      renderRuns(api);
+      await waitFor(() => expect(assign).toHaveBeenCalledWith('/'));
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+});
+
+describe('RUN-01 runs list — R2 per-row lazy fill', () => {
+  it('lazily fills nullable columns of terminal runs only, one row at a time', async () => {
+    const terminalMissing = makeRun({
+      runId: 'rn_01M7MISSING0000000000000X',
+      costUsd: null,
+      costStatus: null,
+    });
+    const runningMissing = makeRun({
+      runId: 'rn_01M7RUNNING0000000000000X',
+      status: 'running',
+      endedAt: null,
+      costUsd: null,
+      costStatus: null,
+    });
+    const api = makeApi([okPage([terminalMissing, runningMissing])]);
+    (api.getRunDetail as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: makeRun({ runId: terminalMissing.runId, costUsd: 0.03125, costStatus: 'upstream' }),
+    });
+    renderRuns(api);
+    await screen.findAllByTestId('agent-v2-runs-row');
+    await waitFor(() => expect(api.getRunDetail).toHaveBeenCalledTimes(1));
+    expect(api.getRunDetail).toHaveBeenCalledWith({ id: terminalMissing.runId });
+    await waitFor(() => {
+      const cells = screen.getAllByTestId('agent-v2-runs-cost');
+      expect(cells[0].textContent).toContain('0.03125');
+      expect(cells[0].textContent).toContain('上游实测');
+    });
+    // the running row keeps — without any fabricated fill request
+    expect(screen.getAllByTestId('agent-v2-runs-cost')[1].textContent).toContain('—');
+  });
+
+  it('keeps —/unknown on a failed fill and offers an inline per-row retry', async () => {
+    const missing = makeRun({ runId: 'rn_01M7MISSING0000000000000X', costUsd: null, costStatus: null });
+    const api = makeApi([okPage([missing])]);
+    const detail = api.getRunDetail as ReturnType<typeof vi.fn>;
+    detail.mockResolvedValueOnce({ ok: false, status: 500, data: null, code: 'runtime.internal' });
+    renderRuns(api);
+    const retry = await screen.findByTestId('agent-v2-runs-fill-retry');
+    expect(screen.getByTestId('agent-v2-runs-cost').textContent).toContain('—');
+    detail.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: makeRun({ runId: missing.runId, costUsd: 0.0041, costStatus: 'estimated' }),
+    });
+    fireEvent.click(retry);
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-v2-runs-cost').textContent).toContain('0.0041');
+      expect(screen.getByTestId('agent-v2-runs-cost').textContent).toContain('估算');
+    });
+    expect(detail).toHaveBeenCalledTimes(2);
   });
 });
