@@ -600,7 +600,9 @@ export function TasksListPage() {
   /* assignee display for T-03 (A-19: never a bare `employee:`/`human:`).
      G1 FAIL 6 — three shapes only: 员工 (directory name + role badge),
      本人 (current user), and the unresolved-directory fallback which shows an
-     em-dash plus a traceable short id instead of a bare `emp_x2` on screen. */
+     em-dash plus a traceable short id instead of a bare `emp_x2` on screen.
+     Per the baseline the who cell carries avatar initial + name + role badge
+     only, so a resolved employee no longer prints its id at all. */
   const assigneeView = (
     r: TaskRow,
   ): { nm: string; id: string; isMe: boolean; mono: boolean; roleKey: string } => {
@@ -619,7 +621,7 @@ export function TasksListPage() {
     if (type === 'employee') {
       const name = names[bare];
       return name
-        ? { nm: name, id: last6(bare), isMe: false, mono: false, roleKey: 'agentConsole.v2.tsk.roleEmployee' }
+        ? { nm: name, id: '', isMe: false, mono: false, roleKey: 'agentConsole.v2.tsk.roleEmployee' }
         : { nm: '—', id: '', isMe: false, mono: true, roleKey: 'agentConsole.v2.tsk.roleEmployee' };
     }
     // human others: no human-name endpoint — mono uid stays honest, no role word
