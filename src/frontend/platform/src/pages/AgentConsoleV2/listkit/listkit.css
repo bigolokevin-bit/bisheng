@@ -1,0 +1,826 @@
+/*
+ * Shared list suite (RUN-01 / TSK-01 / MET-01) — geometry and visual vocabulary
+ * ported 1:1 from run01-target.html (C1 baseline sha 1cbe1633…), which is
+ * itself同源 with ov01-target / tsk01-target. Every rule is scoped under
+ * `.agent-app .lk` so nothing leaks into the platform, and every color resolves
+ * through the existing agentConsoleV2.css token block (no new色值):
+ *   target --bg/--card/--surface/--surface-2 → hsl(var(--background/--card/--surface/--surface-2))
+ *   target --fg/--fg-2/--fg-3 → hsl(var(--foreground/--muted-foreground/--micro-foreground))
+ *   target --nt-fg/--nt-bg → hsl(var(--neutral-pill-fg)) / var(--neutral-pill-bg)
+ * Dark/light switch only changes tokens (same DOM), per DESIGN-SYSTEM §1.
+ * The review bar (.rev) is评审-only and is NOT ported (施工删除, target header).
+ * Sticky table head: target top:100px = review bar 44 + topbar 56; the built
+ * page has no review bar, so top:56px (shell topbar height) — recorded偏差.
+ */
+
+.agent-app .lk {
+  --lk-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.agent-app .lk > * {
+  min-width: 0;
+}
+.agent-app .lk .mono {
+  font-family: var(--lk-mono);
+  font-variant-numeric: tabular-nums;
+}
+.agent-app .lk .micro {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--micro-foreground));
+  line-height: 14px;
+}
+.agent-app .lk .faint {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk .lk-i {
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+  display: block;
+}
+
+/* ---------- 页头 ---------- */
+.agent-app .lk .phead {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.agent-app .lk .phead .h1 {
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.agent-app .lk .phead .sub {
+  font-size: 13.5px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 6px;
+}
+.agent-app .lk .fresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .lk .fresh .mono {
+  color: hsl(var(--muted-foreground));
+}
+
+/* ---------- 按钮 ---------- */
+.agent-app .lk .b {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.agent-app .lk .b.out {
+  border-color: var(--border);
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .b.out:hover {
+  background: var(--hover);
+}
+.agent-app .lk .b.gh {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk .b.gh:hover {
+  background: var(--hover);
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .b.sm {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+.agent-app .lk .b.xs {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+  border-radius: 6px;
+  gap: 6px;
+}
+.agent-app .lk .b[disabled],
+.agent-app .lk .b[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.agent-app .lk .b[disabled]:hover,
+.agent-app .lk .b[aria-disabled='true']:hover {
+  background: transparent;
+}
+.agent-app .lk .lnk {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  text-decoration: none;
+}
+.agent-app .lk .lnk:hover {
+  color: hsl(var(--foreground));
+}
+
+/* ---------- 卡 ---------- */
+.agent-app .lk .card {
+  background: hsl(var(--card));
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  box-shadow: var(--shadow, none);
+}
+.agent-app .lk .rule {
+  border-top: 1px solid var(--hairline);
+}
+
+/* ---------- 药丸 ---------- */
+.agent-app .lk .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.agent-app .lk .pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: currentColor;
+  flex: none;
+}
+.agent-app .lk .pill.ok {
+  background: var(--success-soft);
+  color: hsl(var(--success));
+}
+.agent-app .lk .pill.wr {
+  background: var(--warning-soft);
+  color: hsl(var(--warning));
+}
+.agent-app .lk .pill.dg {
+  background: var(--danger-soft);
+  color: hsl(var(--danger));
+}
+.agent-app .lk .pill.nt {
+  background: var(--neutral-pill-bg);
+  color: hsl(var(--neutral-pill-fg));
+}
+.agent-app .lk .pill.xs {
+  font-size: 11px;
+  padding: 1px 8px;
+  line-height: 16px;
+}
+
+/* ---------- seg ---------- */
+.agent-app .lk .seg {
+  display: inline-flex;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.agent-app .lk .seg button {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.agent-app .lk .seg button:hover {
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .seg button[aria-pressed='true'] {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  box-shadow: 0 0 0 1px var(--hairline);
+}
+
+/* ---------- 筛选条（V2.10 FilterBar，跨页同一结构） ---------- */
+.agent-app .lk .fbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.agent-app .lk .fbar .sp {
+  flex: 1;
+}
+.agent-app .lk .fchips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.agent-app .lk .fchip {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.agent-app .lk .fchip:hover {
+  color: hsl(var(--foreground));
+  background: var(--hover);
+}
+.agent-app .lk .fchip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: currentColor;
+  flex: none;
+}
+.agent-app .lk .fchip[aria-pressed='true'] {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .fchip.s-pend,
+.agent-app .lk .fchip.s-run {
+  color: hsl(var(--warning));
+}
+.agent-app .lk .fchip.s-done {
+  color: hsl(var(--success));
+}
+.agent-app .lk .fchip.s-fail,
+.agent-app .lk .fchip.s-cancel,
+.agent-app .lk .fchip.s-int {
+  color: hsl(var(--danger));
+}
+.agent-app .lk .fchip.s-pend[aria-pressed='true'],
+.agent-app .lk .fchip.s-run[aria-pressed='true'],
+.agent-app .lk .fchip.s-done[aria-pressed='true'],
+.agent-app .lk .fchip.s-fail[aria-pressed='true'],
+.agent-app .lk .fchip.s-cancel[aria-pressed='true'],
+.agent-app .lk .fchip.s-int[aria-pressed='true'] {
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .fchip.s-pend[aria-pressed='true'] .dot,
+.agent-app .lk .fchip.s-run[aria-pressed='true'] .dot {
+  color: hsl(var(--warning));
+}
+.agent-app .lk .fchip.s-done[aria-pressed='true'] .dot {
+  color: hsl(var(--success));
+}
+.agent-app .lk .fchip.s-fail[aria-pressed='true'] .dot,
+.agent-app .lk .fchip.s-cancel[aria-pressed='true'] .dot,
+.agent-app .lk .fchip.s-int[aria-pressed='true'] .dot {
+  color: hsl(var(--danger));
+}
+.agent-app .lk .fsel {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: hsl(var(--muted-foreground));
+  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+  transition: background 0.12s, color 0.12s;
+}
+.agent-app .lk .fsel:hover {
+  color: hsl(var(--foreground));
+  background: var(--hover);
+}
+.agent-app .lk .fsel.on {
+  color: hsl(var(--foreground));
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.agent-app .lk .fsel[disabled],
+.agent-app .lk .fsel[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.agent-app .lk .fsel[disabled]:hover,
+.agent-app .lk .fsel[aria-disabled='true']:hover {
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk .fres {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+.agent-app .lk .fres b {
+  font-family: var(--lk-mono);
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+/* select 弹层（施工：参考屏不展开） */
+.agent-app .lk .lk-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: 10px;
+  background: hsl(var(--card));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow, none);
+  list-style: none;
+  margin: 0;
+}
+.agent-app .lk .lk-pop li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  white-space: nowrap;
+}
+.agent-app .lk .lk-pop li:hover,
+.agent-app .lk .lk-pop li.is-active {
+  background: var(--hover);
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .lk-pop li[aria-selected='true'] {
+  color: hsl(var(--foreground));
+  background: var(--accent-soft);
+}
+
+/* ---------- 主表格（<1280 卡内横滚，页面本身不溢出） ---------- */
+.agent-app .lk .tblwrap {
+  overflow-x: auto;
+}
+.agent-app .lk table.tbl {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  min-width: 1100px;
+}
+.agent-app .lk .tbl th {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--micro-foreground));
+  text-align: left;
+  padding: 12px 16px;
+  height: 40px;
+  border-bottom: 1px solid var(--hairline);
+  background: hsl(var(--card));
+  white-space: nowrap;
+  position: sticky;
+  top: 56px; /* shell topbar 56（评审条 44 已施工删除） */
+  z-index: 5;
+}
+.agent-app .lk .tbl th.r {
+  text-align: right;
+}
+.agent-app .lk .tbl th:first-child {
+  padding-left: 20px;
+  border-radius: 10px 0 0 0;
+}
+.agent-app .lk .tbl th:last-child {
+  padding-right: 20px;
+  border-radius: 0 10px 0 0;
+}
+.agent-app .lk .tbl td {
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+  vertical-align: middle;
+  background: transparent;
+}
+.agent-app .lk .tbl td:first-child {
+  padding-left: 20px;
+}
+.agent-app .lk .tbl td:last-child {
+  padding-right: 20px;
+}
+.agent-app .lk .tbl tbody tr:last-child td {
+  border-bottom: none;
+}
+.agent-app .lk .tbl tbody tr {
+  transition: background 0.12s;
+}
+.agent-app .lk .tbl tbody tr:hover td {
+  background: var(--hover);
+}
+.agent-app .lk .tbl td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+.agent-app .lk .tbl td.mono {
+  white-space: nowrap;
+}
+
+/* 员工单元格 */
+.agent-app .lk .who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.agent-app .lk .who .ava {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+  flex: none;
+}
+.agent-app .lk .who .nm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 来源单元格 */
+.agent-app .lk .src {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: hsl(var(--muted-foreground));
+  font: 12px/1 var(--lk-mono);
+  white-space: nowrap;
+  min-width: 0;
+}
+.agent-app .lk .src .tx {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 成本单元格（上行原值 + 下行 costStatus 药丸） */
+.agent-app .lk .cost {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.agent-app .lk .cost .v {
+  font: 12.5px/16px var(--lk-mono);
+  font-variant-numeric: tabular-nums;
+}
+.agent-app .lk .cost .v.unk {
+  color: hsl(var(--muted-foreground));
+}
+
+/* 复制 ID（截断仅视觉，原值可复制，键盘可达） */
+.agent-app .lk .cp {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font: 12.5px/1 var(--lk-mono);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+.agent-app .lk .cp .cc {
+  position: absolute;
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  color: hsl(var(--micro-foreground));
+  transition: opacity 0.12s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex: none;
+}
+.agent-app .lk .cp:hover .cc,
+.agent-app .lk .cp:focus-within .cc {
+  opacity: 1;
+}
+.agent-app .lk .cp .cc:hover {
+  background: hsl(var(--surface-2));
+  color: hsl(var(--foreground));
+}
+.agent-app .lk .cp.copied .cc {
+  opacity: 1;
+  color: hsl(var(--success));
+}
+.agent-app .lk .cp .tp {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: hsl(var(--surface-2));
+  border: 1px solid var(--hairline);
+  color: hsl(var(--foreground));
+  font: 400 11.5px/1 inherit;
+  font-family: inherit;
+  padding: 5px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.agent-app .lk .cp.copied .tp {
+  opacity: 1;
+}
+
+/* ---------- 分页脚（无总数口径） ---------- */
+.agent-app .lk .rfoot {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 20px;
+  border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
+}
+.agent-app .lk .rfoot .sp {
+  flex: 1;
+}
+.agent-app .lk .rfoot .lg {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk .rfoot .pg {
+  font: 400 12px/1 var(--lk-mono);
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk .tblhint {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk .rfoot.is-caliber {
+  border-top: none;
+  padding-top: 8px;
+  padding-bottom: 14px;
+}
+.agent-app .lk .stale-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: hsl(var(--danger));
+}
+
+/* ---------- 状态屏：空态 / 骨架 / 错误 / 无权限 ---------- */
+.agent-app .lk .empty {
+  margin: 14px 20px 16px;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  text-align: center;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+}
+.agent-app .lk .empty .ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: hsl(var(--surface-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  margin-bottom: 3px;
+}
+.agent-app .lk .empty .t {
+  font-size: 14px;
+  font-weight: 500;
+}
+.agent-app .lk .empty .s {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  max-width: 420px;
+  line-height: 19px;
+}
+.agent-app .lk .empty .b {
+  margin-top: 8px;
+}
+
+.agent-app .lk .stage {
+  padding: 48px 24px 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.agent-app .lk .stage .ic {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  margin-bottom: 6px;
+  position: relative;
+}
+.agent-app .lk .stage .t {
+  font-size: 15px;
+  font-weight: 600;
+}
+.agent-app .lk .stage .s {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  max-width: 440px;
+  line-height: 19px;
+}
+.agent-app .lk .stage .s .mono {
+  color: hsl(var(--foreground));
+  font-size: 12px;
+}
+.agent-app .lk .stage .acts2 {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  position: relative;
+}
+
+.agent-app .lk .skel .bar {
+  height: 12px;
+  border-radius: 6px;
+  background: hsl(var(--surface-2));
+}
+.agent-app .lk .srow-skel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 52px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+.agent-app .lk .srow-skel:last-child {
+  border-bottom: none;
+}
+.agent-app .lk .skel-note {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  text-align: center;
+}
+
+/* ---------- 页脚 ---------- */
+.agent-app .lk .pfoot {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 6px 4px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk .pfoot .sp {
+  flex: 1;
+}
+
+/* ---------- 抽屉（共享套件：TSK/MET 详情侧滑；RUN-01 本期不开） ---------- */
+.agent-app .lk-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--scrim);
+}
+.agent-app .lk-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 81;
+  width: min(480px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: hsl(var(--card));
+  border-left: 1px solid var(--hairline);
+}
+.agent-app .lk-drawer-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--hairline);
+}
+.agent-app .lk-drawer-hd .t {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .lk-drawer-bd {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* ---------- 响应式（与 target §4.2 同断点） ---------- */
+@media (min-width: 1280px) {
+  .agent-app .lk .tblwrap {
+    overflow-x: visible; /* 表头 sticky 相对视口生效 */
+  }
+}
+@media (max-width: 1279px) {
+  .agent-app .lk .tbl th {
+    position: static;
+  }
+  .agent-app .lk .tblhint {
+    display: inline-flex;
+  }
+}
+@media (max-width: 767px) {
+  .agent-app .lk .phead .h1 {
+    font-size: 24px;
+    line-height: 32px;
+  }
+  .agent-app .lk .fbar .sp {
+    display: none;
+  }
+  .agent-app .lk .fchips {
+    width: 100%;
+  }
+  .agent-app .lk .rfoot {
+    padding: 10px 14px;
+  }
+  .agent-app .lk .empty {
+    margin: 12px 14px 14px;
+  }
+  .agent-app .lk .stage {
+    padding: 36px 16px 44px;
+  }
+}
