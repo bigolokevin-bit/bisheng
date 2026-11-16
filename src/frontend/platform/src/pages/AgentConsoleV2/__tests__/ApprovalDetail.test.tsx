@@ -14,6 +14,8 @@
  * all-disabled M1 ops with zero AP2; four states + retry; countdown authority.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
 
@@ -439,6 +441,35 @@ describe('APR-02 — M1 read-only ops & leak guard', () => {
     expect(urls.some((u) => u.includes('/api/approval/decision'))).toBe(false);
     expect(methods.some((m) => m !== 'GET')).toBe(false);
     expect(document.querySelector('textarea')).toBeNull();
+  });
+
+  it('P0-4: the ops bar always renders the three buttons; 批准 keeps the pri recipe (never white-on-white)', async () => {
+    renderDetail();
+    await screen.findByTestId('agent-v2-apd-ops');
+    const bar = document.querySelector('.a2d-acts') as HTMLElement;
+    const btns = Array.from(bar.querySelectorAll('button'));
+    // same DOM at every theme/breakpoint — the CSS decides visibility, not v-if
+    expect(btns.map((b) => b.getAttribute('data-testid'))).toEqual([
+      'agent-v2-apd-reject',
+      'agent-v2-apd-revise',
+      'agent-v2-apd-approve',
+    ]);
+    const approve = screen.getByTestId('agent-v2-apd-approve') as HTMLButtonElement;
+    expect(approve.className).toContain('a2d-btn');
+    expect(approve.className).toContain('pri');
+    expect((approve.textContent ?? '').trim()).not.toBe('');
+    expect(approve.disabled).toBe(true);
+    // root cause guard: a hex in --primary makes `hsl(var(--primary))` invalid,
+    // dropping the background and leaving #fff text on the white card.
+    const css = readFileSync(
+      resolve(process.cwd(), 'src/pages/AgentConsoleV2/agentConsoleV2.css'),
+      'utf8',
+    );
+    const light = css.slice(css.indexOf(".agent-app[data-theme='light']"));
+    const lightBlock = light.slice(0, light.indexOf('}'));
+    const primary = /--primary:\s*([^;]+);/.exec(lightBlock)?.[1].trim() ?? '';
+    expect(primary).not.toMatch(/^#/);
+    expect(primary).toMatch(/^\d+(\.\d+)?\s+\d+(\.\d+)?%\s+\d+(\.\d+)?%$/);
   });
 
   it('no machine codes / raw action / raw changeKind / undefined / total in visible text', async () => {

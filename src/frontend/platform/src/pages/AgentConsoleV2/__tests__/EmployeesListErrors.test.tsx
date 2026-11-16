@@ -166,17 +166,49 @@ describe('EMP-01 r5 localized error states (G15)', () => {
     expect(text).not.toContain(REQ_ID);
   });
 
-  it('budget-usage 500: cost KPI shows localized block copy, never budget.range_too_large', async () => {
+  it('budget-usage 500: cost KPI shows 「—」 + one reason line, never HTTP 500 or budget.range_too_large', async () => {
     mode = 'budget500';
     renderPage();
     await screen.findByTestId('agent-v2-kpi-cost-error');
     const text = pageText();
-    expect(text).toContain('本月成本暂时取不到（HTTP 500）');
+    // P0-1: one neutral reason, no HTTP status, no machine code, no bare key.
+    expect(text).toContain('成本数据暂时不可用');
+    expect(text).not.toContain('HTTP');
+    expect(text).not.toContain('暂时取不到');
     expect(text).not.toMatch(CODEISH);
     expect(text).not.toContain(REQ_ID);
+    // same shape as the healthy card: the value line still renders 「—」
+    expect(screen.getByTestId('agent-v2-kpi-cost').textContent).toBe('—');
     // the list itself is healthy and must render the table, not a page error
     expect(screen.getByTestId('agent-v2-employees-table')).toBeInTheDocument();
     expect(screen.queryByTestId('agent-v2-employees-error')).toBeNull();
+  });
+
+  it('P0-1: KPI failure DOM is theme/breakpoint independent — one reason line, never a status code', async () => {
+    mode = 'budget500';
+    renderPage();
+    const reason = await screen.findByTestId('agent-v2-kpi-cost-error');
+    // the exact text is the dictionary value regardless of theme tokens, so
+    // dark / light / 375 all render this same node with the same string
+    expect(reason.textContent).toBe('成本数据暂时不可用');
+    expect(reason.textContent).not.toMatch(/\d{3}/);
+    // the old code-in-parentheses shape had no value line at all
+    const card = reason.parentElement as HTMLElement;
+    expect(card.textContent).toContain('—');
+    expect(card.textContent).toContain('复制诊断');
+  });
+
+  it('P0-2: owner cell renders the full human ref, never a bare uid', async () => {
+    EMP.ownerUserId = '1';
+    try {
+      renderPage();
+      const cell = await screen.findByTestId('agent-v2-col-owner');
+      expect(cell.textContent).toBe('human:1');
+      expect(cell.textContent).not.toBe('1');
+      expect(cell.getAttribute('title')).toBe('human:1');
+    } finally {
+      EMP.ownerUserId = 'user_1';
+    }
   });
 
   it('copy diagnostics puts only the requestId on the clipboard — never token or code', async () => {

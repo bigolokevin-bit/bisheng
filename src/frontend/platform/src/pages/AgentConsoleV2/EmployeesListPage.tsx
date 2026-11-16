@@ -23,7 +23,6 @@ import {
   fetchEmployeeStats,
   fetchRunStats,
   fetchWorkstations,
-  fmtId,
   fmtRatio,
   fmtTime,
   fmtUsd,
@@ -117,22 +116,28 @@ function DiagCopyButton({ requestId, testId }: { requestId?: string; testId: str
   );
 }
 
-// Localized KPI-block failure line (OV-01 idiom): "…暂时取不到（HTTP nnn）"
-// plus the copy-diagnostics affordance. No machine code, no inline request id.
+// P0-1 (observer pixel audit): the KPI failure line used to print the HTTP
+// status ("…暂时取不到（HTTP 500）"), so one error state read as three
+// different things (dark: code on screen, light/375: bare "—"). It now keeps
+// the SAME shape as the healthy KPI — value line "—" + one reason line — and
+// the HTTP status / internal code never reach the DOM. Only the requestId
+// stays reachable, behind the copy-diagnostics control.
 function KpiBlockError({
   res,
-  block,
+  reason,
   testIdBase,
 }: {
   res: ApiRes<unknown>;
-  block: string;
+  reason: string;
   testIdBase: string;
 }) {
-  const { t } = useTranslation();
   return (
     <>
+      <span className="a2-kpi-num" data-testid={testIdBase}>
+        —
+      </span>
       <span className="a2-meta" data-testid={`${testIdBase}-error`}>
-        {t('agentConsole.v2.ov.blockUnavailable', { block, code: res.status })}
+        {reason}
       </span>
       <DiagCopyButton requestId={res.requestId} testId={`${testIdBase}-diag`} />
     </>
@@ -151,6 +156,18 @@ function sumCost(body: BudgetBody | null | undefined, ids: string[]): { total: n
     }
   });
   return { total, covered };
+}
+
+/* P0-2 (observer pixel audit): the owner cell printed the bare uid ("1"), so a
+   reviewer could not tell a person from a truncated fragment. The E11
+   projection carries only the userId, so the actor type defaults to `human` —
+   the same convention the detail banner and the approval-stats call already
+   use (`human:${owner}`) — while a value that already carries a type prefix is
+   kept verbatim. The cell prints the full ref (never a bare number) and the
+   title keeps that full value. */
+function ownerRef(ownerUserId?: string | null): string {
+  if (!ownerUserId) return '';
+  return ownerUserId.includes(':') ? ownerUserId : `human:${ownerUserId}`;
 }
 
 export function EmployeesListPage() {
@@ -474,7 +491,7 @@ export function EmployeesListPage() {
           {kpi.stats && !kpi.stats.ok ? (
             <KpiBlockError
               res={kpi.stats}
-              block={t('agentConsole.v2.emp.kpiOnDuty')}
+              reason={t('agentConsole.v2.metricsUnavailable')}
               testIdBase="agent-v2-kpi-onduty"
             />
           ) : (
@@ -493,7 +510,7 @@ export function EmployeesListPage() {
           {kpi.approvals && !kpi.approvals.ok ? (
             <KpiBlockError
               res={kpi.approvals}
-              block={t('agentConsole.v2.emp.kpiPending')}
+              reason={t('agentConsole.overview.pendingUnavailable')}
               testIdBase="agent-v2-kpi-pending"
             />
           ) : (
@@ -514,7 +531,7 @@ export function EmployeesListPage() {
           {kpi.costNow && !kpi.costNow.ok ? (
             <KpiBlockError
               res={kpi.costNow}
-              block={t('agentConsole.v2.emp.kpiCost')}
+              reason={t('agentConsole.v2.emp.kpiCostUnavailable')}
               testIdBase="agent-v2-kpi-cost"
             />
           ) : (
@@ -536,7 +553,7 @@ export function EmployeesListPage() {
           {kpi.anomalyNow && !kpi.anomalyNow.ok ? (
             <KpiBlockError
               res={kpi.anomalyNow}
-              block={t('agentConsole.v2.emp.kpiAnomaly')}
+              reason={t('agentConsole.v2.ov.anomalyUnavailable')}
               testIdBase="agent-v2-kpi-anomaly"
             />
           ) : (
@@ -894,8 +911,12 @@ export function EmployeesListPage() {
                     <td className="a2-cell-nowrap" data-testid="agent-v2-col-status">
                       {t(`agentConsole.lifecycle.${r.lifecycleState}`, r.lifecycleState)}
                     </td>
-                    <td className="a2-mono a2-cell-nowrap r" title={r.ownerUserId}>
-                      {fmtId(r.ownerUserId)}
+                    <td
+                      className="a2-mono a2-cell-nowrap r"
+                      title={ownerRef(r.ownerUserId) || undefined}
+                      data-testid="agent-v2-col-owner"
+                    >
+                      {ownerRef(r.ownerUserId) || '—'}
                     </td>
                     <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap r">
                       {en?.stations

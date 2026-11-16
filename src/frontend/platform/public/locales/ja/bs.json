@@ -4563,6 +4563,7 @@
         "kpiDueSoonNote": "{{count}} 件が 24h 内に失効",
         "kpiCaliberLedger": "集計基準: コスト台帳",
         "kpiTrendUnavailable": "トレンドデータなし",
+        "kpiCostUnavailable": "コストデータは一時的に利用できません",
         "anomalyWindowNote": "直近 7 日間のローリング",
         "filterAll": "すべて",
         "filterDept": "部門",

@@ -415,6 +415,7 @@ export function ApprovalsListPage() {
                     <th>
                       <input
                         type="checkbox"
+                        className="a2-check"
                         data-testid="agent-v2-approvals-select-all"
                         checked={allSelected}
                         aria-label={t('agentConsole.v2.apr.selectAll')}
@@ -453,6 +454,7 @@ export function ApprovalsListPage() {
                         <td>
                           <input
                             type="checkbox"
+                            className="a2-check"
                             data-testid="agent-v2-approval-check"
                             checked={selected.has(r.approvalId)}
                             aria-label={r.approvalId}

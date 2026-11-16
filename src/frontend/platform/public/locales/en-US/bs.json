@@ -4737,6 +4737,7 @@
         "kpiDueSoonNote": "{{count}} will expire within 24h",
         "kpiCaliberLedger": "Caliber: cost ledger",
         "kpiTrendUnavailable": "Trend data unavailable",
+        "kpiCostUnavailable": "Cost data temporarily unavailable",
         "anomalyWindowNote": "Rolling last 7 days",
         "filterAll": "All",
         "filterDept": "Department",

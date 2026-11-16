@@ -4682,6 +4682,7 @@
         "kpiDueSoonNote": "{{count}} 单将在 24h 内过期",
         "kpiCaliberLedger": "口径：成本账本",
         "kpiTrendUnavailable": "趋势数据不可用",
+        "kpiCostUnavailable": "成本数据暂时不可用",
         "anomalyWindowNote": "滚动近 7 天",
         "filterAll": "全部",
         "filterDept": "部门",

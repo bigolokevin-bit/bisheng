@@ -454,15 +454,24 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
       );
     });
 
-    it('KPI failures show localized block copy, never run.invalid_query / budget.range_too_large', async () => {
+    it('KPI failures show a localized reason and 「—」, never the HTTP status or a machine code', async () => {
       statsFail = true;
       budgetFail = true;
       renderPage();
       await screen.findByTestId('agent-v2-kpi-onduty-error');
       await screen.findByTestId('agent-v2-kpi-cost-error');
-      expect(screen.getByTestId('agent-v2-kpi-onduty-error').textContent).toContain(
-        'agentConsole.v2.ov.blockUnavailable'
+      // P0-1: reason-only copy (raw-key suite: the key itself is the text)
+      expect(screen.getByTestId('agent-v2-kpi-onduty-error').textContent).toBe(
+        'agentConsole.v2.metricsUnavailable'
       );
+      expect(screen.getByTestId('agent-v2-kpi-cost-error').textContent).toBe(
+        'agentConsole.v2.emp.kpiCostUnavailable'
+      );
+      // the value line keeps the same shape as the healthy card
+      expect(screen.getByTestId('agent-v2-kpi-onduty').textContent).toBe('—');
+      expect(screen.getByTestId('agent-v2-kpi-cost').textContent).toBe('—');
+      // no HTTP status / no parentheses-code anywhere in the page
+      expect(screen.getByTestId('agent-v2-employees-page').textContent).not.toContain('HTTP');
       assertNoLeak(['run.invalid_query', 'budget.range_too_large']);
       // the list itself is healthy — a KPI failure must not fake a page error
       await screen.findByTestId('agent-v2-employees-table');

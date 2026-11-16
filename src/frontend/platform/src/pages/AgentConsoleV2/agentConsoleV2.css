@@ -54,7 +54,12 @@
   --accent: 250 58% 46%;
   --accent-soft: rgba(75, 65, 196, 0.07);
   --accent-border: rgba(75, 65, 196, 0.35);
-  --primary: #18181e;
+  /* P0-4: this token used to be the literal #18181e, so every consumer that
+     wraps it (`hsl(var(--primary))`: primary buttons, incl. APR-02 批准) got an
+     invalid declaration → transparent background with #fff text → the button
+     vanished on light 1440. Same colour, expressed as an HSL triplet like the
+     dark block, so the wrapper resolves in both themes. */
+  --primary: 240 11% 11%;
   --primary-foreground: #ffffff;
   --danger: 357 58% 46%;
   --danger-soft: rgba(191, 51, 61, 0.12);
@@ -786,6 +791,49 @@
 }
 .agent-app .a2-cell-nowrap {
   white-space: nowrap;
+}
+
+/* P0-3 (observer pixel audit): the native checkbox painted a solid white
+   block in dark mode while the bar still said 「已选 0 项」. The control is now
+   drawn from theme tokens only — hollow outline when unchecked, filled with a
+   check when checked — so dark and light are isomorphic (same 16px box, same
+   0 layout shift on toggle). */
+.agent-app .a2-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  flex: none;
+  vertical-align: middle;
+}
+.agent-app .a2-check:hover {
+  border-color: hsl(var(--accent));
+}
+.agent-app .a2-check:checked {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+}
+.agent-app .a2-check:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--primary-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.agent-app .a2-check:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
 }
 /* APR-02: approval id link in the APR-01 queue (detail chunk may not be loaded
    yet, so the link style lives in the always-loaded shell stylesheet). */

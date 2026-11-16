@@ -274,6 +274,23 @@ describe('APR-01 approvals pending list', () => {
     expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 1 项');
   });
 
+  it('P0-3: checkboxes are token-drawn controls — unchecked ≠ solid block, checked state carried by :checked', async () => {
+    renderPage();
+    await screen.findAllByTestId('agent-v2-approval-row');
+    const all = screen.getByTestId('agent-v2-approvals-select-all') as HTMLInputElement;
+    const row = screen.getAllByTestId('agent-v2-approval-check')[0] as HTMLInputElement;
+    // same themed class in both states: dark/light differ only by tokens
+    expect(all.className).toContain('a2-check');
+    expect(row.className).toContain('a2-check');
+    // untouched queue = hollow outline, matching 「已选 0 项」
+    expect(all.checked).toBe(false);
+    expect(row.checked).toBe(false);
+    fireEvent.click(row);
+    expect((screen.getAllByTestId('agent-v2-approval-check')[0] as HTMLInputElement).checked).toBe(true);
+    expect((screen.getAllByTestId('agent-v2-approval-check')[0] as HTMLInputElement).className).toContain('a2-check');
+    expect(screen.getByTestId('agent-v2-approvals-selected-count').textContent).toContain('已选 1 项');
+  });
+
   it('highlights the ?focus row and syncs back/refresh through the URL', async () => {
     renderPage(`/agent/approvals?focus=${A2}`);
     await screen.findAllByTestId('agent-v2-approval-row');
