@@ -794,10 +794,52 @@ export function idTypeKey(value: string | undefined): string | null {
 }
 
 /**
- * `tk_E283…A453` → 「任务 · A453」. Null when the value is not id-shaped or its
+ * `tk_E283F0A9A453` → 「任务 · tk_E28…A453」. Null when the value is not id-shaped or its
  * prefix has no reliable type word — callers then omit the display and keep the
  * raw value in title (never a meaningless `CHAN…ated` fragment).
  */
+/**
+ * R2 (VG ③): ONE middle-ellipsis shape for every shortened id — 「前6…后4」
+ * once the value is longer than what we print whole (≤12 chars stay intact).
+ * A bare 4-char tail read like a full value; the ellipsis is what tells the
+ * reader this is a truncation. The complete value stays in title/copy.
+ */
+export function middleEllipsis(value: string | undefined): string {
+  const v = wireText(value).trim();
+  if (!v) return '—';
+  if (v.length <= 12) return v;
+  return `${v.slice(0, 6)}…${v.slice(-4)}`;
+}
+
+/**
+ * R2 (VG ①): known action codes get a plain-language label; anything outside
+ * the map returns null so the caller prints the raw value (in title too) —
+ * we never invent a translation for an unknown action.
+ */
+const ACTION_LABEL_KEY: Record<string, string> = {
+  'employee.update': 'agentConsole.v2.aud01.actEmployeeUpdate',
+  'employee.create': 'agentConsole.v2.aud01.actEmployeeCreate',
+  'approval.approve': 'agentConsole.v2.aud01.actApprovalApprove',
+  'approval.reject': 'agentConsole.v2.aud01.actApprovalReject',
+  'approval.require': 'agentConsole.v2.aud01.actApprovalRequire',
+  'grant.grant': 'agentConsole.v2.aud01.actGrantGrant',
+  'grant.revoke': 'agentConsole.v2.aud01.actGrantRevoke',
+  'workstation.bind': 'agentConsole.v2.aud01.actWorkstationBind',
+  'workstation.unbind': 'agentConsole.v2.aud01.actWorkstationUnbind',
+  'task.update': 'agentConsole.v2.aud01.actTaskUpdate',
+  'policy.update': 'agentConsole.v2.aud01.actPolicyUpdate',
+  'budget.update': 'agentConsole.v2.aud01.actBudgetUpdate',
+};
+
+export function actionDisplay(
+  value: string | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string | null {
+  const raw = wireText(value).trim();
+  const key = ACTION_LABEL_KEY[raw];
+  return key ? t(key) : null;
+}
+
 export function typeShortLabel(
   value: string | undefined,
   t: (key: string, options?: Record<string, unknown>) => string,
@@ -806,8 +848,8 @@ export function typeShortLabel(
   if (!isCodeId(v)) return null;
   const key = idTypeKey(v);
   if (!key) return null;
-  const tail = idTail(v, 4);
-  return tail ? `${t(key)} · ${tail}` : null;
+  const shown = middleEllipsis(v);
+  return shown ? `${t(key)} · ${shown}` : null;
 }
 
 /** Display text for an id cell: type+short when possible, the raw value otherwise. */
@@ -822,14 +864,14 @@ export function idDisplay(
 
 /**
  * Short code alone, for cells that already print the type word as a row label
- * (AUD-02 关联): `empv_…` → `X3Z5`, with the full value in title/copy.
+ * (AUD-02 关联): `empv_EA7A…AC0E` form: 「前6…后4」, with the full value in title/copy.
  */
 export function shortCode(value: string | undefined): string {
   const v = wireText(value).trim();
   if (!v) return '—';
   if (isCodeId(v)) {
     const alnum = v.replace(/[^A-Za-z0-9]/g, '');
-    if (alnum.length >= 4) return alnum.slice(-4);
+    if (alnum.length >= 4) return middleEllipsis(v);
   }
   return shortId(v);
 }

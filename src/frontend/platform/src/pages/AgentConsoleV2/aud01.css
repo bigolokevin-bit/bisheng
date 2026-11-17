@@ -897,13 +897,30 @@
   margin-top: 6px;
 }
 
+/* R2 (VG ②): the last-page note says 「后面没有了」 while the ghost-styled
+   disabled 下一页 still reads as clickable — the two contradict each other at every
+   width, so this rule lives outside the breakpoint blocks: when the note is in
+   the foot, the button is not rendered. listkit/CursorFoot stays untouched. */
+.agent-app .lk.aud01 .rfoot:has([data-testid='lk-lastpage-note']) button[aria-disabled='true'][data-testid='lk-next'] {
+  display: none;
+}
+
 /* ---------- 断点（§4.2）：1400 sticky 门槛 / 1024 单列 / 768 行卡 ---------- */
 @media (min-width: 1280px) and (max-width: 1399px) {
+  /* R2 (VG ④): at 1280 the 12-column table really scrolls sideways. Give the
+     band a viewport-bounded height so the sticky header rides at the top of
+     the visible area instead of falling under the 720 fold, and fade the
+     right edge so sideways scroll is visible without hunting for the bar. */
   .agent-app .lk.aud01 .tblwrap {
-    overflow-x: auto;
+    overflow: auto;
+    max-height: calc(100vh - 240px);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent 100%);
   }
   .agent-app .lk.aud01 .tbl th {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 3;
   }
   .agent-app .lk.aud01 .tblhint {
     display: inline-flex;
