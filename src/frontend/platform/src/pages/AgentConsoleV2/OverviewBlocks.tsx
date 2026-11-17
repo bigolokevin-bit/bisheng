@@ -569,7 +569,7 @@ export function CostBudgetBlock({
               <div className="ov-qmeta">
                 {pct != null ? (
                   <>
-                    <b className="a2-mono">{pct < 10 ? pct.toFixed(1) : Math.round(pct)}%</b>
+                    <b className="a2-mono">{fmtPercent(pct)}</b>
                     <span>of {fmtUsd(limit)}</span>
                   </>
                 ) : (

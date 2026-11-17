@@ -510,7 +510,7 @@ export function OverviewPage() {
   }, [heat]);
 
   const terminalForRate = runSums.succeeded + runSums.failed;
-  const successRate = runs.ok && terminalForRate > 0 ? ((runSums.succeeded / terminalForRate) * 100).toFixed(1) : null;
+  const successRate = runs.ok && terminalForRate > 0 ? fmtPercent((runSums.succeeded / terminalForRate) * 100) : null;
   const windowLabel = t(`agentConsole.v2.ov.range${rangeKey}`);
   const rangeShort = RANGE_DAYS[rangeKey] <= 28 ? '7' : String(rangeDays);
 
@@ -1265,7 +1265,7 @@ function TrendCard({
               <b className="wr">{t('agentConsole.v2.ov.runsUnknown', { count: unknown })}</b>
             ) : null}
             <i>{t('agentConsole.v2.ov.trendSumUnknown')}</i>
-            <b>{successRate != null ? `${successRate}%` : '—'}</b>
+            <b>{successRate ?? '—'}</b>
             <i>{t('agentConsole.v2.ov.trendSumRate')}</i>
             <b>—</b>
             <i>{t('agentConsole.v2.ov.trendSumP95')}</i>
