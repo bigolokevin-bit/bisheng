@@ -146,6 +146,7 @@ describe('EMP-03 employee detail honesty', () => {
     renderDetail();
     const owner = await screen.findByTestId('agent-v2-ed-owner');
     expect(owner.textContent).toBe('未指派');
+    expect(document.body.textContent).not.toContain('pilot_owner_placeholder');
     expect(screen.queryByTestId('agent-v2-ed-help-owner')).toBeNull();
     expect(urls.some((u) => u.includes('/api/approval-stats'))).toBe(false);
     guardNoRawKeys();

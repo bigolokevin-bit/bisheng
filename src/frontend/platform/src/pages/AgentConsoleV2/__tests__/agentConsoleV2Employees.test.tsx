@@ -160,6 +160,17 @@ describe('EMP-01 employee list', () => {
     guardNoRawKeys();
   });
 
+  /* Q2: the short code is the only identity on screen; the native id is a
+   * tooltip, never body text. */
+  it('never prints a raw employee id in visible text; the raw value lives in title', async () => {
+    renderPage();
+    await screen.findByTestId('agent-v2-emp-table');
+    const code = screen.getByTestId('agent-v2-emp-code-emp_AB12CD34');
+    expect(code.textContent).toBe('员工 · AB12CD34');
+    expect(code.getAttribute('title')).toBe('emp_AB12CD34');
+    expect(document.body.textContent).not.toMatch(/emp_[A-Za-z0-9]/);
+  });
+
   it('links each row to its detail page and to the chat page by employee id', async () => {
     renderPage();
     await screen.findByTestId('agent-v2-emp-table');
