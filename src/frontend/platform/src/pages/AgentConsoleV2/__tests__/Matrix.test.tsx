@@ -225,8 +225,11 @@ describe('MATRIX-01 read-only employee matrix', () => {
     renderPage();
     await screen.findAllByTestId('agent-v2-mtx-row');
     expect(document.querySelectorAll('button')).toHaveLength(0);
-    expect(document.querySelector('input')).toBeNull();
+    // read-only page: no write fields; the only input is the search filter
     expect(document.querySelector('form')).toBeNull();
+    expect(document.querySelectorAll('textarea')).toHaveLength(0);
+    const inputs = Array.from(document.querySelectorAll('input'));
+    expect(inputs.every((el) => el.type === 'search')).toBe(true);
   });
 
   it('reads the upstream field spelling: lifecycleState + currentVersionId', async () => {

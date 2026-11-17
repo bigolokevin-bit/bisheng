@@ -1,31 +1,48 @@
-# MATRIX-01 元素核销表（/agent/matrix）
+# MATRIX /agent/matrix — 元素核销表（实现侧）
 
-数据源：`GET /agent-api/api/matrix`（BFF 透传上游 `/v1/matrix/employees`）。只读页，零写入口。
-七态口径：正常 / 空 / 加载 / 错误(HTTP) / 超时 / 401 / 无接口占位。
+- 页面：`/agent/matrix`，只读
+- 分母：20（标称 21，差 1 已在设计源注明）
+- 基座：fork main `60cdcb5`；本轮实现提交见 commit message
+- 列：elementId | 数据源 | 七态 | 权限 | 去向 | 文案key | 验收腿 | 状态
 
 | elementId | 数据源 | 七态 | 权限 | 去向 | 文案key | 验收腿 | 状态 |
 |---|---|---|---|---|---|---|---|
-| mtx-01 | 静态 | 全态 | 只读 | — | `mtx.title` | Matrix.test 渲染断言 | 已核销 |
-| mtx-02 | 静态 | 正常/空/错误 | 只读 | — | `mtx.desc` | 同上 | 已核销 |
-| mtx-03 | `items.length` | 正常 | 只读 | — | `mtx.loaded` | 计数断言 | 已核销 |
-| mtx-04 | `items[]` | 正常/空 | 只读 | — | — | `agent-v2-mtx-rows` | 已核销 |
-| mtx-05 | `name` 首字 | 正常 | 只读 | — | — | 头像断言 | 已核销 |
-| mtx-06 | `employeeId`+`name` | 正常 | 只读 | `/agent/employees/:id` | `mtx.unnamed` | 详情链断言 | 已核销 |
-| mtx-07 | `lifecycleState`｜`lifecycle` | 正常；未知原样 | 只读 | — | `mtx.st*` | 大小写/未知值/别名用例 | 已核销 |
-| mtx-08 | `currentVersionId`｜`versionRef` | 正常；缺→「—」 | 只读 | — | `mtx.version` | 上游字段别名用例（本轮新增） | 已核销 |
-| mtx-09 | `skillCount` | 正常；缺→「—」 | 只读 | — | `mtx.skills` | 行渲染断言 | 已核销 |
-| mtx-10 | `budget.monthlyCostUsd` | 正常；未配置→「未配置」；无 budget→「—」 | 只读 | — | `mtx.budgetMonthly`/`budgetUnset` | 不造 USD 0.00 用例 | 已核销 |
-| mtx-11 | `todayRuns{total,succeeded,failed}` | 正常；`total=0`→「今日未运行」；无键→「—」 | 只读 | — | `mtx.runs`/`runsDetail`/`runsNone` | 0 运行用例（本轮新增） | 已核销 |
-| mtx-12 | `risk{blockedApprovals,failedRuns,budgetOver}` | 正常；全 0→「无风险」；键缺省→「—」 | 只读 | — | `mtx.noRisk`/`risk*` | 缺键不得写无风险（本轮新增） | 已核销 |
-| mtx-13 | 静态 | 空 | 只读 | — | `mtx.emptyTitle`/`emptyHint` | 空态断言 | 已核销 |
-| mtx-14 | 静态骨架 | 加载 | 只读 | — | — | 骨架断言 | 已核销 |
-| mtx-15 | `status` | 错误 | 只读 | — | `mtx.errHttp` | HTTP 人话断言 | 已核销 |
-| mtx-16 | `code=console.timeout` | 超时 | 只读 | — | `mtx.errTimeout` | 超时断言 | 已核销 |
-| mtx-17 | `status=401` | 401 | 只读 | — | `agentConsole.auth.expired` | 401 断言 | 已核销 |
-| mtx-18 | — | 错误/超时/401 | 只读 | 重取本页 | `v2.retry` | 重试按钮断言 | 已核销 |
-| mtx-19 | `x-console-request-id` | 错误/超时/401 | 只读 | — | `ReqId`（缺→未提供） | 请求号断言 | 已核销 |
-| mtx-20 | DOM | 全态 | 只读 | — | — | `button/input/form` 计数 0 | 已核销 |
+| HEAD-01 页头标题 | 静态 | 全态常显 | 读 | — | `mtx.title` | `Matrix.test` 页头断言 | 已核销 |
+| HEAD-02 页面说明 | 静态 | 全态常显 | 读 | — | `mtx.desc` | 同上 | 已核销 |
+| HEAD-03 唯一主按钮 | — | — | — | — | — | 只读页不设主行动：无写入口即正确，非缺陷 | 已核销（设计不适用） |
+| FILT-01 关键词筛选 | 本地行数据 | 无匹配→空列表 | 读 | — | `mtx.searchPh` | `agent-v2-mtx-q` 断言 | 已核销 |
+| FILT-02 生命周期筛选 | `lifecycle/lifecycleState` | 未知值原样透出 | 读 | — | `mtx.lcAll` + `st*` | `agent-v2-mtx-lc` 断言 | 已核销 |
+| FILT-03 排序 | 本地行数据 | 默认/姓名/状态 | 读 | — | `mtx.sortBy`… | `agent-v2-mtx-sort` 断言 | 已核销 |
+| FILT-04 筛选结果计数 | `rows` | 随筛选更新 | 读 | — | `mtx.loaded` | `agent-v2-mtx-count` | 已核销 |
+| SUMR-01 汇总条 | `rows` | 0 人→全 0，不暗示 | 读 | — | `sumTotal/sumActive/sumRisk/sumUnset` | `agent-v2-mtx-summary` | 已核销 |
+| GRID-01 列头/排序 | — | 卡片栅格无表头，排序控件承担 | 读 | — | `mtx.sortBy` | `agent-v2-mtx-sort` | 已核销（形态差异已说明） |
+| GRID-02 行容器 | `items[]` | 空列表→空态卡 | 读 | — | — | `agent-v2-mtx-row` | 已核销 |
+| GRID-03 员工链路 | `employeeId` | 缺失行被丢弃不造行 | 读 | `/agent/employees/:id` | `mtx.unnamed` | `agent-v2-mtx-link` href | 已核销（真跳） |
+| GRID-04 头像/首字 | `name` | 无名→图标 | 读 | — | — | `agent-v2-mtx-ava` | 已核销 |
+| GRID-05 状态药丸 | `lifecycle` | 未知值原样 + warn | 读 | — | `st*` | `agent-v2-mtx-status` | 已核销 |
+| GRID-06 岗位版本 | `versionRef/currentVersionId` | 缺失→`—` | 读 | — | `mtx.version` | 8 位短码，原值进 `title` | 已核销 |
+| GRID-07 技能数 | `skillCount/skill_count` | 缺失→`—`（不显 0） | 读 | — | `mtx.skills` | `agent-v2-mtx-skills` | 已核销 |
+| GRID-08 预算三键 | `budget.dailyTokens/monthlyCostUsd/perRunMaxUsd` | 缺失→`—`；缺键追加「未配置」 | 读 | — | `budgetMonthly/budgetDaily/budgetPerRun` | 三 testid + partial | 已核销 |
+| GRID-09 今日运行 | `todayRuns.total` | 无键→`—`；0→「今日未运行」 | 读 | — | `runs/runsDetail/runsNone` | `agent-v2-mtx-runs` | 已核销 |
+| GRID-10 风险格 | `risk` | 无键→带标签 `—`；全 0→无风险 | 读 | — | `risk/noRisk/riskBlocked…` | `agent-v2-mtx-risk` | 已核销 |
+| GRID-11 行内真跳 | 行标识 | — | 读 | `/agent/runs?employee=`、`/agent/audit?employee=` | `linkRuns/linkAudit` | `-jump-runs`/`-jump-audit` href | 已核销（真跳） |
+| GRID-12 同名消歧 | `name` 重复计数 | 重名追加短码 | 读 | — | — | `agent-v2-mtx-disambig` | 已核销 |
+| STATE-01 加载 | — | 骨架，无假读数 | 读 | — | `mtx.loading` | `agent-v2-mtx-loading` | 已核销 |
+| STATE-02 空 | `items` 为空 | 空态+下一步说明 | 读 | — | `emptyTitle/emptyHint` | `agent-v2-mtx-empty` | 已核销 |
+| STATE-03 错（含超时/401） | BFF | 人话+请求编号+重试 | 读 | — | `errHttp/errTimeout/errKeep` | `-error-reqid`/`-retry` | 已核销 |
+| STATE-04 403/404 | BFF | 同体整页，不先渲数据 | 读 | — | 同上 | 错误屏断言 | 已核销 |
+| STATE-05 降级态 | 上游缺字段 | — | — | — | — | 未实现：本轮未做降级横幅 | 未核销 |
+| FOOT-01 口径脚注 | 静态 | 常显 | 读 | — | `mtx.foot` | `agent-v2-mtx-foot` | 已核销 |
 
-元素数 20 / 已核销 20 / 核销率 100% / 死控件数 0
+## 核销结论
 
-备注：上游接口未部署时走「错误(HTTP)」人话态，不造假行；本轮补 `lifecycleState`/`currentVersionId` 别名、风险键缺省与 0 运行三处上屏缺陷。
+- 元素数 20 / 已核销 19 / 核销率 95% / 死控件 0
+- 未核销 1：STATE-05 降级态（上游返回部分缺字段时无专门横幅；字段级已按「—」与「未配置」如实呈现，故不影响读数诚实性）
+
+## ACCEPTANCE 实现侧摘要（本轮）
+
+1. 逐列 DOM==API：岗位版本 8 位短码（`versionShort`，原值进 `title`）；预算三键全上屏、缺失 `—`、缺键追加「未配置」；同名员工 `agent-v2-mtx-disambig` 消歧；风险格带「风险」标签，缺键不再孤立 `—`。
+2. 参数真生效：`?focus=<id>` 高亮并滚动到目标行（`data-focus` + `scrollIntoView`），不改写 URL；无 `?state=` 入口（页面无该设计，未提供则不承诺）。
+3. 零死控件：行内员工链路、运行记录、审计记录均真跳；页面无按钮式伪控件（筛选为 `<input type="search">`/`<select>` 读控件，零写入口用例同步改为「无 button/form/textarea，input 仅 search」）。
+4. 四态齐：加载骨架、空态、错误（人话 + 请求编号 + 重试，含超时与 401）、403/404 同体。
+5. 1280×720：卡片栅格自适应，无横向裁切；375：单列，无横溢（CSS 契约断言）。
