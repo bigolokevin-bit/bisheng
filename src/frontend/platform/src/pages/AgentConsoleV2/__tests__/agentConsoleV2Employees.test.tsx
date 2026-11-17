@@ -373,7 +373,7 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
     expect(screen.queryByTestId('agent-v2-employees-table')).toBeNull();
   });
 
-  it('keeps filters honest: lifecycle tabs, disabled extras, create note', async () => {
+  it('keeps filters honest: lifecycle tabs, disabled extras, real create link', async () => {
     renderPage();
     await screen.findByTestId('agent-v2-employees-table');
     expect(screen.getByTestId('agent-v2-filter-active')).toBeTruthy();
@@ -383,11 +383,11 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
     expect(screen.getByTestId('agent-v2-filter-unavailable-note').textContent).toContain(
       'agentConsole.v2.emp.filterUnavailableNote'
     );
+    /* EMP-02: creation is open now, so the entry is a link to the real page —
+       a disabled button plus a 「not open yet」 note would be a lie. */
     const create = screen.getByTestId('agent-v2-employees-create');
-    expect(create).toBeDisabled();
-    expect(screen.getByTestId('agent-v2-employees-create-note').textContent).toContain(
-      'agentConsole.v2.emp.createDisabledNote'
-    );
+    expect(create.getAttribute('href')).toBe('/agent/employees/new');
+    expect(screen.queryByTestId('agent-v2-employees-create-note')).toBeNull();
   });
 
   it('renders the platform activity heatmap from R7 cells', async () => {
@@ -533,13 +533,15 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
 });
 
 describe('EMP-01 P1 round: disabled visuals, 375 scroll hint, name clipping', () => {
-  it('P1-2: create/prev-page are REALLY disabled in the DOM (visual fix only, no functional change)', async () => {
+  it('P1-2: the create entry is a real link now; pagination stays a disabled button', async () => {
     renderPage();
     await screen.findByTestId('agent-v2-employees-table');
-    const create = screen.getByTestId('agent-v2-employees-create') as HTMLButtonElement;
-    expect(create.disabled).toBe(true);
-    expect(create.getAttribute('disabled')).not.toBeNull();
-    expect(create.title).toBe('agentConsole.v2.emp.createDisabledNote');
+    /* EMP-02 lane: the header entry was promoted from a disabled button to a
+       link. The visual rule for genuinely disabled controls (pagination) is
+       still asserted below. */
+    const create = screen.getByTestId('agent-v2-employees-create');
+    expect(create.tagName).toBe('A');
+    expect(create.getAttribute('href')).toBe('/agent/employees/new');
     // first page → no previous page, and the control is disabled (not just dim)
     const prev = screen.getByText('agentConsole.v2.emp.prevPage') as HTMLButtonElement;
     expect(prev.disabled).toBe(true);

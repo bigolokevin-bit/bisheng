@@ -73,6 +73,14 @@ export const HELP_TERMS = [
   'hashChain',
   /** AUD-02: an absent field drops its row; 「—」 means a value, not absence. */
   'absentField',
+  /** EMP-02: permission is decided by the service, not by a clickable-if-lucky button. */
+  'emp02Perm',
+  /** EMP-02: a repeated submission returns the first result instead of failing. */
+  'emp02Replay',
+  /** TSK-03: the source is a record, not a choice — no channel to impersonate. */
+  'tsk03Source',
+  /** TSK-03: retrying the same submission never creates a second task. */
+  'tsk03Replay',
 ] as const;
 
 export type HelpTerm = (typeof HELP_TERMS)[number];

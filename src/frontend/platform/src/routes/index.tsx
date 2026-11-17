@@ -40,6 +40,9 @@ const AgentApprovalsPage = lazy(() => import("@/pages/AgentApprovalsPage").then(
 const AgentConsoleShell = lazy(() => import("@/pages/AgentConsoleV2/Shell").then(module => ({ default: module.AgentConsoleShell })));
 const ShellOverviewPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.OverviewPage })));
 const ShellEmployeesPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.EmployeesPage })));
+// EMP-02 / TSK-03: the console's two real write screens.
+const ShellEmployeeCreatePage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.EmployeeCreateScreen })));
+const ShellTaskCreatePage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.TaskCreateScreen })));
 const ShellEmployeeDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.EmployeeDetailScreen })));
 const ShellApprovalsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.ApprovalsPage })));
 const ShellApprovalDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.ApprovalDetailScreen })));
@@ -159,10 +162,12 @@ const privateRouter = [
           children: [
             { index: true, element: <ShellOverviewPage /> },
             { path: "employees", element: <ShellEmployeesPage /> },
+            { path: "employees/new", element: <ShellEmployeeCreatePage /> },
             { path: "employees/:id", element: <ShellEmployeeDetailPage /> },
             { path: "approvals", element: <ShellApprovalsPage /> },
             { path: "approvals/:id", element: <ShellApprovalDetailPage /> },
             { path: "tasks", element: <ShellTasksPage /> },
+            { path: "tasks/new", element: <ShellTaskCreatePage /> },
             { path: "tasks/:taskId", element: <ShellTaskDetailPage /> },
             { path: "runs", element: <ShellRunsPage /> },
             { path: "runs/:runId", element: <ShellRunDetailPage /> },

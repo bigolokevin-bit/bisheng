@@ -21,7 +21,7 @@
  * Machine codes (console.*, request.*, task.*) never reach the screen;
  * copy interpolates the HTTP status only (G15, same as APR-01). */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { userContext } from '@/contexts/userContext';
@@ -183,6 +183,13 @@ const ICON_PATHS: Record<string, JSX.Element> = {
   chevD: <path d="m6 9 6 6 6-6" />,
   chevL: <path d="m15 18-6-6 6-6" />,
   chevR: <path d="m9 18 6-6-6-6" />,
+  /* TSK-03 create entry: a real link now, so the glyph must exist. */
+  plus: (
+    <>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </>
+  ),
   msg: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
   copy: (
     <>
@@ -1033,8 +1040,14 @@ export function TasksListPage() {
           <p className="a2-meta">{t('agentConsole.v2.tsk.desc')}</p>
         </div>
         <span className="a2-sp" />
-        {/* G1 FAIL 5: baseline header right side carries ONE control — the
-            warning-triangle follow-up toggle. No refresh button exists there. */}
+        {/* TSK-03 (EMP-02/TSK-03 write lane, 2026-11-17): the create entry is
+            now a real link — the page writes through the BFF, so the button
+            must not be a decoration. The follow-up toggle stays as the one
+            secondary control beside it. */}
+        <Link className="a2-btn" to="/agent/tasks/new" data-testid="agent-v2-tsk-create">
+          <Icon name="plus" size={14} />
+          {t('agentConsole.v2.tsk.createEntry')}
+        </Link>
         <button
           type="button"
           className="a2-btn"

@@ -1,0 +1,889 @@
+/*
+ * EMP-02 `/agent/employees/new` + TSK-03 `/agent/tasks/new` — the form/result
+ * vocabulary shared by the console's only two write screens.
+ *
+ * Ported 1:1 from the locked references `emp02-target.html` / `tsk03-target.html`
+ * and scoped under `.agent-app .a2s-page .lk.emp02` / `.agent-app .a2s-page .lk.tsk03`, so nothing
+ * leaks out of these pages. Every colour resolves through the existing console
+ * token layer (agentConsoleV2.css): no new hex value, no new font, no new
+ * dependency — dark/light stay one DOM with only tokens swapped.
+ *
+ * Shared vocabulary is NOT redefined here: `.card .b .lnk .pill .seg .micro
+ * .mono .phead .fresh .stage .skel .pfoot .rule` come from listkit.css. This
+ * file adds what the two form pages introduce: the 1fr+340px form layout, the
+ * field/label/error set, the locked read-only row, the bottom action bar, the
+ * badge/task preview, the result card, the neutral replay band, the collapsed
+ * technical details and the priority segment.
+ */
+
+/* ---------- 表单版式：主列 + 右侧 340 预览栏 ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flow-narrow {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 1080px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .fcol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 112px;
+  min-width: 0;
+}
+
+/* ---------- 页头（reference §1: 30/38 h1, back link pushed right） ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .phead .h1 {
+  font-size: 30px;
+  line-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .phead .h1 .lk-i {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .phead .sp {
+  flex: 1;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- 卡头 / 卡脚 ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-hd .t {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-hd .t .lk-i {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-hd .c {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--micro-foreground));
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: hsl(var(--surface));
+  white-space: nowrap;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-hd .sp {
+  flex: 1;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .hd-note {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-foot-note {
+  margin: 0;
+  padding: 0 20px 14px;
+  font-size: 11.5px;
+  line-height: 17px;
+  color: hsl(var(--micro-foreground));
+}
+
+/* ---------- 字段 ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .fset {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .frow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flab label,
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flab .lbl {
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  line-height: 18px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .tagreq {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: hsl(var(--micro-foreground));
+  background: var(--neutral-pill-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+  line-height: 14px;
+  flex: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .tagreq.opt {
+  background: transparent;
+  border: 1px solid var(--hairline);
+  line-height: 12px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .fcount {
+  margin-left: auto;
+  color: hsl(var(--micro-foreground));
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp {
+  height: 40px;
+  width: 100%;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  min-width: 0;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp::placeholder {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp:hover:not(:disabled) {
+  border-color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp[aria-invalid='true'] {
+  border-color: hsl(var(--danger));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px var(--danger-soft);
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) textarea.inp {
+  height: auto;
+  min-height: 88px;
+  padding: 10px 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) select.inp {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 34px;
+  cursor: pointer;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .selwrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .selwrap > .lk-i {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: hsl(var(--micro-foreground));
+  pointer-events: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .fhint {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 16px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .ferr {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: hsl(var(--danger));
+  line-height: 17px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .ferr .lk-i {
+  margin-top: 2px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .ferrsum {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-soft);
+  font-size: 12.5px;
+  color: hsl(var(--foreground));
+  line-height: 18px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .ferrsum .lk-i {
+  color: hsl(var(--danger));
+  margin-top: 2px;
+}
+
+/* ---------- 只读行（所有者 / 来源） ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .locked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  font-size: 13.5px;
+  color: hsl(var(--muted-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .locked .lk-i {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .locked .sp {
+  flex: 1;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .who .ava {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: hsl(var(--card));
+  border: 1px solid var(--hairline);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  color: hsl(var(--muted-foreground));
+  flex: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .who .nm2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .src-note {
+  font-size: 11.5px;
+}
+
+/* ---------- 底部操作条（主按钮永远最右） ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .facts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .facts .sp {
+  flex: 1;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .b.pri {
+  background: hsl(var(--primary));
+  /* --primary-foreground is a literal hex token, so it must not be wrapped in hsl(). */
+  color: var(--primary-foreground);
+  border-color: transparent;
+  text-decoration: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .b.pri:hover:not([disabled]) {
+  background: hsl(var(--primary) / 0.88);
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .b.pri[disabled]:hover {
+  background: hsl(var(--primary));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .spin {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  animation: create-spin 0.9s linear infinite;
+  flex: none;
+}
+@keyframes create-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- 预览：工牌（EMP-02） ---------- */
+.agent-app .a2s-page .lk.emp02 .bar.pending,
+.agent-app .a2s-page .lk.emp02 .mono.pending {
+  color: hsl(var(--micro-foreground));
+  font-size: 12px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .pvbody {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .badge {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  min-width: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .pvhint {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 17px;
+}
+.agent-app .a2s-page .lk.emp02 .badge-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.agent-app .a2s-page .lk.emp02 .pvav {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: hsl(var(--card));
+  border: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  flex: none;
+}
+.agent-app .a2s-page .lk.emp02 .pvname {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.agent-app .a2s-page .lk.emp02 .pvname .n {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 21px;
+  color: hsl(var(--foreground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .a2s-page .lk.emp02 .pvname .t2 {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  line-height: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .a2s-page .lk.emp02 .pvname .empty {
+  color: hsl(var(--micro-foreground));
+  font-weight: 400;
+}
+.agent-app .a2s-page .lk.emp02 .badge-ft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 11px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* ---------- 预览：任务卡（TSK-03） ---------- */
+.agent-app .a2s-page .lk.tsk03 .tk-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.agent-app .a2s-page .lk.tsk03 .tk-src {
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  margin-left: auto;
+  white-space: nowrap;
+}
+.agent-app .a2s-page .lk.tsk03 .tk-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  color: hsl(var(--foreground));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.agent-app .a2s-page .lk.tsk03 .tk-title.empty {
+  color: hsl(var(--micro-foreground));
+  font-weight: 400;
+}
+.agent-app .a2s-page .lk.tsk03 .tk-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+}
+
+/* ---------- 优先级：三档单选（原生 radio，视觉段） ---------- */
+.agent-app .a2s-page .lk.tsk03 .pri {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 4px;
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-width: 0;
+  transition: background 0.12s, border-color 0.12s;
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt .t {
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  line-height: 18px;
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt .d {
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  line-height: 15px;
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt:hover {
+  background: var(--hover);
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt:has(input:checked) {
+  background: hsl(var(--card));
+  border-color: var(--accent-border);
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt:has(input:checked) .t {
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s-page .lk.tsk03 .pri-opt:has(input:focus-visible) {
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px var(--accent-border);
+}
+
+/* ---------- 候选为空：整块说明，不渲染空下拉 ---------- */
+.agent-app .a2s-page .lk.tsk03 .emptyblk {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+}
+.agent-app .a2s-page .lk.tsk03 .emptyblk .h {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-app .a2s-page .lk.tsk03 .emptyblk .h .lk-i {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s-page .lk.tsk03 .emptyblk .s {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  line-height: 17px;
+}
+.agent-app .a2s-page .lk.tsk03 .emptyblk .acts2 {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 2px;
+}
+
+/* ---------- 右侧说明行 ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .rows {
+  padding: 4px 0 10px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 20px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row + .row {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row .k {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 16px;
+  color: hsl(var(--micro-foreground));
+  flex: none;
+  padding-top: 1px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row .body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row .nm {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  line-height: 18px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row .why {
+  font-size: 11.5px;
+  color: hsl(var(--muted-foreground));
+  line-height: 17px;
+  overflow-wrap: anywhere;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row .why b {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+/* ---------- 结果卡（成功 / 重放 / 冲突） ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 14px;
+  flex-wrap: wrap;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-hd .ric {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--success-soft);
+  color: hsl(var(--success));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-hd .ric.wr {
+  background: var(--warning-soft);
+  color: hsl(var(--warning));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-hd .rt {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 23px;
+  margin: 0;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-hd .rs {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  line-height: 19px;
+  margin-top: 1px;
+  overflow-wrap: anywhere;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-hd .sp {
+  flex: 1;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-body {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-p {
+  margin: 0;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  line-height: 20px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .idrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .idrow .mono {
+  font-size: 13px;
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .idrow .micro {
+  flex: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .idrow .sp {
+  flex: 1;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .nextlist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .nextlist .ni {
+  display: flex;
+  gap: 9px;
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  line-height: 18px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .nextlist .ni .k {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .result .facts {
+  border-top: 1px solid var(--hairline);
+}
+
+/* ---------- 中性提示条（重放 / 脏值 / 权限说明） ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .roband {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--neutral-pill-bg);
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .roband .lk-i {
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .roband b {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .roband .sp {
+  flex: 1;
+}
+
+/* ---------- 卡内错误条 ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .errbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin: 0;
+  background: var(--danger-soft);
+  color: hsl(var(--danger));
+  font-size: 12.5px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .errbar .tx {
+  flex: 1;
+  min-width: 0;
+  color: hsl(var(--foreground));
+  line-height: 17px;
+}
+
+/* ---------- 状态屏补充 ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .stage .vn {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  margin-top: 6px;
+  max-width: 460px;
+  line-height: 17px;
+  position: relative;
+}
+
+/* ---------- 折叠的技术信息（正文零工程语言） ---------- */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .tech {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .tech summary {
+  cursor: pointer;
+  color: hsl(var(--micro-foreground));
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .tech summary::-webkit-details-marker {
+  display: none;
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .tech[open] summary {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .tech .kv {
+  display: flex;
+  gap: 14px;
+  padding: 6px 0 0;
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 11.5px;
+  line-height: 16px;
+  color: hsl(var(--micro-foreground));
+  flex-wrap: wrap;
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1180px) {
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flayout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+@media (max-width: 1023px) {
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .side {
+    position: static;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .frow2 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 767px) {
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .fset {
+    padding: 14px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-hd {
+    padding: 14px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .facts {
+    padding: 12px 14px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .facts .b {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .facts .b.pri {
+    flex: 0 0 auto;
+    min-width: 112px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .pvbody {
+    padding: 0 14px 14px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .row {
+    padding: 11px 14px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-hd {
+    padding: 16px 14px 12px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .res-body {
+    padding: 0 14px 14px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .card-foot-note {
+    padding: 0 14px 12px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .errbar {
+    padding: 10px 14px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .pri-opt {
+    padding: 7px 9px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .pri-opt .d {
+    font-size: 10.5px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .stage {
+    padding: 36px 16px 44px;
+  }
+}
+@media (max-width: 419px) {
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .facts .b.pri {
+    min-width: 104px;
+    white-space: nowrap;
+  }
+  .agent-app .a2s-page .lk.tsk03 .pri {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .pri-opt {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .locked .src-note {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .spin {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.45;
+  }
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .inp {
+    transition: none;
+  }
+}
