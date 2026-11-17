@@ -911,3 +911,17 @@
     animation: none !important;
   }
 }
+/* Cursor rows: 「已加载 N 条」 + 加载更多 —— never a total (§6 裁定一). */
+.agent-app .lk.collab .lk-more {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 20px 0;
+}
+.agent-app .lk.collab .lk-more .micro {
+  color: var(--muted-foreground);
+}
+.agent-app .lk.collab .lk-more .b {
+  margin-left: auto;
+}

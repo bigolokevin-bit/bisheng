@@ -28,7 +28,8 @@ import {
   type DelegationBudget,
   type DelegationRow,
 } from './collab';
-import { fmtId, fmtTime } from './v2Data';
+import { fmtId } from './v2Data';
+import { fmtStamp } from './collab';
 
 const NS = 'agentConsole.v2.collab';
 
@@ -200,7 +201,7 @@ export function Timeline({ rows, t }: { rows: TimelineRow[]; t: TFunction }) {
               <span className="stg">{t(row.labelKey)}</span>
               <span className={`tm${row.timeKey === 'at' ? ' mono' : ''}`}>
                 {row.timeKey === 'at'
-                  ? fmtTime(row.at)
+                  ? fmtStamp(row.at)
                   : row.timeKey === 'notYet'
                     ? t(`${NS}.chain.notYet`)
                     : row.timeKey === 'never'
@@ -317,7 +318,7 @@ export function CollabHead({
       <div className="fresh">
         <LkIcon name="clock" />
         <span>{t(`${NS}.fresh.at`)}</span>
-        <span className="mono">{fetchedAt ? fmtTime(fetchedAt) : t(`${NS}.fresh.none`)}</span>
+        <span className="mono">{fetchedAt ? fmtStamp(fetchedAt) : t(`${NS}.fresh.none`)}</span>
         <span className="faint">·</span>
         <span>{t(`${NS}.fresh.source`)}</span>
         <span className="faint">·</span>

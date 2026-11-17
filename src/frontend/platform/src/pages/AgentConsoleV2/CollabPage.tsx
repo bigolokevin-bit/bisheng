@@ -25,6 +25,7 @@ import {
   createHttpCollabApi,
   directoryFrom,
   mergeChain,
+  fmtStamp,
   namesFrom,
   personName,
   personRole,
@@ -49,7 +50,7 @@ import {
   WriteNote,
   timelineRows,
 } from './collabKit';
-import { fmtId, fmtTime } from './v2Data';
+import { fmtId } from './v2Data';
 import './collab.css';
 
 const NS = 'agentConsole.v2.collab';
@@ -63,11 +64,13 @@ export interface CollabPageProps {
 
 type ListState =
   | { kind: 'loading' }
-  | { kind: 'ready'; rows: DelegationRow[] }
+  | { kind: 'ready'; rows: DelegationRow[]; nextCursor?: string }
   | { kind: 'empty' }
   | { kind: 'denied'; requestId?: string }
   | { kind: 'error'; requestId?: string; timeout: boolean }
   | { kind: 'auth' };
+
+type MoreState = 'idle' | 'loading' | 'error';
 
 type ChainState =
   | { kind: 'idle' }
@@ -90,6 +93,7 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
   const [fetchedAt, setFetchedAt] = useState<string | undefined>(undefined);
   const [selectedId, setSelectedId] = useState<string | undefined>(initialSelectedId);
   const [reloadToken, setReloadToken] = useState(0);
+  const [more, setMore] = useState<MoreState>('idle');
   const [chainToken, setChainToken] = useState(0);
 
   // Directory names: degraded silently — 「员工 · 末4位」 is the honest fallback.
@@ -113,6 +117,7 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
   useEffect(() => {
     let live = true;
     setList({ kind: 'loading' });
+    setMore('idle');
     collabApi
       .listDelegations()
       .then((res) => {
@@ -134,13 +139,13 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
           });
           return;
         }
-        setFetchedAt(new Date().toISOString());
+        setFetchedAt(res.data.asOf ?? new Date().toISOString());
         const rows = sortDelegations(res.data.items);
         if (!rows.length) {
           setList({ kind: 'empty' });
           return;
         }
-        setList({ kind: 'ready', rows });
+        setList({ kind: 'ready', rows, nextCursor: res.data.nextCursor ?? undefined });
         setSelectedId((current) => {
           if (current && rows.some((row) => row.delegationId === current)) return current;
           return rows[0]?.delegationId;
@@ -193,6 +198,40 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
 
   const retryList = useCallback(() => setReloadToken((n) => n + 1), []);
   const retryChain = useCallback(() => setChainToken((n) => n + 1), []);
+
+  // Cursor paging: append only, never re-sort into a different first row, so a
+  // selected delegation cannot jump under the reader's cursor.
+  const loadMore = useCallback(() => {
+    if (list.kind !== 'ready' || !list.nextCursor) return;
+    const cursor = list.nextCursor;
+    setMore('loading');
+    collabApi
+      .listDelegations(cursor)
+      .then((res) => {
+        if (res.status === 401) {
+          window.location.assign('/');
+          return;
+        }
+        if (!res.ok || !res.data || !Array.isArray(res.data.items)) {
+          setMore('error');
+          return;
+        }
+        const page = res.data;
+        if (page.asOf) setFetchedAt(page.asOf);
+        setMore('idle');
+        setList((current) => {
+          if (current.kind !== 'ready') return current;
+          const seen = new Set(current.rows.map((row) => row.delegationId));
+          const added = page.items.filter((row) => !seen.has(row.delegationId));
+          return {
+            kind: 'ready',
+            rows: [...current.rows, ...added],
+            nextCursor: page.nextCursor ?? undefined,
+          };
+        });
+      })
+      .catch(() => setMore('error'));
+  }, [collabApi, list]);
 
   return (
     <div className="a2s-page">
@@ -276,6 +315,9 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
             names={names}
             selectedId={selectedId}
             onSelect={setSelectedId}
+            nextCursor={list.kind === 'ready' ? list.nextCursor : undefined}
+            more={more}
+            onLoadMore={loadMore}
             t={t}
           />
           {selected ? (
@@ -306,6 +348,9 @@ function DelegationTable({
   names,
   selectedId,
   onSelect,
+  nextCursor,
+  more,
+  onLoadMore,
   t,
 }: {
   rows: DelegationRow[];
@@ -313,6 +358,9 @@ function DelegationTable({
   names: Map<string, string>;
   selectedId?: string;
   onSelect: (id: string) => void;
+  nextCursor?: string;
+  more: MoreState;
+  onLoadMore: () => void;
   t: TFunction;
 }) {
   return (
@@ -388,7 +436,7 @@ function DelegationTable({
                   <td data-l={t(`${NS}.list.col.updated`)} className="mono c-tm">
                     {row.updatedAt ?? row.createdAt ? (
                       <span title={row.updatedAt ?? row.createdAt}>
-                        {fmtTime((row.updatedAt ?? row.createdAt) as string)}
+                        {fmtStamp((row.updatedAt ?? row.createdAt) as string)}
                       </span>
                     ) : (
                       <span className="faint">{t(`${NS}.list.timeMissing`)}</span>
@@ -411,6 +459,25 @@ function DelegationTable({
             })}
           </tbody>
         </table>
+      </div>
+      <div className="lk-more">
+        <span className="micro">{t('agentConsole.v2.skills.loaded', { count: rows.length })}</span>
+        {nextCursor ? (
+          <button
+            type="button"
+            className="b out sm"
+            onClick={onLoadMore}
+            disabled={more === 'loading'}
+            aria-busy={more === 'loading'}
+            data-testid="collab-load-more"
+          >
+            <LkIcon name="chevD" />
+            {t('agentConsole.list.loadMore')}
+          </button>
+        ) : null}
+        {more === 'error' ? (
+          <span className="micro faint">{t('agentConsole.v2.run02.moreError')}</span>
+        ) : null}
       </div>
       <div className="card-ft">{t(`${NS}.list.foot`)}</div>
     </section>

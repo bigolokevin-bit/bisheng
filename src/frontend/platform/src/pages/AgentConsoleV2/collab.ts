@@ -15,8 +15,8 @@
  * every absolute amount stays backend-only and is never rendered here.
  *
  * Identity rule: raw ids never reach the DOM. Employee ids resolve through the
- * directory (`employeeLabelById`) and degrade to 「员工 · 末4位」, which is the
- * shared, already-localized identity fallback — never a bare `emp_…`.
+ * directory and otherwise degrade to 「员工 · 8 位大写短码」 (PRD v0.3 §1 L5) —
+ * never a bare `emp_…`.
  *
  * The write surface (accept / reject / handoff / complete) is NOT here: the
  * BFF write routes are not wired yet, so the page renders one static note and
@@ -26,7 +26,6 @@ import type { TFunction } from 'i18next';
 
 import type { EmployeeSummary } from '@/controllers/API/agent';
 
-import { employeeLabelById } from './identity';
 import { makeFetcher } from './v2Data';
 
 // ---------------------------------------------------------------- shapes
@@ -56,6 +55,10 @@ export interface DelegationRow {
 
 export interface DelegationListShape {
   items: DelegationRow[];
+  /** Server read time (ISO). Preferred over the client clock for 「读取于」. */
+  asOf?: string;
+  /** Cursor pagination; absent/null means this is the last page. */
+  nextCursor?: string | null;
 }
 
 export interface ChainItem {
@@ -82,7 +85,7 @@ export interface CollabApiResult<T> {
 }
 
 export interface CollabApi {
-  listDelegations(): Promise<CollabApiResult<DelegationListShape>>;
+  listDelegations(cursor?: string): Promise<CollabApiResult<DelegationListShape>>;
   getChain(delegationId: string): Promise<CollabApiResult<ChainShape>>;
 }
 
@@ -96,7 +99,10 @@ export interface HttpCollabApiOptions {
 export function createHttpCollabApi(options: HttpCollabApiOptions = {}): CollabApi {
   const fetcher = makeFetcher(options.base ?? '/agent-api', options.getToken);
   return {
-    listDelegations: () => fetcher<DelegationListShape>('/api/delegations'),
+    listDelegations: (cursor?: string) =>
+      fetcher<DelegationListShape>(
+        cursor ? `/api/delegations?cursor=${encodeURIComponent(cursor)}` : '/api/delegations',
+      ),
     getChain: (delegationId) =>
       fetcher<ChainShape>(`/api/delegations/${encodeURIComponent(delegationId)}/chain`),
   };
@@ -267,13 +273,52 @@ export function namesFrom(directory: EmployeeDirectory): Map<string, string> {
   return map;
 }
 
+/**
+ * PRD v0.3 §1 L5: an employee reference reads 「员工 · 8 位大写短码」, derived
+ * from the id body so two employees never collapse onto the same 4-character
+ * tail. A directory name always wins; the code is only the honest fallback.
+ */
+export function shortCode(id: string | null | undefined): string {
+  const body = (id ?? '').replace(/^emp_/i, '').replace(/[^0-9a-zA-Z]/g, '');
+  return body.slice(0, 8).toUpperCase();
+}
+
 /** Display name for an employee id; never the bare id. */
 export function personName(
   id: string | null | undefined,
   names: Map<string, string>,
   t: TFunction,
 ): string {
-  return employeeLabelById(id ?? undefined, names, t);
+  const bare = (id ?? '').trim();
+  if (!bare || /^(unknown|none|null|undefined)$/i.test(bare)) {
+    return t('agentConsole.v2.id.unknown');
+  }
+  const name = names.get(bare)?.trim();
+  if (name) return name;
+  const code = shortCode(bare);
+  return code
+    ? t('agentConsole.v2.id.employeeRef', { tail: code })
+    : t('agentConsole.v2.id.employee');
+}
+
+/**
+ * 「北京时间到分」 as one string (PRD §1 L5): `2026-11-17 20:12`. `sv-SE` already
+ * prints `YYYY-MM-DD HH:mm`; the zone is pinned, never the browser default.
+ */
+export function fmtStamp(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) return '—';
+  const out = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(ms));
+  return out.replace('T', ' ');
 }
 
 /** 「岗位」 when the directory knows it; an unknown post is simply omitted. */
