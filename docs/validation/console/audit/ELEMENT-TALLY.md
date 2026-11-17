@@ -47,3 +47,12 @@
 - 短码：`shortId` 统一中段省略（前缀+首4+…+末4，如 `tk_01M7…V1XZ`），无长度例外；完整值在 `title`/复制。
 - 1280×720：1280–1399 带 `.tblwrap{overflow:auto; max-height:calc(100vh - 240px)}` + `th{position:sticky;top:0;z-index:3}`（覆盖 listkit 的 static），可见横滑提示「可左右滑动查看全部列」；≥1400 仍 `overflow:visible` + sticky。
 - 测试：`__tests__/AuditList.test.tsx` 46 例（含 1280 契约与文案断言）。
+
+## 2026-11-18 实现侧摘要 · AUD-02（L4p4，基座 fda248d）
+
+- 本轮新增：成功态请求编号区——`head` 的 `ready` 变体补 `requestId?`，A4 成功分支写入 `res.requestId`，meta 行在 ready 时渲染 `<ReqId testId="aud02-ok-reqid" />`（缺失显「未提供」，有值可复制），与错误态/403 态的请求编号口径一致。
+- 已在基座祖先链（`c788bee`）：删除 idline 可见原值 chip（`message.send`/`employee.update` 不再上屏）；已知判定枚举不再打印「原值 …」可见行，`not_applicable`/缺失各留自身说明，未收录枚举仍原样透出。
+- 403/404：同一屏体，仅 `HTTP` 号不同，整页替换不先渲数据；`aud02-forbidden-reqid` 缺失时显「未提供」并有重试。
+- `empv_`：`shortId`/`refShort` 走中段省略，裸值在 `title`/复制（随 AUD-01 统一口径）。
+- `⋯`：行内 `RowMenu` 保留（复制事件 id / 打开 AUD-02），带 `aria-haspopup="menu"`。
+- 测试：`__tests__/AuditDetail.test.tsx` 59 例（含 403/404 同体、请求编号缺失、数字 schemaVersion、身份大小写）。

@@ -103,7 +103,7 @@ export interface AuditDetailPageProps {
 
 type Head =
   | { kind: 'loading' }
-  | { kind: 'ready'; event: AuditEventDetail; readAt: string }
+  | { kind: 'ready'; event: AuditEventDetail; readAt: string; requestId?: string }
   | { kind: 'error'; status: number; requestId?: string }
   | { kind: 'forbidden'; status: number; requestId?: string };
 
@@ -170,7 +170,12 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
         if (!live) return;
         setBusy(false);
         if (res.ok && res.data) {
-          setHead({ kind: 'ready', event: res.data, readAt: new Date().toISOString() });
+          setHead({
+            kind: 'ready',
+            event: res.data,
+            readAt: new Date().toISOString(),
+            requestId: res.requestId,
+          });
           return;
         }
         if (res.status === 401) {
@@ -250,6 +255,12 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
       </span>
       <span className="faint">·</span>
       <span>{t('agentConsole.v2.aud02.freshNoPolling')}</span>
+      {head.kind === 'ready' ? (
+        <>
+          <span className="faint">·</span>
+          <ReqId requestId={head.requestId} testId="aud02-ok-reqid" />
+        </>
+      ) : null}
     </div>
   );
 
