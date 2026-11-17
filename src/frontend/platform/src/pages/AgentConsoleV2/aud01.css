@@ -899,11 +899,19 @@
 
 /* ---------- 断点（§4.2）：1400 sticky 门槛 / 1024 单列 / 768 行卡 ---------- */
 @media (min-width: 1280px) and (max-width: 1399px) {
+  /* The 12-column table is 1282px wide here, so the wrapper is the scroller:
+     horizontal for the extra columns, vertical for the body — the header stays
+     inside the visible area (sticky) and the hint below says how to scroll. */
   .agent-app .lk.aud01 .tblwrap {
-    overflow-x: auto;
+    overflow: auto;
+    max-height: calc(100vh - 240px);
   }
   .agent-app .lk.aud01 .tbl th {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: hsl(var(--card));
+    box-shadow: inset 0 -1px 0 var(--hairline);
   }
   .agent-app .lk.aud01 .tblhint {
     display: inline-flex;
