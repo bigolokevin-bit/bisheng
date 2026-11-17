@@ -272,8 +272,8 @@ export function hasSkew(event: AuditEventDetail): boolean {
 // ---------- labels ----------
 
 /** `schemaVersion` as shown in the chip: `v1` for both `1` and `v1`. */
-export function schemaLabel(version: string | undefined): string {
-  const v = (version ?? '').trim();
+export function schemaLabel(version: string | number | null | undefined): string {
+  const v = String(version ?? '').trim();
   if (!v) return '';
   return /^v/i.test(v) ? v : `v${v}`;
 }

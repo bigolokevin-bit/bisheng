@@ -53,7 +53,7 @@ import type { AgentConsoleApi } from '@/controllers/API/agent';
 import zhHans from '../../../../public/locales/zh-Hans/bs.json';
 import { AuditDetailPage } from '../AuditDetailPage';
 import { AuditEventRow } from '../AuditEventRow';
-import { createHttpAuditDetailApi, pickEvent, type AuditDetailApi } from '../aud02';
+import { createHttpAuditDetailApi, pickEvent, schemaLabel, type AuditDetailApi } from '../aud02';
 import type { AuditEvent, AuditVerifyResult } from '../aud01';
 
 // ---------------------------------------------------------------- fixtures
@@ -776,5 +776,56 @@ describe('AUD-01 row → AUD-02 (the disabled entry is gone)', () => {
     expect(screen.getByTestId(`aud01-task-jump-${EVENT_ID}`).getAttribute('href')).toBe(
       `/agent/tasks/${encodeURIComponent(TASK_ID)}`,
     );
+  });
+});
+
+// ---------------------------------------------------- numeric schemaVersion (QA-1)
+
+describe('AUD-02 — numeric schemaVersion tolerance (BFF A4 returns a number)', () => {
+  it('schemaLabel maps 1 and 0 to chips, and keeps the neutral empty for blanks', () => {
+    expect(schemaLabel(1)).toBe('v1');
+    expect(schemaLabel(0)).toBe('v0');
+    expect(schemaLabel('v1')).toBe('v1');
+    expect(schemaLabel('1')).toBe('v1');
+    expect(schemaLabel(null)).toBe('');
+    expect(schemaLabel(undefined)).toBe('');
+    expect(schemaLabel('  ')).toBe('');
+  });
+
+  it('the detail page renders a numeric schemaVersion without crashing', async () => {
+    renderPage({ api: makeApi({ ok: true, event: event({ schemaVersion: 1 }) }) });
+    await waitReady();
+    expect(screen.getByTestId('aud02-detail')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('该页加载失败');
+  });
+
+  it('the integrity card still shows v1 for a numeric schemaVersion', async () => {
+    renderPage({ api: makeApi({ ok: true, event: event({ schemaVersion: 1 }) }) });
+    await waitReady();
+    const card = screen.getByTestId('aud02-card-integrity');
+    expect(card.textContent).toContain('v1');
+  });
+
+  it('a list row tolerates a numeric schemaVersion', () => {
+    const tRow = (key: string) => key;
+    render(
+      <table>
+        <tbody>
+          <AuditEventRow event={event({ schemaVersion: 1 })} t={tRow} />
+        </tbody>
+      </table>,
+    );
+    expect(screen.getByTestId(`aud01-row-${EVENT_ID}`)).toBeTruthy();
+  });
+
+  it('the 404 screen keeps its retry button and request id (E11)', async () => {
+    const api = makeApi({ ok: false, status: 404, requestId: 'req-e11-404' });
+    renderPage({ api });
+    await screen.findByTestId('aud02-forbidden');
+    const retry = screen.getByTestId('aud02-forbidden-retry');
+    expect(retry.tagName).toBe('BUTTON');
+    expect(screen.getByTestId('aud02-forbidden-reqid').textContent).toContain('req-e11-404');
+    fireEvent.click(retry);
+    await waitFor(() => expect(api.getEvent).toHaveBeenCalledTimes(2));
   });
 });

@@ -47,7 +47,7 @@ export interface AuditError {
  */
 export interface AuditEvent {
   eventId: string;
-  schemaVersion: string;
+  schemaVersion: string | number;
   tenantId: string;
   occurredAt: string;
   recordedAt: string;
