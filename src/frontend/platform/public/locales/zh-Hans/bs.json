@@ -4871,7 +4871,7 @@
       "navSkills": "技能治理",
       "shellAccountAnonymous": "未登录",
       "shellCollapseNav": "折叠导航",
-      "envPilot": "本地试点",        "shellSearchOff": "全局搜索暂不可用（没有搜索服务）",
+      "envPilot": "本地试点",        "shellSearchOff": "搜索暂不可用",
 
       "shellPageError": "该页加载失败",
       "shellPageErrorHint": "可点击重试；持续失败请记录 request id 反馈。",
@@ -7042,7 +7042,7 @@
         "employeeLabel": "数字员工",
         "updatedLabel": "最近更新",
         "inputAria": "消息输入框",
-        "placeholder": "输入消息，Enter 发送，Shift+Enter 换行",
+        "placeholder": "输入消息…",
         "composerHint": "Enter 发送，Shift+Enter 换行",
         "send": "发送",
         "sending": "发送中…",
@@ -7066,7 +7066,10 @@
         "deniedThreadTitle": "无法查看该会话",
         "backToList": "返回会话列表",
         "authHint": "请重新登录后再试。",
-        "noSessionsHint": "有会话后，这里会显示对话内容。"
+        "noSessionsHint": "有会话后，这里会显示对话内容。",
+        "sessionMissingTitle": "该会话打不开",
+        "sessionMissing": "该会话不在本次读取范围内，可能已删除或链接失效。",
+        "listEmptyGo": "去数字员工页选择一位员工开始对话"
       },
       "collab": {
         "title": "协作视图",

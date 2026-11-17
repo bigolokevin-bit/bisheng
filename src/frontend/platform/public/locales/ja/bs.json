@@ -4871,7 +4871,7 @@
       "navSkills": "スキル管理",
       "shellAccountAnonymous": "未ログイン",
       "shellCollapseNav": "ナビゲーションをたたむ",
-      "envPilot": "ローカル試行",        "shellSearchOff": "グローバル検索は現在利用できません（検索サービスなし）",
+      "envPilot": "ローカル試行",        "shellSearchOff": "検索は利用できません",
 
       "shellPageError": "このページの読み込みに失敗しました",
       "shellPageErrorHint": "再試行できます。持续失败の場合は request id を控えてください。",
@@ -6925,7 +6925,7 @@
         "employeeLabel": "デジタル従業員",
         "updatedLabel": "最終更新",
         "inputAria": "メッセージ入力",
-        "placeholder": "メッセージを入力。Enter で送信、Shift+Enter で改行",
+        "placeholder": "メッセージを入力…",
         "composerHint": "Enter で送信、Shift+Enter で改行",
         "send": "送信",
         "sending": "送信中…",
@@ -6949,7 +6949,10 @@
         "deniedThreadTitle": "この会話を表示できません",
         "backToList": "セッション一覧に戻る",
         "authHint": "再度ログインしてからお試しください。",
-        "noSessionsHint": "セッションができると、ここに会話が表示されます。"
+        "noSessionsHint": "セッションができると、ここに会話が表示されます。",
+        "sessionMissingTitle": "この会話は開けません",
+        "sessionMissing": "その会話は今回読み込んだ範囲にありません。削除されたか、リンクが無効になっています。",
+        "listEmptyGo": "デジタル従業員ページで従業員を選んで会話をはじめます"
       },
       "collab": {
         "title": "コラボレーション",

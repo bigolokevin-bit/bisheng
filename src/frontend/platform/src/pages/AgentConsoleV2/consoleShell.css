@@ -392,7 +392,11 @@
     flex-direction: row;
     align-items: stretch;
     gap: 4px;
-    padding: 8px 10px;
+    /* VG D3: the last entry used to sit flush against the viewport edge and
+     * lose half a glyph. Breathing room on both ends, and the fade is wider
+     * than the padding so no label hides under it. */
+    padding: 8px 18px;
+    scroll-padding-inline: 18px;
     border-right: 0;
     border-bottom: 1px solid var(--hairline);
     overflow-x: auto;
@@ -403,15 +407,15 @@
     -webkit-mask-image: linear-gradient(
       90deg,
       transparent 0,
-      #000 10px,
-      #000 calc(100% - 10px),
+      #000 18px,
+      #000 calc(100% - 18px),
       transparent 100%
     );
     mask-image: linear-gradient(
       90deg,
       transparent 0,
-      #000 10px,
-      #000 calc(100% - 10px),
+      #000 18px,
+      #000 calc(100% - 18px),
       transparent 100%
     );
   }
@@ -451,6 +455,14 @@
     align-self: center;
   }
 
+  /* VG D3: the topbar repeats the account glyph with no label beside it, and
+   * on a narrow screen that lone circle read as a stray control. The rail
+   * already carries the account, so the decorative glyph steps out below 767.
+   * Shell.tsx is the integration lane's file, so this is CSS-scope only. */
+  .agent-app .a2s-topbar .a2s-ava {
+    display: none;
+  }
+
   .agent-app .a2s-railhint {
     display: inline-flex;
     align-items: center;
@@ -458,11 +470,14 @@
     font-size: 10.5px;
     color: hsl(var(--micro-foreground));
     flex: none;
-    padding: 0 6px 0 14px;
+    padding: 0 8px 0 14px;
     align-self: center;
-    position: sticky;
-    right: 0;
-    background: hsl(var(--background));
+    /* VG D3: sticky inside the scrolling strip let the capsule float on top of
+     * the entries and clip its own border at the edge. It now rides along as
+     * the last item with its own margin. */
+    position: static;
+    margin-left: 4px;
+    background: transparent;
   }
 
   .agent-app .a2s-topbar {

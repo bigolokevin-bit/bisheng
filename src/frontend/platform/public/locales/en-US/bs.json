@@ -4926,7 +4926,7 @@
       "navSkills": "Skills",
       "shellAccountAnonymous": "Signed out",
       "shellCollapseNav": "Collapse navigation",
-      "envPilot": "Local pilot",        "shellSearchOff": "Global search is not available (no search service)",
+      "envPilot": "Local pilot",        "shellSearchOff": "Search is unavailable",
 
       "shellPageError": "This page failed to load",
       "shellPageErrorHint": "Retry is available; if it keeps failing, note the request id.",
@@ -7097,7 +7097,7 @@
         "employeeLabel": "Digital employee",
         "updatedLabel": "Updated",
         "inputAria": "Message input",
-        "placeholder": "Type a message — Enter to send, Shift+Enter for a new line",
+        "placeholder": "Type a message…",
         "composerHint": "Enter to send, Shift+Enter for a new line",
         "send": "Send",
         "sending": "Sending…",
@@ -7121,7 +7121,10 @@
         "deniedThreadTitle": "Cannot view this conversation",
         "backToList": "Back to sessions",
         "authHint": "Sign in again and retry.",
-        "noSessionsHint": "Once a session exists, its conversation will appear here."
+        "noSessionsHint": "Once a session exists, its conversation will appear here.",
+        "sessionMissingTitle": "This session cannot be opened",
+        "sessionMissing": "That session is not among the ones this page read. It may have been deleted, or the link is stale.",
+        "listEmptyGo": "Pick an employee on the digital-employee page to start a chat"
       },
       "collab": {
         "title": "Collaboration",

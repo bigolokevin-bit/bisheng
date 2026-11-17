@@ -21,6 +21,7 @@ interface ChatThreadProps {
   messages: ChatMessageRow[];
   sessionId: string | null;
   emptyList: boolean;
+  deepMissing: boolean;
   onRetry: () => void;
   onBack: () => void;
 }
@@ -32,6 +33,7 @@ export function ChatThread({
   messages,
   sessionId,
   emptyList,
+  deepMissing,
   onRetry,
   onBack,
 }: ChatThreadProps) {
@@ -62,11 +64,31 @@ export function ChatThread({
         </header>
       ) : null}
 
-      {state === 'idle' ? (
+      {state === 'idle' && deepMissing ? (
+        <div
+          className="cchat-placeholder"
+          data-testid="agent-v2-chat-thread-missing"
+        >
+          <h3 className="a2-h2">{t(`${ns}.sessionMissingTitle`)}</h3>
+          <p className="a2-meta">{t(`${ns}.sessionMissing`)}</p>
+          <div>
+            <button
+              type="button"
+              className="a2-btn"
+              onClick={onBack}
+              data-testid="agent-v2-chat-thread-missing-back"
+            >
+              {t(`${ns}.backToList`)}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {state === 'idle' && !deepMissing ? (
         <div className="cchat-placeholder" data-testid="agent-v2-chat-idle">
-          <h3 className="a2-h2">
-            {emptyList ? t(`${ns}.listEmptyTitle`) : t(`${ns}.selectHint`)}
-          </h3>
+          {emptyList ? null : (
+            <h3 className="a2-h2">{t(`${ns}.selectHint`)}</h3>
+          )}
           <p className="a2-meta">
             {emptyList ? t(`${ns}.noSessionsHint`) : t(`${ns}.threadHint`)}
           </p>

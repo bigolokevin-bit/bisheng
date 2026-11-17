@@ -346,3 +346,57 @@
     padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   }
 }
+/* ── CHAT-01 VG D4 / D5 ──────────────────────────────────────────────────
+ * D4: the send button looked the same muted outline whether it was live or
+ * not, and the small print sat under the readable floor. Enabled = filled
+ * accent, disabled = a readable outline; card edges, the subtitle and the
+ * empty-state note move up a notch in both themes, and the Beijing-time line
+ * stops being smaller than body copy.
+ * D5: when both columns are empty they take their content height and the
+ * composer stops sticking to the bottom of a half-empty screen.
+ * Only tokens this file already uses. */
+.agent-app .cchat-composer-foot .a2-btn.is-primary {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: hsl(var(--foreground));
+}
+
+.agent-app .cchat-composer-foot .a2-btn.is-primary[disabled] {
+  background: transparent;
+  border-color: var(--border);
+  color: hsl(var(--muted-foreground));
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.agent-app .cchat-list,
+.agent-app .cchat-thread {
+  border-color: var(--border);
+}
+
+.agent-app .cchat-head .a2-meta,
+.agent-app .cchat-placeholder .a2-meta {
+  color: hsl(var(--foreground) / 0.82);
+}
+
+.agent-app .cchat-head .a2-micro {
+  font-size: 12px;
+  color: hsl(var(--foreground) / 0.72);
+}
+
+.agent-app .cchat-shell.is-idle {
+  align-items: stretch;
+}
+
+.agent-app .cchat-shell.is-idle .cchat-thread {
+  min-height: 0;
+}
+
+.agent-app .cchat-shell.is-idle .cchat-composer {
+  position: static;
+  margin-top: 12px;
+}
+
+.agent-app .cchat-shell.is-idle .cchat-placeholder {
+  justify-content: flex-start;
+}

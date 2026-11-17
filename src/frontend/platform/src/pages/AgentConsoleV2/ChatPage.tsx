@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import type {
   ChatApi,
@@ -86,7 +86,21 @@ export default function ChatPage({ api }: ChatPageProps = {}) {
       setItems(rows);
       setListFailure(null);
       setListState(rows.length > 0 ? 'ready' : 'empty');
-      setSelected((prev) => pickSessionId(rows, prev));
+      setSelected((prev) => {
+        /* Leg 5: a deep link the list does not contain must not be traded for
+         * the newest row. Dropping the selection leaves the thread pane idle,
+         * which is where the neutral notice renders. linkedSession is read
+         * from the address on every render, so it is deliberately not added
+         * to the effect deps: the list must not re-fetch on navigation. */
+        if (
+          linkedSession &&
+          prev === linkedSession &&
+          !rows.some((r) => r.sessionId === linkedSession)
+        ) {
+          return null;
+        }
+        return pickSessionId(rows, prev);
+      });
     });
     return () => {
       alive = false;
@@ -155,6 +169,19 @@ export default function ChatPage({ api }: ChatPageProps = {}) {
 
   const composerDisabled = threadState !== 'ready';
 
+  /* Leg 5: a deep link that is not in the loaded list must not fall back
+   * silently. pickSessionId() swaps the id out, so the mismatch below is the
+   * honest signal that the address points at nothing we actually read. */
+  const deepMissing =
+    Boolean(linkedSession) &&
+    selected !== linkedSession &&
+    (listState === 'ready' || listState === 'empty');
+
+  /* D5: with both panes empty there is nothing to stretch. Let the columns
+   * take their content height instead of floating a half-page card over a
+   * blank column and a composer glued to the bottom. */
+  const idleLayout = listState === 'empty' || threadState === 'idle';
+
   return (
     <div className="a2s-page cchat-page" data-testid="agent-v2-page-chat">
       <header className="cchat-head">
@@ -219,7 +246,7 @@ export default function ChatPage({ api }: ChatPageProps = {}) {
       ) : null}
 
       {listState === 'ready' || listState === 'empty' ? (
-        <div className="cchat-shell">
+        <div className={idleLayout ? 'cchat-shell is-idle' : 'cchat-shell'}>
           <aside
             className="a2-card cchat-list"
             aria-label={t(`${ns}.listAria`)}
@@ -235,6 +262,13 @@ export default function ChatPage({ api }: ChatPageProps = {}) {
               <div className="cchat-placeholder is-list" data-testid="agent-v2-chat-list-empty">
                 <h3 className="a2-h2">{t(`${ns}.listEmptyTitle`)}</h3>
                 <p className="a2-meta">{t(`${ns}.listEmptyHint`)}</p>
+                <Link
+                  to="/agent/employees"
+                  className="a2-btn"
+                  data-testid="agent-v2-chat-list-empty-go"
+                >
+                  {t(`${ns}.listEmptyGo`)}
+                </Link>
               </div>
             ) : (
               <ul className="cchat-rows" role="list">
@@ -270,6 +304,7 @@ export default function ChatPage({ api }: ChatPageProps = {}) {
               messages={messages}
               sessionId={selected}
               emptyList={listState === 'empty'}
+              deepMissing={deepMissing}
               onRetry={retryThread}
               onBack={backToList}
             />
