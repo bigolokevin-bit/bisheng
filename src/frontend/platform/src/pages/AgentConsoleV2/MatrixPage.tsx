@@ -12,7 +12,7 @@
  * Zero engineering language on screen: HTTP status only ever appears as an
  * interpolation argument inside a human sentence (same G15 stance as APR-01);
  * no field names, no error codes, no UTC stamps (fmtTime is Asia/Shanghai).
- * Money goes through fmtUsd only — never ¥/元.
+ * Money goes through fmtUsd only — never CNY glyphs.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';

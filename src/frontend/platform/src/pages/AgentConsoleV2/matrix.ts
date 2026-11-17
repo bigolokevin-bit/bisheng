@@ -11,7 +11,7 @@
  * - unknown enum values pass through verbatim (no machine translation);
  * - budget honesty (fork main a57232b): a null budget object shows '—',
  *   a configured-but-partial field shows 「未配置」, never USD 0.00;
- * - money formatting goes through fmtUsd only ('USD 120.00'), never ¥/元.
+ * - money formatting goes through fmtUsd only ('USD 120.00'), never CNY glyphs.
  */
 
 export const MATRIX_LIFECYCLES = [

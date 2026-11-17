@@ -1,0 +1,20 @@
+# 未跟踪的 compose 覆写（总控裁定 A 路径1）：全部宿主发布端口改绑 127.0.0.1（loopback）。
+# !override 取代（而非追加）上游 docker-compose.yml 的 ports 列表（用 !override 整体替换上游 ports（!reset 在本 compose 版本语义=清空，实测教训））。
+# 若 lima/colima 转发仍显示 *:port，则本文件保留但改走防火墙路径（ops/firewall.sh）。
+services:
+  mysql:
+    ports: !override ["127.0.0.1:3306:3306"]
+  openfga:
+    ports: !override ["127.0.0.1:8080:8080", "127.0.0.1:8081:8081", "127.0.0.1:2112:2112"]
+  redis:
+    ports: !override ["127.0.0.1:6379:6379"]
+  backend:
+    ports: !override ["127.0.0.1:7860:7860"]
+  frontend:
+    ports: !override ["127.0.0.1:3001:3001"]
+  elasticsearch:
+    ports: !override ["127.0.0.1:9200:9200", "127.0.0.1:9300:9300"]
+  minio:
+    ports: !override ["127.0.0.1:9100:9000"]
+  milvus:
+    ports: !override ["127.0.0.1:19530:19530", "127.0.0.1:9091:9091"]
