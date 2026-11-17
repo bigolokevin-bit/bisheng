@@ -220,8 +220,10 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(screen.getByTestId('agent-v2-rd-poll').textContent).toBe('已结束 · 停止刷新');
     expect(screen.getByTestId('agent-v2-rd-seq').textContent).toBe('12');
     expect(fresh.textContent).toContain('只读详情，不提供中止、重跑、续跑与导出');
-    expect(fresh.textContent).toContain('GET /api/run-detail');
-    expect(fresh.textContent).toContain('GET /api/run-events');
+    /* Q2: no endpoints or run-phase codes on screen; only the human caliber. */
+    expect(fresh.textContent).not.toContain('GET /api');
+    expect(fresh.textContent).not.toContain('R2');
+    expect(fresh.textContent).not.toContain('R3');
   });
 
   it('E07/E10: eight fields + wide governance; tenantId never reaches the DOM', async () => {
@@ -242,7 +244,9 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(screen.getByTestId('agent-v2-rd-f-end').textContent).toContain('11-16 08:56');
 
     const gov = screen.getByTestId('agent-v2-rd-gov');
-    expect(gov.textContent).toContain(RUN_ID);
+    /* Q2: the raw run id stays in the copy buffer/title, never as body text. */
+    expect(gov.textContent).not.toContain(RUN_ID);
+    expect(gov.textContent).toContain('…');
     expect(gov.textContent).toContain('run_4b0c…b61dae');
     expect(gov.textContent).toContain('pss_9f2…4b86');
     expect(gov.textContent).toContain('执行引擎侧 ID，对账用');
@@ -330,18 +334,18 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(within(sm).queryAllByRole('button')).toHaveLength(0);
 
     expect(screen.getByTestId('agent-v2-rd-reason').textContent).toBe('执行引擎报告完成');
-    expect(screen.getByTestId('agent-v2-rd-reason').parentElement?.textContent).toContain(
+    expect(screen.getByTestId('agent-v2-rd-reason').parentElement?.textContent).not.toContain(
       'run.upstream_completed',
     );
   });
 
-  it('E20/E22: an unlisted reason stays raw; a terminal run without a code shows none', async () => {
+  it('E20/E22: an unlisted reason is a human fallback, never the raw code; a terminal run without a code shows none', async () => {
     const api = makeApi({ run: makeRun({ reasonCode: 'run.mystery_code' }) });
     const first = renderPage(api);
     await waitReady();
     const reason = screen.getByTestId('agent-v2-rd-reason');
     expect(reason.textContent).toBe('原因码未收录');
-    expect(reason.parentElement?.textContent).toContain('run.mystery_code');
+    expect(reason.parentElement?.textContent).not.toContain('run.mystery_code');
     first.unmount();
 
     renderPage(makeApi({ run: makeRun({ reasonCode: null }) }));
@@ -520,7 +524,7 @@ describe('RUN-02 — no-event and failure states', () => {
     expect(empty.textContent).toContain('这次运行没有事件');
     expect(empty.textContent).toContain('本页不会补出假步骤、也不会把它判成失败');
     expect(screen.getByTestId('agent-v2-rd-empty-retry').textContent).toContain('重新拉取');
-    expect(screen.getByTestId('agent-v2-rd-fresh').textContent).toContain('事件流未发起请求（暂无事件）');
+    expect(screen.getByTestId('agent-v2-rd-fresh').textContent).not.toContain('未发起请求');
     const duration = screen.getByTestId('agent-v2-rd-f-duration');
     expect(duration.textContent).toContain('未开始，不编数字');
     expect(duration.textContent).toContain('—');

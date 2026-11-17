@@ -682,12 +682,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
           <span className="faint" aria-hidden="true">
             ·
           </span>
-          <span>
-            {t('agentConsole.v2.run02.source')} <span className="mono">GET /api/run-detail</span> (R2)
-            <span className="mono"> + GET /api/run-events</span> (R3)
-            {run.lastEventSeq <= 0 ? ` · ${t('agentConsole.v2.run02.sourceNoEvents')}` : ''}
-            {` · ${t('agentConsole.v2.run02.sourceReadonly')}`}
-          </span>
+          <span>{t('agentConsole.v2.run02.sourceReadonly')}</span>
         </div>
 
         {pollLost ? (
@@ -901,7 +896,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                   <span className="a2r-gk">{t('agentConsole.v2.run02.govRunId')}</span>
                   <CopyId
                     value={run.runId}
-                    display={run.runId}
+                    display={shortRunId(run.runId)}
                     ariaLabel={t('agentConsole.v2.run02.copyRunId')}
                     copiedLabel={t('agentConsole.v2.run02.copied')}
                     testId="agent-v2-rd-gov-runid"
@@ -1188,8 +1183,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                       {REASON_KEYS[run.reasonCode]
                         ? t(REASON_KEYS[run.reasonCode])
                         : t('agentConsole.v2.run02.reasonUnknown')}
-                    </span>{' '}
-                    <span className="mono a2r-raw">{run.reasonCode}</span>
+                    </span>
                   </KVRow>
                 ) : null}
                 <KVRow k={t('agentConsole.v2.run02.interruptLabel')}>
