@@ -84,3 +84,11 @@
 @media (max-width: 900px) {
   .agent-app .ov-page .ov-entryrow { grid-template-columns: minmax(0, 1fr); }
 }
+/* 375: the four KPI cards wrap to one per row instead of squeezing a
+ * 28px money value into a half-width card. The shared 4→2×2 rule stays
+ * untouched (read-only surface); this only stops clipping on phones. */
+@media (max-width: 420px) {
+  .agent-app .ov-page .ov-kpis { grid-template-columns: minmax(0, 1fr); }
+  .agent-app .ov-page .ov-kpi { min-width: 0; }
+  .agent-app .ov-page .ov-kpi .ov-v { overflow-wrap: anywhere; }
+}

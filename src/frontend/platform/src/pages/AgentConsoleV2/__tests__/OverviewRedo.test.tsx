@@ -71,16 +71,17 @@ function bodyFor(url: string): unknown {
   if (url.includes('/api/employee-stats')) return { total: 2, byLifecycle: { active: 2 } };
   if (url.includes('/api/approval-stats')) return { pending: 0, dueSoon: 0 };
   if (url.includes('/api/run-stats')) {
-    // current window: 14 runs = 13 succeeded + 0 failed + 1 running/unknown
-    // (prev window answers the same; the residual is what the page locks).
-    if (url.includes('from=') && decodeURIComponent(url).includes('from=20')) {
+    // Today's KPI uses a Beijing-day window (from < 2 days ago); the 7-day
+    // spark and the 28-day trend keep the wider fixture.
+    const from = new URL(url, 'http://localhost').searchParams.get('from');
+    const fromMs = from ? Date.parse(from) : Number.NaN;
+    if (Number.isFinite(fromMs) && Date.now() - fromMs < 2 * 86400000) {
       return {
-        buckets: [
-          { bucketStart: dayAgo(3), runs: 1, succeeded: 1, failed: 0, costUsd: 0.01 },
-          { bucketStart: dayAgo(0), runs: 13, succeeded: 12, failed: 0, costUsd: 0.12 },
-        ],
+        buckets: [{ bucketStart: dayAgo(0), runs: 5, succeeded: 4, failed: 1, costUsd: 0.05 }],
       };
     }
+    // current window: 14 runs = 13 succeeded + 0 failed + 1 running/unknown
+    // (the residual is what the summary and trend foot lock).
     return {
       buckets: [
         { bucketStart: dayAgo(3), runs: 1, succeeded: 1, failed: 0, costUsd: 0.01 },
@@ -103,8 +104,8 @@ function bodyFor(url: string): unknown {
   if (url.includes('/api/budget-usage')) {
     return {
       items: [
-        { employeeId: EMP_A.employeeId, period: '2026-11', periodKind: 'month', costUsd: 0.12, updatedAt: dayAgo(0) },
-        { employeeId: EMP_B.employeeId, period: '2026-11', periodKind: 'month', costUsd: 0.01, updatedAt: dayAgo(0) },
+        { employeeId: EMP_A.employeeId, period: '2026-11-17', periodKind: 'day', costUsd: 0.05, updatedAt: dayAgo(0) },
+        { employeeId: EMP_B.employeeId, period: '2026-11-17', periodKind: 'day', costUsd: 0.01, updatedAt: dayAgo(0) },
       ],
       missingEmployeeIds: [],
     };
@@ -183,18 +184,17 @@ describe('OV-01 redo', () => {
     }
   });
 
-  it('spells the running/unknown residual identically in KPI, summary and trend foot', async () => {
+  it('spells the running/unknown residual identically in summary and trend foot', async () => {
     stubFetch();
     renderOverview();
-    const unknown = await screen.findByTestId('agent-v2-ov-kpi-runs-unknown');
-    // 14 = 12 + 0 + (1 + 1 residual from the second bucket) → residual math:
-    // runs 14 - succeeded 13 - failed 0 = 1 running/unknown.
-    expect(unknown.textContent).toContain('1 条运行中/未知');
-    const summary = await screen.findByTestId('agent-v2-ov-trend-summary');
+    await screen.findByTestId('agent-v2-ov-trend-summary');
+    const summary = screen.getByTestId('agent-v2-ov-trend-summary');
     expect(summary.textContent).toContain('1 条运行中/未知');
     const foot = screen.getByTestId('agent-v2-ov-trend-foot');
     expect(foot.textContent).toContain('1 条运行中/未知（计入总数 14）');
-    expect(screen.getByTestId('agent-v2-ov-kpi-runs').textContent).toContain('14');
+    // KPI-02 now counts TODAY only (5 runs in the fixture), not the 7-day 14.
+    expect(screen.getByTestId('agent-v2-ov-kpi-runs').textContent).toContain('5');
+    expect(screen.getByTestId('agent-v2-ov-kpi-runs').textContent).toContain('今日运行');
   });
 
   it('queue: completed tasks never render as actionable; zero rows state the affordance', async () => {
