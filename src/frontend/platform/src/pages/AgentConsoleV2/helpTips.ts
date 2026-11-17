@@ -13,6 +13,24 @@
  */
 
 export const HELP_TERMS = [
+  /** AUD-01: why a read-only page has no export/modify entry at all. */
+  'readonlyBanner',
+  /** AUD-01: which actions enter the chain (prefix table lives backend-only). */
+  'criticalChain',
+  /** AUD-01: occurred_at closed/closed vs recorded_at half-open. */
+  'twoWindows',
+  /** AUD-01: the four conditions that allow a green chain verdict. */
+  'greenGate',
+  /** AUD-01: employee queries must pick a side (actor vs resource). */
+  'empDimension',
+  /** AUD-01: occurredAt vs recordedAt drift is a data-quality signal. */
+  'clockSkew',
+  /** AUD-01: `deny` (decision) is not `denied` (outcome). */
+  'decisionPair',
+  /** AUD-01: the four outcome values. */
+  'outcomeEnum',
+  /** AUD-01: the shown time is not the sort key; no column sorting. */
+  'timeColumn',
   /** APR-02: hash of the change target this approval was raised for. */
   'targetHash',
   /** APR-02: digest of the message body the approval covers. */

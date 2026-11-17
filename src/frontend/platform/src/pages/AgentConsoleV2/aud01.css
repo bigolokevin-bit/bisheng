@@ -1,0 +1,1006 @@
+/*
+ * AUD-01 `/agent/audit` page layer (aud01-target.html §1.3–§1.8 geometry).
+ *
+ * Everything is scoped under `.agent-app .lk.aud01`, so the shared list suite
+ * (.lk) keeps its RUN/TSK geometry and only this page overrides what the
+ * 12-column target requires: table min-width 1262 and the 1400 sticky gate
+ * (1280 would overflow by 87px on 12 columns), row expansion, verify panel,
+ * read-only banner, row cards at <768.
+ * Colours resolve through the existing token block — no new hex values.
+ */
+
+.agent-app .lk.aud01 {
+  --lk-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+}
+
+.agent-app .lk.aud01 .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- 页级只读边界 banner（§1.3） ---------- */
+.agent-app .lk.aud01 .roband {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud01 .roband .lk-i {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud01 .roband b {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  margin-right: 2px;
+}
+.agent-app .lk.aud01 .roband .sp {
+  flex: 1;
+}
+.agent-app .lk.aud01 .roband .mono {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+/* ---------- 链校验面板（A7，§1.4/§1.6） ---------- */
+.agent-app .lk.aud01 .chain01 {
+  padding: 0;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .chain01-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud01 .chain01-hd .t {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.agent-app .lk.aud01 .chain01-hd .t .lk-i {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk.aud01 .chain01-hd .c {
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: hsl(var(--surface));
+}
+.agent-app .lk.aud01 .chain01-hd .sp,
+.agent-app .lk.aud01 .chain01-win .sp {
+  flex: 1;
+}
+.agent-app .lk.aud01 .hd-note {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 17px;
+}
+.agent-app .lk.aud01 .chain01-pre {
+  padding: 0 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agent-app .lk.aud01 .chain01-pre p {
+  margin: 0;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 17px;
+  display: flex;
+  gap: 7px;
+}
+.agent-app .lk.aud01 .chain01-pre p .n {
+  font-size: 10.5px;
+  line-height: 17px;
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .lk.aud01 .chain01-win {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud01 .chain01-win .lb {
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud01 .chain01-win .win-range {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk.aud01 .seg.sm button {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  min-width: 44px;
+  justify-content: center;
+}
+
+/* 五态（S0 中性 / S1 success / S2 warning / S3 danger / S4 danger 图标底） */
+.agent-app .lk.aud01 .cv {
+  margin: 0 20px 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border: 1px solid transparent;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .cv .top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud01 .cv .ic {
+  width: 28px;
+  height: 28px;
+  border-radius: 99px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: hsl(var(--surface-2));
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud01 .cv .h {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.agent-app .lk.aud01 .cv .s {
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  line-height: 18px;
+}
+.agent-app .lk.aud01 .cv .nums {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud01 .cv .big {
+  font: 600 32px/38px var(--lk-mono);
+  font-variant-numeric: tabular-nums;
+}
+.agent-app .lk.aud01 .cv .unit {
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk.aud01 .cv .tail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 9px;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .lk.aud01 .cv .tail .kv {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud01 .cv .tail .kv .k {
+  min-width: 96px;
+  flex: none;
+}
+.agent-app .lk.aud01 .cv.s0 {
+  border-color: var(--hairline);
+}
+.agent-app .lk.aud01 .cv.s0 .ic {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk.aud01 .cv.s1 {
+  border-color: hsl(var(--success) / 0.42);
+}
+.agent-app .lk.aud01 .cv.s1 .ic {
+  background: hsl(var(--success) / 0.14);
+  color: hsl(var(--success));
+}
+.agent-app .lk.aud01 .cv.s1 .h {
+  color: hsl(var(--success));
+}
+.agent-app .lk.aud01 .cv.s2 {
+  border-color: hsl(var(--warning) / 0.42);
+}
+.agent-app .lk.aud01 .cv.s2 .ic {
+  background: hsl(var(--warning) / 0.14);
+  color: hsl(var(--warning));
+}
+.agent-app .lk.aud01 .cv.s2 .h {
+  color: hsl(var(--warning));
+}
+.agent-app .lk.aud01 .cv.s3 {
+  border-color: hsl(var(--danger) / 0.42);
+}
+.agent-app .lk.aud01 .cv.s3 .ic,
+.agent-app .lk.aud01 .cv.s4 .ic {
+  background: hsl(var(--danger) / 0.14);
+  color: hsl(var(--danger));
+}
+.agent-app .lk.aud01 .cv.s3 .h {
+  color: hsl(var(--danger));
+}
+.agent-app .lk.aud01 .blist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+.agent-app .lk.aud01 .bitem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud01 .bitem .tg {
+  font-size: 10.5px;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  color: hsl(var(--accent));
+  background: var(--accent-soft);
+  padding: 2px 6px;
+  border-radius: 5px;
+  flex: none;
+}
+.agent-app .lk.aud01 .acts2 {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ---------- 筛选条补充（§1.5 F2/F3 + 自定义窗口） ---------- */
+.agent-app .lk.aud01 .fsearch {
+  height: 32px;
+  flex: 1 1 260px;
+  max-width: 340px;
+  min-width: 180px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: hsl(var(--surface));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: hsl(var(--muted-foreground));
+  font-size: 12.5px;
+}
+.agent-app .lk.aud01 .fsearch input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  color: hsl(var(--foreground));
+  font-size: 12.5px;
+  font-family: inherit;
+}
+.agent-app .lk.aud01 .fsearch input::placeholder {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud01 .fsearch kbd {
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 5px;
+  color: hsl(var(--micro-foreground));
+  background: none;
+}
+.agent-app .lk.aud01 .custombar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 20px 12px;
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud01 .custombar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.agent-app .lk.aud01 .custombar input {
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
+  padding: 0 8px;
+  font-size: 12px;
+  font-family: inherit;
+}
+.agent-app .lk.aud01 .alertline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: hsl(var(--warning));
+  line-height: 17px;
+}
+.agent-app .lk.aud01 .alertline.inline {
+  margin: 0 20px 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: hsl(var(--warning) / 0.1);
+  border: 1px solid hsl(var(--warning) / 0.35);
+}
+
+/* 已选条件行（§1.5 F4） */
+.agent-app .lk.aud01 .fchips .lb {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud01 .fchips .ftag {
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .fchips .ftag .fk {
+  color: hsl(var(--muted-foreground));
+  flex: none;
+}
+.agent-app .lk.aud01 .fchips .ftag .fv {
+  font-family: var(--lk-mono);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 190px;
+}
+.agent-app .lk.aud01 .fchips .ftag .rm {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  flex: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.agent-app .lk.aud01 .fchips .ftag .rm:hover {
+  background: var(--hover);
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud01 .fchips .fnote {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  white-space: nowrap;
+}
+
+/* ---------- 12 列表格（§1.7） ---------- */
+.agent-app .lk.aud01 table.tbl {
+  /* 12 columns sum to 1282 (target 1262 + 20 for a non-clipping ops cell) */
+  min-width: 1282px;
+}
+/* target §1.7: 12px cell padding (the suite's 16px costs ~8px per column and
+   truncates every id one character earlier than the baseline) */
+.agent-app .lk.aud01 .tbl th {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.agent-app .lk.aud01 .tbl td {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.agent-app .lk.aud01 .tbl th:first-child,
+.agent-app .lk.aud01 .tbl td:first-child {
+  padding-left: 20px;
+}
+/* the actions cell keeps two 28px controls: trim its side padding instead of
+   shrinking the buttons below a comfortable target */
+.agent-app .lk.aud01 .tbl th:last-child,
+.agent-app .lk.aud01 .tbl td:last-child {
+  padding-left: 4px;
+  padding-right: 8px;
+}
+.agent-app .lk.aud01 .tbl th .inf {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.agent-app .lk.aud01 .tbl th.r {
+  text-align: right;
+}
+.agent-app .lk.aud01 .cell2 {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .cell2 .l {
+  font-size: 13px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .lk.aud01 .cell2 .s {
+  font: 11.5px/15px var(--lk-mono);
+  color: hsl(var(--micro-foreground));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .lk.aud01 .clock-cell {
+  align-items: flex-end;
+}
+.agent-app .lk.aud01 .clock-diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: hsl(var(--warning));
+  font-size: 11px;
+  white-space: nowrap;
+}
+/* max-width:100% is what makes ellipsis possible at all: an inline-flex box
+   otherwise sizes to its content, and a long displayName pushes the td out. */
+.agent-app .lk.aud01 .who {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+.agent-app .lk.aud01 .who .ava {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .lk.aud01 .who .nm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+.agent-app .lk.aud01 .who .raw {
+  font: 12px/16px var(--lk-mono);
+  color: hsl(var(--muted-foreground));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .lk.aud01 .behalf {
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
+  display: inline-block;
+}
+.agent-app .lk.aud01 .idcell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .idcell .cp {
+  min-width: 0;
+  max-width: 100%;
+}
+.agent-app .lk.aud01 .idcell .jump {
+  font-size: 11.5px;
+}
+.agent-app .lk.aud01 .jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  text-decoration: none;
+}
+.agent-app .lk.aud01 .jump:hover {
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud01 .jump.dis {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.agent-app .lk.aud01 .jump.dis:hover {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk.aud01 .jump.load {
+  color: hsl(var(--micro-foreground));
+  cursor: progress;
+}
+.agent-app .lk.aud01 .rescell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .rescell .rt {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: hsl(var(--micro-foreground));
+  text-transform: uppercase;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .lk.aud01 .ops {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  justify-content: flex-end;
+  position: relative;
+}
+.agent-app .lk.aud01 .opb {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.agent-app .lk.aud01 .opb:hover {
+  background: hsl(var(--surface-2));
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud01 .chevwrap {
+  display: inline-flex;
+  transition: transform 0.12s;
+}
+.agent-app .lk.aud01 tr.exp-open .chevwrap {
+  transform: rotate(90deg);
+}
+.agent-app .lk.aud01 .opsmore {
+  position: relative;
+  display: inline-flex;
+}
+.agent-app .lk.aud01 .opmenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 12;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: 9px;
+  background: hsl(var(--card));
+  border: 1px solid var(--hairline);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.agent-app .lk.aud01 .opmenu button {
+  text-align: left;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.agent-app .lk.aud01 .opmenu button:hover:not([disabled]) {
+  background: var(--hover);
+}
+.agent-app .lk.aud01 .opmenu button[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- 行展开（§1.8） ---------- */
+.agent-app .lk.aud01 tr.exp > td {
+  padding: 0;
+  background: transparent !important;
+  border-bottom: 1px solid var(--hairline);
+}
+.agent-app .lk.aud01 .expbox {
+  margin: 0 20px 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+}
+.agent-app .lk.aud01 .expbox .col {
+  min-width: 0;
+}
+.agent-app .lk.aud01 .expbox .hd {
+  margin-bottom: 9px;
+}
+.agent-app .lk.aud01 .dlist {
+  display: flex;
+  flex-direction: column;
+}
+.agent-app .lk.aud01 .drow {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-height: 28px;
+  padding: 5px 0 5px 9px;
+  border-left: 2px solid transparent;
+  font-size: 12.5px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .drow + .drow {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .lk.aud01 .drow.add {
+  border-left-color: hsl(var(--success));
+}
+.agent-app .lk.aud01 .drow.del {
+  border-left-color: hsl(var(--danger));
+}
+.agent-app .lk.aud01 .drow.chg {
+  border-left-color: hsl(var(--accent));
+}
+.agent-app .lk.aud01 .drow .sgn {
+  font: 600 12px/18px var(--lk-mono);
+  flex: none;
+  width: 12px;
+}
+.agent-app .lk.aud01 .drow.add .sgn {
+  color: hsl(var(--success));
+}
+.agent-app .lk.aud01 .drow.del .sgn {
+  color: hsl(var(--danger));
+}
+.agent-app .lk.aud01 .drow.chg .sgn {
+  color: hsl(var(--accent));
+}
+.agent-app .lk.aud01 .drow .dk {
+  font: 12px/18px var(--lk-mono);
+  color: hsl(var(--muted-foreground));
+  flex: none;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .lk.aud01 .drow .dv {
+  font-family: var(--lk-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .lk.aud01 .drow .old {
+  color: hsl(var(--micro-foreground));
+  text-decoration: line-through;
+}
+.agent-app .lk.aud01 .drow .arw {
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .lk.aud01 .dvline {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  cursor: pointer;
+}
+.agent-app .lk.aud01 .dvpre {
+  margin: 4px 0 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: hsl(var(--surface-2));
+  font: 11.5px/16px var(--lk-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 192px;
+  overflow: auto;
+}
+.agent-app .lk.aud01 .dempty {
+  font-size: 12.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 18px;
+}
+.agent-app .lk.aud01 .warnline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: hsl(var(--warning));
+  line-height: 17px;
+}
+.agent-app .lk.aud01 .card-ft {
+  padding: 10px 0 0;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 18px;
+}
+.agent-app .lk.aud01 .integ {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .integ .kv,
+.agent-app .lk.aud01 .rel .kv {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .integ .kv .k,
+.agent-app .lk.aud01 .rel .kv .k {
+  color: hsl(var(--micro-foreground));
+  min-width: 64px;
+  flex: none;
+}
+.agent-app .lk.aud01 .integ .exp {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 17px;
+}
+.agent-app .lk.aud01 .errtext {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+  line-height: 17px;
+  word-break: break-word;
+  min-width: 0;
+}
+.agent-app .lk.aud01 .rel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* ---------- 无过滤引导（§1.10） ---------- */
+.agent-app .lk.aud01 .guide {
+  margin: 0 20px 16px;
+  padding: 22px 20px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  text-align: center;
+}
+.agent-app .lk.aud01 .guide .ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: hsl(var(--surface-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud01 .guide .t {
+  font-size: 14px;
+  font-weight: 500;
+}
+.agent-app .lk.aud01 .guide .s {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  max-width: 460px;
+  line-height: 19px;
+}
+.agent-app .lk.aud01 .guide .qs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+/* ---------- 断点（§4.2）：1400 sticky 门槛 / 1024 单列 / 768 行卡 ---------- */
+@media (min-width: 1280px) and (max-width: 1399px) {
+  .agent-app .lk.aud01 .tblwrap {
+    overflow-x: auto;
+  }
+  .agent-app .lk.aud01 .tbl th {
+    position: static;
+  }
+  .agent-app .lk.aud01 .tblhint {
+    display: inline-flex;
+  }
+}
+@media (min-width: 1400px) {
+  .agent-app .lk.aud01 .tblwrap {
+    overflow-x: visible;
+  }
+  .agent-app .lk.aud01 .tbl th {
+    position: sticky;
+  }
+  .agent-app .lk.aud01 .tblhint {
+    display: none;
+  }
+}
+@media (max-width: 1023px) {
+  .agent-app .lk.aud01 .expbox {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  .agent-app .lk.aud01 .fbar,
+  .agent-app .lk.aud01 .custombar {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .agent-app .lk.aud01 .fchips {
+    padding: 0 14px 12px;
+  }
+  .agent-app .lk.aud01 .fsearch {
+    max-width: none;
+    flex: 1 1 100%;
+  }
+  .agent-app .lk.aud01 .alertline.inline {
+    margin: 0 14px 10px;
+  }
+  .agent-app .lk.aud01 .chain01-hd,
+  .agent-app .lk.aud01 .chain01-pre,
+  .agent-app .lk.aud01 .chain01-win {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .agent-app .lk.aud01 .cv {
+    margin: 0 14px 14px;
+  }
+  .agent-app .lk.aud01 .cv .tail .kv .k {
+    min-width: 76px;
+  }
+  .agent-app .lk.aud01 .guide {
+    margin: 0 14px 14px;
+    padding: 18px 14px;
+  }
+  .agent-app .lk.aud01 .expbox {
+    margin: 0 14px 14px;
+    padding: 14px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agent-app .lk.aud01 .tblhint {
+    display: none;
+  }
+
+  /* 表格 → 行卡（12 列硬塞横滚等于没有，deep/06 §5.6） */
+  .agent-app .lk.aud01 table.tbl {
+    min-width: 0;
+  }
+  .agent-app .lk.aud01 .tbl thead {
+    display: none;
+  }
+  .agent-app .lk.aud01 .tbl,
+  .agent-app .lk.aud01 .tbl tbody,
+  .agent-app .lk.aud01 .tbl tr,
+  .agent-app .lk.aud01 .tbl td {
+    display: block;
+    width: auto;
+  }
+  .agent-app .lk.aud01 .tbl tbody tr.trow-main {
+    border-bottom: 1px solid var(--hairline);
+  }
+  .agent-app .lk.aud01 .tbl td {
+    height: auto;
+    padding: 8px 14px;
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+    min-width: 0;
+  }
+  .agent-app .lk.aud01 .tbl td::before {
+    content: attr(data-l);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: hsl(var(--micro-foreground));
+    flex: none;
+    min-width: 56px;
+  }
+  .agent-app .lk.aud01 .tbl td:first-child {
+    padding-top: 12px;
+  }
+  .agent-app .lk.aud01 .tbl td:last-child {
+    padding-bottom: 12px;
+  }
+  .agent-app .lk.aud01 .tbl td.num {
+    text-align: left;
+  }
+  .agent-app .lk.aud01 .tbl td > .cell2,
+  .agent-app .lk.aud01 .tbl td > .who,
+  .agent-app .lk.aud01 .tbl td > .rescell,
+  .agent-app .lk.aud01 .tbl td > .idcell {
+    min-width: 0;
+    align-items: flex-end;
+  }
+  /* 触屏无 hover：复制键与已复制气泡改成静态常显（绝对定位会撑出 scrollWidth） */
+  .agent-app .lk.aud01 .cp {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .agent-app .lk.aud01 .cp .cc {
+    position: static;
+    transform: none;
+    display: inline-flex;
+    opacity: 1;
+    width: 24px;
+    height: 24px;
+    margin-left: 2px;
+    flex: none;
+  }
+  .agent-app .lk.aud01 .cp .tp {
+    left: auto;
+    right: 0;
+    transform: none;
+    max-width: 220px;
+    white-space: normal;
+    text-align: right;
+  }
+}

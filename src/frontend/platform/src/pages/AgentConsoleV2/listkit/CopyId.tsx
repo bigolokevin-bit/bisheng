@@ -10,6 +10,10 @@ import { LkIcon } from './icons';
 export interface CopyIdProps {
   /** Full upstream value — copied verbatim, never the truncated display. */
   value: string;
+  /** Same-origin jump target (the id itself becomes the link, no extra line). */
+  href?: string;
+  /** Accessible name for that link (defaults to the value). */
+  linkLabel?: string;
   /** Visually truncated form. */
   display: string;
   ariaLabel: string;
@@ -17,7 +21,15 @@ export interface CopyIdProps {
   testId?: string;
 }
 
-export function CopyId({ value, display, ariaLabel, copiedLabel, testId }: CopyIdProps) {
+export function CopyId({
+  value,
+  display,
+  ariaLabel,
+  copiedLabel,
+  testId,
+  href,
+  linkLabel,
+}: CopyIdProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -44,7 +56,13 @@ export function CopyId({ value, display, ariaLabel, copiedLabel, testId }: CopyI
       <button type="button" className="cc" aria-label={ariaLabel} onClick={copy}>
         <LkIcon name="copy" size={14} />
       </button>
-      {display}
+      {href ? (
+        <a className="vv" href={href} aria-label={linkLabel ?? value} title={value}>
+          {display}
+        </a>
+      ) : (
+        <span className="vv">{display}</span>
+      )}
       <span className="tp" aria-hidden="true">
         {copiedLabel}
       </span>

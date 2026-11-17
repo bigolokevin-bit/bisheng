@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink, useParams } from 'react-router-dom';
 
 import { ApprovalDetailPage } from './ApprovalDetailPage';
+import { AuditListPage } from './AuditListPage';
 import { ApprovalsListPage } from './ApprovalsListPage';
 import { EmployeeDetailPage } from './EmployeeDetailPage';
 import { EmployeesListPage } from './EmployeesListPage';
@@ -16,28 +17,6 @@ import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
 import { TaskDetailPage } from './TaskDetailPage';
 import { TasksListPage } from './TasksListPage';
-
-interface L1PageProps {
-  titleKey: string;
-  descKey: string;
-  testid: string;
-}
-
-function L1Page({ titleKey, descKey, testid }: L1PageProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="a2s-page" data-testid={testid}>
-      <h1 className="a2-h1">{t(titleKey)}</h1>
-      <p className="a2-meta">{t(descKey)}</p>
-      <div className="a2-card">
-        <span className="a2-pill" data-testid={`${testid}-pending`}>
-          {t('agentConsole.v2.shell.pendingPill')}
-        </span>
-        <p className="a2-card-sub">{t('agentConsole.v2.shell.emptyDesc')}</p>
-      </div>
-    </div>
-  );
-}
 
 export function OverviewPage() {
   /* OV-01 slice 1: header + 4 real-BFF KPIs; remaining blocks are honest
@@ -77,13 +56,14 @@ export function TaskDetailScreen() {
   return <TaskDetailPage key={taskId} taskIdOverride={taskId} />;
 }
 
+/* AUD-01: the real read-only audit list (aud01-target.html). Read-only A3+A7
+ * only — the page itself carries zero write entries. */
 export function AuditPage() {
+  const { consoleApi } = useShellApis();
   return (
-    <L1Page
-      titleKey="agentConsole.v2.navAudit"
-      descKey="agentConsole.v2.shell.auditDesc"
-      testid="agent-v2-page-audit"
-    />
+    <div className="a2s-page" data-testid="agent-v2-page-audit-shell">
+      <AuditListPage consoleApi={consoleApi} />
+    </div>
   );
 }
 
