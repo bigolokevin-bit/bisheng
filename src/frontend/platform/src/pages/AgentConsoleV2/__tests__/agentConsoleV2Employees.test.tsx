@@ -180,6 +180,9 @@ describe('EMP-01 employee list', () => {
     expect(screen.getByTestId('agent-v2-emp-chat-emp_AB12CD34').getAttribute('href')).toBe(
       '/agent/chat?employeeId=emp_AB12CD34',
     );
+    expect(screen.getByTestId('agent-v2-employees-create').getAttribute('href')).toBe(
+      '/agent/employees/new',
+    );
   });
 
   it('shows the configured budget in USD and never converts it client-side', async () => {

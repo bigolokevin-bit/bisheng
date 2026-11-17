@@ -178,6 +178,17 @@ describe('EmployeeDetailPage budget limits (GAP-2 honest empty state)', () => {
     expect(text).not.toContain('未配置');
   });
 
+  it('shows the owner and Beijing effective time, and discloses the danger zone with zero controls', async () => {
+    versionBudget = { monthlyCostUsd: 10 };
+    renderDetail();
+    await screen.findByTestId('agent-v2-ed-banner');
+    expect(screen.getByTestId('agent-v2-ed-banner').textContent).toContain('opsadmin');
+    expect(screen.getByTestId('agent-v2-ed-fields').textContent).toContain('2026-11-15 08:00');
+    const danger = screen.getByTestId('agent-v2-ed-danger-readonly');
+    expect(danger.textContent).toContain('本页只读');
+    expect(danger.querySelectorAll('button, a')).toHaveLength(0);
+  });
+
   it('no current version keeps the plain dash instead of inventing a budget', async () => {
     versionBudget = { monthlyCostUsd: 10 };
     vi.stubGlobal(
