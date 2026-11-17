@@ -274,11 +274,11 @@ describe('RUN-01 runs list — structure & honest values', () => {
     expect(screen.getByTestId('agent-v2-runs-start').getAttribute('title')).toBe(RUN_A.startedAt);
   });
 
-  it('keeps 「查看」 disabled with the RUN-02 reason and has zero write entries', async () => {
+  it('S3: 「查看」 really links to RUN-02 and there are zero write entries', async () => {
     renderRuns(makeApi([okPage([RUN_A])]));
     const view = await screen.findByTestId('agent-v2-runs-view');
-    expect(view).toBeDisabled();
-    expect(view.getAttribute('title')).toBe('运行详情页（RUN-02）尚未上线，暂不可查看');
+    expect(view.tagName).toBe('A');
+    expect(view.getAttribute('href')).toBe(`/agent/runs/${RUN_A.runId}`);
     const writeish = screen
       .getAllByRole('button')
       .filter((b) => /重跑|中止|删除|新建|批量|创建/.test(b.textContent ?? ''));

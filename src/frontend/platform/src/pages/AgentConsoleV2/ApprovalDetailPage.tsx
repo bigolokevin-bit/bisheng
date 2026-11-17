@@ -778,7 +778,7 @@ export function ApprovalDetailPage() {
           {/* P1 batch2: the footer line IS the caliber statement — explain it here. */}
           <HelpTip term="caliber" testId="agent-v2-apd-help-caliber" className="a2d-pfoot-help" />
         </span>
-        <span><kbd className="a2-mono">⌘K</kbd> {apd('footSearch')}</span>
+        {/* S3: the ⌘K search hint pointed at the removed dead global search. */}
       </div>
     </div>
   );

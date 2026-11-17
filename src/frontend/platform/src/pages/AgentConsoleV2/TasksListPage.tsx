@@ -1571,19 +1571,16 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
             {r.progressNote ? r.progressNote : '—'}
           </span>
         </td>
-        {/* T-08 detail: disabled placeholder, no route (TSK-02 unbuilt) */}
+        {/* T-08 detail — S3: TSK-02 is live at /agent/tasks/:taskId, so this
+            is a real link now (was: disabled placeholder). */}
         <td>
-          <button
-            type="button"
+          <a
             className="a2-btn"
+            href={`/agent/tasks/${encodeURIComponent(r.taskId)}`}
             data-testid="agent-v2-task-detail"
-            disabled
-            aria-disabled="true"
-            title={t('agentConsole.v2.tsk.detailDisabled')}
-            style={{ opacity: 0.4, boxShadow: 'none', cursor: 'not-allowed' }}
           >
             {t('agentConsole.v2.detail')}
-          </button>
+          </a>
         </td>      </tr>
       {isOpen && (
         <tr data-testid="agent-v2-task-expanded" data-task-id={r.taskId}>

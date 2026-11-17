@@ -310,8 +310,9 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(rel.textContent).toContain('续跑是新运行，不复活上一轮');
 
     const taskView = within(rel).getByTestId('agent-v2-rd-task-view');
-    expect(taskView).toBeDisabled();
-    expect(taskView.getAttribute('title')).toBe('任务详情页（TSK-02）尚未上线，暂不可查看');
+    // S3: TSK-02 is live — the jump is a real link.
+    expect(taskView.tagName).toBe('A');
+    expect(taskView.getAttribute('href')).toBe('/agent/tasks/tk_01M7DEY7QK3T8V2W4X6Y8A0BCE');
     expect(within(rel).getByTestId('agent-v2-rd-audit').getAttribute('href')).toBe(
       `/agent/audit?runId=${encodeURIComponent(RUN_ID)}`,
     );

@@ -224,6 +224,19 @@
   margin-left: auto;
 }
 
+/* S3: the search slot is a static note, not a control. */
+.agent-app .a2s-search.is-static {
+  cursor: default;
+}
+
+.agent-app .a2s-search-off {
+  font-size: 12.5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* env chip: neutral pill + success dot (never the purple accent) */
 .agent-app .a2s-chip {
   height: 26px;
@@ -283,8 +296,9 @@
   max-width: 200px;
 }
 
+/* S3: passive account label (no menu opens) — text tint only, no button
+   hover background. */
 .agent-app .a2s-ume:hover {
-  background: var(--hover);
   color: hsl(var(--foreground));
 }
 

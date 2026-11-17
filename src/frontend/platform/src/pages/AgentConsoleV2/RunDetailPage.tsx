@@ -1086,16 +1086,14 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                         copiedLabel={t('agentConsole.v2.run02.copied')}
                         testId="agent-v2-rd-task"
                       />
-                      <button
-                        type="button"
+                      {/* S3: TSK-02 is live — real navigation, no dead shell. */}
+                      <a
                         className="b xs out"
-                        disabled
-                        aria-disabled="true"
-                        title={t('agentConsole.v2.run02.relTaskDisabled')}
+                        href={`/agent/tasks/${encodeURIComponent(run.taskId)}`}
                         data-testid="agent-v2-rd-task-view"
                       >
                         {t('agentConsole.v2.run02.relTaskView')}
-                      </button>
+                      </a>
                     </>
                   ) : (
                     <span className="faint mono" data-testid="agent-v2-rd-task">

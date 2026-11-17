@@ -445,7 +445,7 @@ describe('AUD-01 safety + links (§3, §1.7)', () => {
     expect(resCell.textContent).not.toContain('<b>');
   });
 
-  it('task jump is disabled with a reason while TSK-02 is unbuilt, copy still works', async () => {
+  it('S3: the task jump is a real link to TSK-02 and copy stays independent', async () => {
     const withTask = event({
       eventId: 'ev_TASK',
       action: 'message.send',
@@ -458,10 +458,10 @@ describe('AUD-01 safety + links (§3, §1.7)', () => {
 
     const row = screen.getByTestId('aud01-row-ev_TASK');
     const jump = within(row).getByText('查看任务');
-    expect(jump.getAttribute('aria-disabled')).toBe('true');
-    expect(jump.getAttribute('href')).toBeNull();
-    expect(jump.getAttribute('title')).toContain('尚未开放');
-    // the copy control is independent of the dead link
+    expect(jump.tagName).toBe('A');
+    expect(jump.getAttribute('href')).toBe('/agent/tasks/tk_01M7DEY7QK3T8V2W4X6Y8A0BCE');
+    expect(jump.getAttribute('aria-disabled')).toBeNull();
+    // the copy control is independent of the link
     expect(within(row).getAllByRole('button', { name: '复制任务 ID' })).toHaveLength(1);
   });
 

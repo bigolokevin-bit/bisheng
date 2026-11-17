@@ -793,16 +793,15 @@ function RunRow({ run, fill, onRetryFill, name, t }: RunRowProps) {
         {formatMoment(endedAt)}
       </td>
       <td>
-        <button
-          type="button"
+        {/* S3: RUN-02 is live — 「查看」 really navigates (plain anchor, same
+            idiom as the audit row run/employee jumps; copy stays separate). */}
+        <a
           className="b xs out"
-          disabled
-          aria-disabled="true"
-          title={t('agentConsole.v2.runs01.viewDisabledTitle')}
+          href={`/agent/runs/${encodeURIComponent(run.runId)}`}
           data-testid="agent-v2-runs-view"
         >
           {t('agentConsole.v2.runs01.view')}
-        </button>
+        </a>
       </td>
     </tr>
   );

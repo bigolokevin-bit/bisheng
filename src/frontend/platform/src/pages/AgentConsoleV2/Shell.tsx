@@ -2,9 +2,10 @@
  * Console v2 shell rebuilt against ov01-target.html §1 (OV-01 C1 fix):
  * 72px SVG icon rail (Lucide-style 1.5px stroke, currentColor, never a
  * Unicode glyph), spacer-pinned 设置 + avatar at the bottom so there is no
- * "black hole" below the nav; topbar = breadcrumb with chevron, search pill
- * (搜索员工、审批、run id + ⌘K kbd), neutral env chip with a success dot
- * (no purple), icon-only theme toggle, user area = avatar + name + chevron.
+ * "black hole" below the nav; topbar = breadcrumb with chevron, static
+ * search note (S3: no global search backend), neutral env chip with a
+ * success dot (no purple), icon-only theme toggle, account label = avatar +
+ * name (passive since S3: the menu never had an item; no chevron affordance).
  * ≤767 the rail becomes a sticky top horizontal-scroll strip with the
  * 「可左右滑动」 hint and the active entry auto-scrolled into view — it is
  * never a floating band in the middle of the page.
@@ -13,8 +14,8 @@
  * - no fake usernames: the account control renders the real userContext value
  *   or an explicit "not signed in" copy;
  * - the env chip is a deployment label ("local pilot"), never a computed lie;
- * - the search pill is a focusable placeholder only — there is no global
- *   search endpoint yet, so it never pretends to search;
+ * - the search slot is a static 「暂不可用」 note — S3 removed the dead input:
+ *   there is no global search endpoint, so nothing pretends to search;
  * - un-built sections render title + scope note + explicit pending state,
  *   never zeros or fake curves.
  *
@@ -22,7 +23,7 @@
  * 'agentConsole.v2.theme' (same key as the v2 page, zero layout shift, the
  * first frame is painted with the stored theme — no flash).
  */
-import { Component, Suspense, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, Suspense, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -264,11 +265,6 @@ export function AgentConsoleShell() {
   const { t } = useTranslation();
   const location = useLocation();
   const [theme, setTheme] = useState<'dark' | 'light'>(initialTheme);
-  /* S-5: user menu — default CLOSED; Esc / outside click dismiss (target §1). */
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLSpanElement | null>(null);
-  /* S-3: ⌘K focuses the global search pill (M1 read-only entry). */
-  const searchRef = useRef<HTMLInputElement | null>(null);
   /* Optional detail-page breadcrumb tail; null = the default two segments. */
   const [crumbTail, setCrumbTail] = useState<CrumbTail | null>(null);
 
@@ -290,37 +286,10 @@ export function AgentConsoleShell() {
     }
   }, [theme]);
 
-  // S-5: dismiss the user menu on Esc or on any click outside the trigger.
-  useEffect(() => {
-    if (!userMenuOpen) return undefined;
-    const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setUserMenuOpen(false);
-    };
-    const onDown = (ev: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(ev.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('mousedown', onDown);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('mousedown', onDown);
-    };
-  }, [userMenuOpen]);
-
-  // S-3: ⌘K / Ctrl+K focuses the search pill (no request is ever sent from
-  // it in M1 — there is no search backend endpoint, so no dead request).
-  useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => {
-      if ((ev.metaKey || ev.ctrlKey) && !ev.shiftKey && ev.key.toLowerCase() === 'k') {
-        ev.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  // S3: the old S-5 user-menu state machine and the S-3 ⌘K focus handler
+  // are gone — the menu never rendered an item and the pill never reacted,
+  // so both were dead affordances. The account chip is a passive label and
+  // the search slot is a static 「暂不可用」 note.
 
   // fix B (G8): on narrow screens the rail scrolls horizontally; bring the
   // active entry into view on mount and on every route change so it is never
@@ -399,22 +368,16 @@ export function AgentConsoleShell() {
               ) : null}
             </nav>
             <span className="a2s-sp" aria-hidden="true" />
-            <label className="a2s-search">
+            {/* S3: global search has no backend — an honest static note
+                replaces the dead input + ⌘K affordance. */}
+            <span
+              className="a2s-search is-static"
+              data-testid="agent-v2-search-off"
+              title={t('agentConsole.v2.shellSearchOff')}
+            >
               <RailIcon name="search" size={14} />
-              <input
-                type="text"
-                ref={searchRef}
-                className="a2s-search-input"
-                placeholder={t('agentConsole.v2.shellSearchPlaceholder')}
-                aria-label={t('agentConsole.v2.shellSearchPlaceholder')}
-                onKeyDown={(ev) => {
-                  if (ev.key === 'Escape') (ev.target as HTMLInputElement).blur();
-                }}
-              />
-              <span className="a2s-search-kbd a2-mono" aria-hidden="true">
-                ⌘K
-              </span>
-            </label>
+              <span className="a2s-search-off">{t('agentConsole.v2.shellSearchOff')}</span>
+            </span>
             <span
               className="a2s-chip"
               data-testid="agent-v2-env-chip"
@@ -438,7 +401,6 @@ export function AgentConsoleShell() {
                 {avatarChar(accountLabel) ?? <RailIcon name="user" size={13} />}
               </span>
               <span className="a2s-ume-nm">{accountLabel}</span>
-              <RailIcon name="chevD" size={13} />
             </span>
           </header>
           <ShellBoundary

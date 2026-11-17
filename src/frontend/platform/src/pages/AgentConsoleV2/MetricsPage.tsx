@@ -1082,9 +1082,7 @@ function PageFooter({ t, winFallback }: { t: ReturnType<typeof useTranslation>['
       </span>
       <span className="sp" />
       {winFallback ? <span data-testid="agent-v2-met-win-fallback">{t('agentConsole.v2.met.winFallback')}</span> : null}
-      <span>
-        <kbd>⌘K</kbd> {t('agentConsole.v2.met.footSearch')}
-      </span>
+      {/* S3: the ⌘K search hint pointed at the removed dead global search. */}
     </div>
   );
 }

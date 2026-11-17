@@ -223,8 +223,8 @@ describe('APR-02 — page footer & shell breadcrumb', () => {
     expect(foot.textContent).toContain('缺失显示 —/不可得');
     expect(foot.textContent).toContain('不造 0');
     expect(foot.textContent).toContain('无总数');
-    expect(foot.textContent).toContain('⌘K');
-    expect(foot.textContent).toContain('搜索');
+    // S3: the dead ⌘K global-search hint is gone from the footer.
+    expect(foot.textContent).not.toContain('⌘K');
   });
 
   it('shell breadcrumb adds 「控制台 › 审批 › 截断 id」 with the full id in title', async () => {

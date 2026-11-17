@@ -97,6 +97,7 @@
   color: inherit;
   font-family: inherit;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
+  text-decoration: none; /* S3: .b may also be an <a> (runs01 view) */
 }
 .agent-app .lk .b.out {
   border-color: var(--border);

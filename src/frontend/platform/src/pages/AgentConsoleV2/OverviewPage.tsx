@@ -908,7 +908,8 @@ export function OverviewPage() {
         <span>{t('agentConsole.v2.ov.footerCaliber')}</span>
         <span className="sp" />
         <span data-testid="agent-v2-ov-footer-keys">
-          <kbd>⌘K</kbd> {t('agentConsole.v2.ov.kbdSearch')} · <kbd>⌘⇧R</kbd> {t('agentConsole.v2.ov.refresh')}
+          {/* S3: the ⌘K search hint left with the dead global-search pill. */}
+          <kbd>⌘⇧R</kbd> {t('agentConsole.v2.ov.refresh')}
         </span>
       </div>
     </div>

@@ -43,8 +43,8 @@ import {
   type DiffRow,
 } from './aud01';
 
-/** TSK-02 (`/agent/tasks/:id`) is not built yet: the honest state is disabled. */
-export const TASK_DETAIL_READY = false;
+/* S3: TSK-02 (`/agent/tasks/:taskId`) is live in the route table — the row
+ * jump is a real link now; the old disabled placeholder is removed. */
 
 const jsonText = (v: unknown): string => {
   if (typeof v === 'string') return v;
@@ -178,7 +178,16 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
                 ariaLabel={t('agentConsole.v2.aud01.copyTask')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
-              <TaskJump taskId={event.taskId} t={t} />
+              {/* S3: real navigation to TSK-02 (same anchor idiom as the
+                  employee jump; copy stays independent of the link). */}
+              <a
+                className="jump"
+                href={`/agent/tasks/${encodeURIComponent(event.taskId)}`}
+                data-testid={`aud01-task-jump-${event.eventId}`}
+              >
+                {t('agentConsole.v2.aud01.viewTask')}
+                <LkIcon name="chevR" size={13} />
+              </a>
             </span>
           ) : (
             <span className="faint mono">—</span>
@@ -338,49 +347,6 @@ function OutcomeCell({ outcome, t }: { outcome: string; t: TFunction }) {
   );
 }
 
-/**
- * C9 three mutually exclusive states (裁定 ②). Loading never spins: it is
- * `aria-busy` + a static icon + copy (DESIGN-SYSTEM §6.6 — no autoplay motion).
- */
-function TaskJump({ taskId, t }: { taskId: string; t: TFunction }) {
-  const [loading, setLoading] = useState(false);
-  const href = `/agent/tasks/${encodeURIComponent(taskId)}`;
-
-  if (!TASK_DETAIL_READY) {
-    return (
-      <a
-        className="jump dis"
-        aria-disabled="true"
-        title={t('agentConsole.v2.aud01.taskJumpDisabled')}
-        onClick={(ev) => ev.preventDefault()}
-      >
-        {t('agentConsole.v2.aud01.viewTask')}
-      </a>
-    );
-  }
-  if (loading) {
-    return (
-      <span className="jump load" role="status" aria-busy="true" aria-live="polite">
-        <LkIcon name="clock" size={13} />
-        {t('agentConsole.v2.aud01.taskJumpLoading')}
-      </span>
-    );
-  }
-  return (
-    <a
-      className="jump"
-      href={href}
-      onClick={(ev) => {
-        ev.preventDefault();
-        setLoading(true);
-        window.location.assign(href);
-      }}
-    >
-      {t('agentConsole.v2.aud01.viewTask')}
-      <LkIcon name="chevR" size={13} />
-    </a>
-  );
-}
 
 /** `⋯` row menu: copy the event id; the detail page (AUD-02) is not built. */
 function RowMenu({ eventId, t }: { eventId: string; t: TFunction }) {

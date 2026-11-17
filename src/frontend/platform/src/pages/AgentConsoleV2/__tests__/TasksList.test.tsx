@@ -222,13 +222,13 @@ describe('TSK-01 read-only task board (reconciled)', () => {
     expect(screen.queryAllByTestId('agent-v2-task-assignee-role').length).toBeGreaterThan(0);
   });
 
-  it('detail entry is a disabled honest stub on every row while TSK-02 is not built', async () => {
+  it('S3: the detail entry is a real link to TSK-02 on every row', async () => {
     renderPage();
-    const btns = await screen.findAllByTestId('agent-v2-task-detail');
-    expect(btns.length).toBeGreaterThan(0);
-    for (const b of btns) {
-      expect((b as HTMLButtonElement).disabled).toBe(true);
-      expect(b.getAttribute('title')).toBe('详情页未上线（TSK-02）');
+    const links = await screen.findAllByTestId('agent-v2-task-detail');
+    expect(links.length).toBeGreaterThan(0);
+    for (const a of links) {
+      expect(a.tagName).toBe('A');
+      expect(a.getAttribute('href')).toMatch(/^\/agent\/tasks\/tk_/);
     }
   });
 

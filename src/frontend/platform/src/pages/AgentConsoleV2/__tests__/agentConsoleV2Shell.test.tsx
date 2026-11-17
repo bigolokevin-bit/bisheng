@@ -102,6 +102,20 @@ describe('AgentConsoleShell (W1)', () => {
     expect(account.textContent).toBeTruthy();
   });
 
+  it('S3: dead controls are gone — search is a static note, account has no menu shell', () => {
+    const { container } = renderShell('/agent');
+    // the search slot is a passive note, not an input with a ⌘K promise
+    expect(screen.getByTestId('agent-v2-search-off')).toHaveTextContent(
+      'agentConsole.v2.shellSearchOff',
+    );
+    expect(container.querySelector('.a2s-search input')).toBeNull();
+    expect(container.querySelector('.a2s-search-kbd')).toBeNull();
+    // the account label never opened a menu: no chevron icon inside it
+    const account = screen.getByTestId('agent-v2-account');
+    expect(account.tagName).toBe('SPAN');
+    expect(account.querySelector('svg path[d^="m6 9 6 6"]')).toBeNull();
+  });
+
   it('keeps the default two-segment crumb and only appends an opted-in detail tail', () => {
     function CrumbTailStub() {
       useConsoleCrumbTail('ap_9D21…F2E3', 'ap_9D21F4A67B3E4C05D8A1F2E3');
