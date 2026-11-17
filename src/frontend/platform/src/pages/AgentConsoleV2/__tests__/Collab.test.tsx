@@ -13,7 +13,7 @@
  * - `delegation.charged` × 2 collapse into one chain line
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/components/bs-ui/message', () => ({
@@ -44,7 +44,13 @@ vi.mock('react-i18next', async () => {
 });
 
 import { CollabPage } from '../CollabPage';
-import type { ChainItem, CollabApi, CollabApiResult, DelegationRow } from '../collab';
+import type {
+  ChainItem,
+  CollabApi,
+  CollabApiResult,
+  DelegationListShape,
+  DelegationRow,
+} from '../collab';
 
 // ---------------------------------------------------------------- fixtures
 
@@ -100,7 +106,7 @@ function fail<T>(status: number, requestId?: string, code?: string): CollabApiRe
 }
 
 function makeApi(options: {
-  list?: CollabApiResult<{ items: DelegationRow[] }>;
+  list?: CollabApiResult<DelegationListShape>;
   chains?: Record<string, CollabApiResult<{ items: ChainItem[] }>>;
 }): CollabApi {
   return {
@@ -273,5 +279,56 @@ describe('COL-01 collaboration view', () => {
     renderPage(api);
     await waitFor(() => expect(screen.getByText('交接链没能读出来。这一步只是读取，没有改动任何东西。')).toBeTruthy());
     expect(screen.getByTestId('collab-chain-retry')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------- S3-W3
+
+describe('COL-01 S3-W3 — PRD v0.3 alignment', () => {
+  it('prefers the server asOf over the local clock for 「读取于」', async () => {
+    const api = makeApi({ list: ok({ items: [row()], asOf: '2026-11-17T12:34:00.000Z' }) });
+    renderPage(api);
+    await waitFor(() => expect(screen.getByText(/2026-11-17 20:34/)).toBeTruthy());
+  });
+
+  it('reads one cursor page at a time and appends it without a total', async () => {
+    const second = row({ delegationId: `${DL}02`, taskId: `${TK}02`, title: '把对账单按客户拆成十份' });
+    const calls: Array<string | undefined> = [];
+    const api: CollabApi = {
+      listDelegations: vi.fn(async (cursor?: string) => {
+        calls.push(cursor);
+        if (cursor === 'c2') return ok({ items: [second], nextCursor: null });
+        return ok({ items: [row()], nextCursor: 'c2' });
+      }),
+      getChain: vi.fn(async () => ok({ items: chain() })),
+    };
+    const { container } = renderPage(api);
+    await waitFor(() => expect(screen.getByText('已加载 1 条')).toBeTruthy());
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+
+    const more = screen.getByTestId('collab-load-more');
+    fireEvent.click(more);
+
+    await waitFor(() => expect(container.querySelectorAll('tbody tr')).toHaveLength(2));
+    expect(calls).toEqual([undefined, 'c2']);
+    expect(screen.getByText('已加载 2 条')).toBeTruthy();
+    expect(screen.queryByTestId('collab-load-more')).toBeNull();
+    expect(container.textContent).not.toMatch(/共\s*\d+\s*条/);
+  });
+
+  it('falls back to 「员工 · 8 位大写短码」 and never shows a raw employee id', async () => {
+    const stranger = 'emp_9f3a1b2c4d5e6f70';
+    const api = makeApi({ list: ok({ items: [row({ toEmployeeId: stranger })] }) });
+    const { container } = renderPage(api);
+    await waitFor(() => expect(screen.getByTestId('collab-detail')).toBeTruthy());
+    expect(container.textContent).toContain('员工 · 9F3A1B2C');
+    expect(container.textContent).not.toContain('emp_9f3a1b2c4d5e6f70');
+  });
+
+  it('formats every timestamp as Beijing time to the minute', async () => {
+    const api = makeApi({});
+    const { container } = renderPage(api);
+    await waitFor(() => expect(container.textContent).toContain('2026-11-17 14:05'));
+    expect(container.textContent).not.toMatch(/T06:05|06:05/);
   });
 });
