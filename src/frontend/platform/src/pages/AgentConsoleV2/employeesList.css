@@ -1,0 +1,263 @@
+/* EMP-01 list styling. Scoped under .agent-app, theme tokens only. */
+
+.agent-app .emp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.agent-app .emp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-app .emp-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.agent-app .emp-tab {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+
+.agent-app .emp-tab.is-on {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: hsl(var(--foreground));
+}
+
+.agent-app .emp-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-app .emp-search .a2-search {
+  width: 260px;
+}
+
+.agent-app .emp-table-card {
+  padding: 4px 16px 14px;
+}
+
+.agent-app .emp-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.agent-app .emp-tr {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.6fr)
+    150px
+    minmax(150px, 1.1fr)
+    90px
+    170px
+    130px
+    100px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.agent-app .emp-tr:last-child {
+  border-bottom: 0;
+}
+
+.agent-app .emp-th {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.agent-app .emp-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.agent-app .emp-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: hsl(var(--foreground));
+  font-size: 13px;
+}
+
+.agent-app .emp-name-lines {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agent-app .emp-name-link {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-app .emp-name-link:hover {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+.agent-app .emp-pill {
+  font-size: 10.5px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.agent-app .emp-pill.is-active {
+  background: var(--success-soft);
+  color: hsl(var(--success));
+}
+
+.agent-app .emp-pill.is-paused,
+.agent-app .emp-pill.is-suspended {
+  background: var(--danger-soft);
+  color: hsl(var(--danger));
+}
+
+.agent-app .emp-pill.is-onboarding,
+.agent-app .emp-pill.is-offboarding {
+  background: var(--warning-soft);
+  color: hsl(var(--warning));
+}
+
+.agent-app .emp-pill.is-draft,
+.agent-app .emp-pill.is-archived {
+  background: var(--neutral-pill-bg);
+  color: var(--neutral-pill-fg);
+}
+
+.agent-app .emp-role {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-app .emp-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-app .emp-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-app .emp-muted {
+  color: var(--muted-foreground);
+}
+
+.agent-app .emp-row-action {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.agent-app .emp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.agent-app .emp-more-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agent-app .emp-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .agent-app .emp-table {
+    overflow: visible;
+  }
+
+  .agent-app .emp-th {
+    display: none;
+  }
+
+  .agent-app .emp-tr {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 12px;
+    margin-top: 10px;
+  }
+
+  .agent-app .emp-tr > span[role='cell']::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10.5px;
+    color: var(--micro-foreground);
+    margin-bottom: 2px;
+  }
+
+  .agent-app .emp-name-cell {
+    grid-column: 1 / -1;
+  }
+
+  .agent-app .emp-row-action {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .agent-app .emp-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .agent-app .emp-tr {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-app .emp-search {
+    width: 100%;
+  }
+
+  .agent-app .emp-search .a2-search {
+    width: 100%;
+  }
+}

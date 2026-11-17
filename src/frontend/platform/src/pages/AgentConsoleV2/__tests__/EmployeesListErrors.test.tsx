@@ -1,248 +1,259 @@
 /* eslint-disable no-restricted-syntax -- assertions intentionally use the localized copy under test */
 /**
- * EMP-01 r5 (G15): the employees list error states must render fully
- * localized copy — 401 / 403 / generic 5xx each readable on its own, HTTP
- * status only as an interpolation parameter, and internal machine codes
- * (console.forbidden, run.invalid_query, budget.range_too_large,
- * agent.http.*) never in the DOM. The requestId is reachable only through
- * the explicit "复制诊断" control, which copies the request id alone —
- * never the bearer token, never the response body.
- *
- * Unlike the raw-key suite, this file mocks react-i18next with the real
- * zh-Hans dictionary (same idiom as OverviewErrors.test.tsx), so the strict
- * "no dotted identifier anywhere" check is meaningful: a missing key would
- * render its dotted path and fail the assertion.
+ * EMP-03 detail honesty suite (S3-W2): placeholder owner, full Beijing
+ * timestamps, the three budget states, whole-page access states and the
+ * chat link. Machine codes never reach the screen.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('react-i18next', async () => {
-  const mod = (await import('../../../../public/locales/zh-Hans/bs.json')) as {
-    default: Record<string, unknown>;
+  const mod = await import('../../../../public/locales/zh-Hans/bs.json');
+  const dict: Record<string, unknown> = (mod as { default: Record<string, unknown> }).default;
+  const lookup = (key: string): unknown => {
+    let cur: unknown = dict;
+    for (const part of key.split('.')) {
+      if (cur == null || typeof cur !== 'object') return undefined;
+      cur = (cur as Record<string, unknown>)[part];
+    }
+    return cur;
   };
-  const dict = mod.default;
-  const t = (key: unknown, opts?: unknown): string => {
-    const value = String(key)
-      .split('.')
-      .reduce<unknown>(
-        (acc, part) =>
-          acc && typeof acc === 'object'
-            ? (acc as Record<string, unknown>)[part]
-            : undefined,
-        dict,
+  const t = (key: string, defOrOpts?: unknown): string => {
+    const val = lookup(key);
+    if (typeof val !== 'string') return typeof defOrOpts === 'string' ? defOrOpts : key;
+    if (defOrOpts && typeof defOrOpts === 'object') {
+      return val.replace(/\{\{(\w+)\}\}/g, (_m, k: string) =>
+        String((defOrOpts as Record<string, unknown>)[k] ?? ''),
       );
-    if (typeof value !== 'string') return String(key);
-    const options = (opts ?? {}) as Record<string, unknown>;
-    return value.replace(/\{\{(\w+)\}\}/g, (m, name: string) =>
-      name in options ? String(options[name]) : m
-    );
+    }
+    return val;
   };
   return { useTranslation: () => ({ t }) };
 });
 
-import { EmployeesListPage } from '../EmployeesListPage';
+import { EmployeeDetailPage } from '../EmployeeDetailPage';
+import { userContext } from '@/contexts/userContext';
 
-const REQ_ID = 'req_emp01_diag';
-const TOKEN = 'tok_sup3r_secret';
+const EMP = 'emp_AB12CD34';
+const AT = '2026-11-17T12:12:00Z';
 
-const EMP = {
-  employeeId: 'emp_AAAAAAAAAAAAAAAAAAAAAAAA',
-  name: '鲤爪',
-  lifecycleState: 'active',
-  ownerUserId: 'user_1',
-};
+let urls: string[] = [];
+let detailStatus = 200;
+let detailBody: Record<string, unknown> = {};
+let versionBudget: Record<string, unknown> | undefined = { monthlyCostUsd: 10 };
 
-type Mode = 'ok' | 'list500' | 'list403' | 'list401' | 'budget500';
-let mode: Mode = 'ok';
+function response(status: number, body: unknown, requestId: string | null = null) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    headers: { get: (name: string) => (name.toLowerCase() === 'x-console-request-id' ? requestId : null) },
+  } as unknown as Response;
+}
 
-function bodyFor(url: string): unknown {
-  if (url.includes('/api/employees')) {
-    if (mode === 'list403') return { code: 'console.forbidden', message: 'no' };
-    if (mode === 'list401') return { code: 'console.unauthenticated', message: 'expired' };
-    if (mode === 'list500') return { code: 'run.invalid_query', message: 'bad' };
-    return { items: [EMP] };
+function route(url: string): Response {
+  if (url.includes('/api/employee?')) return response(detailStatus, detailBody, 'req-1');
+  if (url.includes('/api/employee-versions')) {
+    return response(200, {
+      items: currentVersionId
+        ? [
+            {
+              id: 'v3',
+              employeeId: EMP,
+              versionNo: 3,
+              effectiveFrom: AT,
+              effectiveTo: null,
+              budget: versionBudget,
+            },
+          ]
+        : [],
+    });
   }
-  if (url.includes('/api/employee-stats')) return { total: 1, byLifecycle: { active: 1 } };
-  if (url.includes('/api/approval-stats')) return { pending: 0, dueSoon: 0 };
+  if (url.includes('/api/effective-config')) {
+    return response(200, { employee: detailBody, version: null, grants: [], resolvedAt: AT });
+  }
+  if (url.includes('/api/workstations')) return response(200, { items: [] });
+  if (url.includes('/api/run-stats')) return response(200, { buckets: [] });
   if (url.includes('/api/budget-usage')) {
-    if (mode === 'budget500') return { code: 'budget.range_too_large', message: 'too wide' };
-    return { items: [], missingEmployeeIds: [EMP.employeeId] };
+    return response(200, { items: [{ employeeId: EMP, period: '2026-11', costUsd: 12.5 }] });
   }
-  if (url.includes('/api/run-activity')) return { cells: [], max: 0 };
-  if (url.includes('/api/run-stats')) return { buckets: [] };
-  if (url.includes('/api/workstations')) return { items: [] };
-  return { items: [] };
+  if (url.includes('/api/approval-stats')) return response(200, { pending: 0, dueSoon: 0 });
+  return response(200, { items: [] });
 }
 
-function statusFor(url: string): number {
-  if (url.includes('/api/employees') && mode === 'list500') return 500;
-  if (url.includes('/api/employees') && mode === 'list403') return 403;
-  if (url.includes('/api/employees') && mode === 'list401') return 401;
-  if (url.includes('/api/budget-usage') && mode === 'budget500') return 500;
-  return 200;
-}
+let currentVersionId = 'v3';
 
-function stubFetch() {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      const status = statusFor(url);
-      return new Response(JSON.stringify(bodyFor(url)), {
-        status,
-        headers: { 'Content-Type': 'application/json', 'X-Console-Request-Id': REQ_ID },
-      });
-    })
-  );
-}
-
-function renderPage() {
+function renderDetail(entry = `/agent/employees/${EMP}`) {
   return render(
-    <MemoryRouter initialEntries={['/agent/employees']}>
-      <EmployeesListPage />
-    </MemoryRouter>
+    <userContext.Provider value={{ user: { user_id: 9, user_name: '小浩' } } as never}>
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/agent/employees/:id" element={<EmployeeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    </userContext.Provider>,
   );
 }
 
-// Machine-code shape: dotted lowercase identifiers such as console.forbidden,
-// budget.range_too_large or agent.http.500. With the real dictionary loaded,
-// NOTHING on this page legitimately matches — raw i18n keys would too.
-const CODEISH = /[a-z]+\.[a-z_]+/;
-
-function pageText() {
-  return screen.getByTestId('agent-v2-employees-page').textContent ?? '';
+function guardNoRawKeys() {
+  const body = document.body.textContent ?? '';
+  expect(body).not.toContain('agentConsole.');
+  expect(body).not.toContain('pilot_owner_placeholder');
+  expect(body).not.toContain('[object Object]');
+  expect(body).not.toContain('undefined');
 }
 
 beforeEach(() => {
-  mode = 'ok';
-  localStorage.setItem('ws_token', TOKEN);
-  stubFetch();
+  urls = [];
+  detailStatus = 200;
+  currentVersionId = 'v3';
+  versionBudget = { monthlyCostUsd: 10 };
+  detailBody = {
+    id: EMP,
+    name: '小鲤',
+    title: '产品助理',
+    lifecycleState: 'active',
+    ownerUserId: 'human:9',
+    currentVersionId: 'v3',
+    revision: 2,
+    createdAt: AT,
+    updatedAt: AT,
+  };
+  globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    urls.push(url);
+    return route(url);
+  }) as never;
 });
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
-  localStorage.clear();
+  vi.restoreAllMocks();
 });
 
-describe('EMP-01 r5 localized error states (G15)', () => {
-  it('generic 500: readable copy + HTTP status, machine code absent everywhere, retry kept', async () => {
-    mode = 'list500';
-    renderPage();
-    await screen.findByTestId('agent-v2-employees-error');
-    const text = pageText();
-    expect(text).toContain('查询失败，请重试');
-    expect(text).toContain('数字员工暂时取不到（HTTP 500）');
-    expect(text).toContain('复制诊断');
-    expect(text).toContain('重试');
-    // the injected machine code (run.invalid_query) and the request id are
-    // not in the DOM at all — requestId lives behind the copy control only.
-    expect(text).not.toMatch(CODEISH);
-    expect(text).not.toContain(REQ_ID);
-    expect(text).not.toContain(TOKEN);
-    expect(screen.getByTestId('agent-v2-employees-retry')).toBeInTheDocument();
+describe('EMP-03 employee detail honesty', () => {
+  it('renders the identity and the current version', async () => {
+    renderDetail();
+    expect((await screen.findAllByText('小鲤')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('产品助理').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('v3').length).toBeGreaterThan(0);
+    guardNoRawKeys();
   });
 
-  it('403: no-permission copy, no console.forbidden in the DOM', async () => {
-    mode = 'list403';
-    renderPage();
-    await screen.findByTestId('agent-v2-employees-403');
-    const text = pageText();
-    expect(text).toContain('没有管理控制台权限');
-    expect(text).toContain('当前账号没有管理数字员工的权限');
-    expect(text).not.toMatch(CODEISH);
-    expect(text).not.toContain(REQ_ID);
+  it('shows a placeholder owner as a neutral dash and never calls approval-stats for it', async () => {
+    detailBody = { ...detailBody, ownerUserId: 'pilot_owner_placeholder' };
+    renderDetail();
+    const owner = await screen.findByTestId('agent-v2-ed-owner');
+    expect(owner.textContent).toBe('—');
+    expect(screen.queryByTestId('agent-v2-ed-help-owner')).toBeNull();
+    expect(urls.some((u) => u.includes('/api/approval-stats'))).toBe(false);
+    guardNoRawKeys();
   });
 
-  it('401: session-expired copy, no console.unauthenticated in the DOM', async () => {
-    mode = 'list401';
-    renderPage();
-    await screen.findByTestId('agent-v2-employees-auth');
-    const text = pageText();
-    expect(text).toContain('登录已失效');
-    expect(text).toContain('登录状态已失效，请重新登录后重试。');
-    expect(text).not.toMatch(CODEISH);
-    expect(text).not.toContain(REQ_ID);
+  it('prints effective times as full Beijing minutes', async () => {
+    renderDetail();
+    await screen.findAllByText('小鲤');
+    expect(document.body.textContent).toContain('2026-11-17 20:12');
+    expect(document.body.textContent).not.toContain('2026-11-17T12:12');
   });
 
-  it('budget-usage 500: cost KPI shows 「—」 + one reason line, never HTTP 500 or budget.range_too_large', async () => {
-    mode = 'budget500';
-    renderPage();
-    await screen.findByTestId('agent-v2-kpi-cost-error');
-    const text = pageText();
-    // P0-1: one neutral reason, no HTTP status, no machine code, no bare key.
-    expect(text).toContain('成本数据暂时不可用');
-    expect(text).not.toContain('HTTP');
-    expect(text).not.toContain('暂时取不到');
-    expect(text).not.toMatch(CODEISH);
-    expect(text).not.toContain(REQ_ID);
-    // same shape as the healthy card: the value line still renders 「—」
-    expect(screen.getByTestId('agent-v2-kpi-cost').textContent).toBe('—');
-    // the list itself is healthy and must render the table, not a page error
-    expect(screen.getByTestId('agent-v2-employees-table')).toBeInTheDocument();
-    expect(screen.queryByTestId('agent-v2-employees-error')).toBeNull();
+  it('prints the configured monthly limit in the PRD money format', async () => {
+    renderDetail();
+    const row = await screen.findByTestId('agent-v2-ed-budget-row');
+    expect(row.textContent).toContain('月度成本上限 $10.00');
+    expect(row.textContent).toContain('日 token 额度 未配置');
+    expect(row.textContent).toContain('单次上限 未配置');
+    expect(row.textContent).not.toContain('USD');
   });
 
-  it('P0-1: KPI failure DOM is theme/breakpoint independent — one reason line, never a status code', async () => {
-    mode = 'budget500';
-    renderPage();
-    const reason = await screen.findByTestId('agent-v2-kpi-cost-error');
-    // the exact text is the dictionary value regardless of theme tokens, so
-    // dark / light / 375 all render this same node with the same string
-    expect(reason.textContent).toBe('成本数据暂时不可用');
-    expect(reason.textContent).not.toMatch(/\d{3}/);
-    // the old code-in-parentheses shape had no value line at all
-    const card = reason.parentElement as HTMLElement;
-    expect(card.textContent).toContain('—');
-    expect(card.textContent).toContain('复制诊断');
+  it('reads a budget object with no limits as not configured, not zero', async () => {
+    versionBudget = {};
+    renderDetail();
+    const row = await screen.findByTestId('agent-v2-ed-budget-row');
+    expect(row.textContent).toBe('本版本未配置预算');
+    expect(row.textContent).not.toContain('$0.00');
   });
 
-  it('P0-2 → S2: owner cell prints a readable identity, the full human ref stays in the title', async () => {
-    EMP.ownerUserId = '1';
-    try {
-      renderPage();
-      const cell = await screen.findByTestId('agent-v2-col-owner');
-      expect(cell.textContent).toBe('用户 #1');
-      expect(cell.textContent).not.toBe('1');
-      expect(cell.textContent).not.toContain('human:');
-      expect(cell.getAttribute('title')).toBe('human:1');
-    } finally {
-      EMP.ownerUserId = 'user_1';
-    }
+  it('reads an absent budget object as unknown (—)', async () => {
+    currentVersionId = '';
+    renderDetail();
+    const row = await screen.findByTestId('agent-v2-ed-budget-row');
+    expect(row.textContent).toBe('—');
   });
 
-  it('copy diagnostics puts only the requestId on the clipboard — never token or code', async () => {
-    mode = 'list500';
-    const writeText = vi.fn(async (value: string) => value);
-    Object.defineProperty(window.navigator, 'clipboard', {
-      value: { writeText },
-      configurable: true,
-    });
-    renderPage();
-    await screen.findByTestId('agent-v2-employees-error');
-    fireEvent.click(screen.getByTestId('agent-v2-employees-diag'));
-    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    const copied = String(writeText.mock.calls[0][0]);
-    expect(copied).toBe(REQ_ID);
-    expect(copied).not.toContain(TOKEN);
-    expect(copied).not.toMatch(CODEISH);
-    await waitFor(() =>
-      expect(screen.getByTestId('agent-v2-employees-diag').textContent).toContain('已复制')
+  it('shows the ledger actual in USD with two decimals', async () => {
+    renderDetail();
+    const actual = await screen.findByTestId('agent-v2-ed-budget-actual');
+    expect(actual.textContent).toContain('$12.50');
+    expect(document.body.textContent).not.toContain('USD 12.50');
+  });
+
+  it('links the chat panel to the chat page with the employee id', async () => {
+    renderDetail();
+    await screen.findAllByText('小鲤');
+    const tabs = screen.getAllByRole('tab');
+    fireEvent.click(tabs[1]);
+    const link = await screen.findByTestId('agent-v2-ed-chat-link');
+    expect(link.getAttribute('href')).toBe(`/agent/chat?employeeId=${EMP}`);
+  });
+
+  it('keeps a request number on the 404 whole-page state and offers the way back', async () => {
+    detailStatus = 404;
+    detailBody = { code: 'employee.not_found' };
+    renderDetail();
+    const card = await screen.findByTestId('agent-v2-ed-notFound');
+    expect(card.textContent).toContain('员工不存在或无权访问');
+    expect(card.textContent).toContain('req-1');
+    expect(screen.queryByText('小鲤')).toBeNull();
+    expect(screen.getByText('返回员工列表').closest('a')?.getAttribute('href')).toBe(
+      '/agent/employees',
     );
   });
 
-  it('healthy state regression: table renders, no error copy anywhere', async () => {
-    mode = 'ok';
-    renderPage();
-    await screen.findByTestId('agent-v2-employees-table');
-    const text = pageText();
-    expect(text).toContain('鲤爪');
-    expect(text).not.toContain('暂时取不到');
-    expect(text).not.toContain('查询失败');
-    expect(text).not.toContain('复制诊断');
-    expect(text).not.toMatch(CODEISH);
-    expect(screen.queryByTestId('agent-v2-employees-error')).toBeNull();
-    expect(screen.queryByTestId('agent-v2-kpi-cost-error')).toBeNull();
+  it('separates forbidden from not found', async () => {
+    detailStatus = 403;
+    detailBody = { code: 'console.forbidden' };
+    renderDetail();
+    const card = await screen.findByTestId('agent-v2-ed-forbidden');
+    expect(card.textContent).toContain('无权限查看该员工');
+  });
+
+  it('separates an expired session from both access states', async () => {
+    detailStatus = 401;
+    detailBody = { code: 'console.unauthenticated' };
+    renderDetail();
+    const card = await screen.findByTestId('agent-v2-ed-unauthorized');
+    expect(card.textContent).toContain('登录已失效');
+  });
+
+  it('keeps a network failure as 未能读取 with retry, never not found', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError('offline');
+    }) as never;
+    renderDetail();
+    const card = await screen.findByTestId('agent-v2-ed-readFailed');
+    expect(card.textContent).toContain('无法连接员工服务');
+    expect(card.textContent).toContain('未提供');
+    expect(screen.queryByTestId('agent-v2-ed-notFound')).toBeNull();
+  });
+
+  it('renders a real owner as a readable name and keeps the raw ref in the title only', async () => {
+    renderDetail();
+    const owner = await screen.findByTestId('agent-v2-ed-owner');
+    expect(owner.textContent).toBe('小浩');
+    expect((owner as HTMLElement).title).toBe('human:9');
+    guardNoRawKeys();
+  });
+
+  it('does not leak machine codes into any state', async () => {
+    detailStatus = 500;
+    detailBody = { code: 'console.upstream_error' };
+    renderDetail();
+    const card = await screen.findByTestId('agent-v2-ed-unavailable');
+    expect(card.textContent).toContain('数字员工暂时取不到（HTTP 500）');
+    expect(screen.queryByTestId('agent-v2-ed-notFound')).toBeNull();
+    const body = document.body.textContent ?? '';
+    expect(body).not.toContain('console.upstream_error');
   });
 });
