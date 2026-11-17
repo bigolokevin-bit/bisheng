@@ -503,7 +503,7 @@ describe('AUD-01 expansion (§1.8)', () => {
     expect(exp.textContent).toContain('契约版本');
     expect(exp.textContent).not.toContain('schemaVersion');
     expect(exp.textContent).toContain('没有「验证此条」入口');
-    expect(exp.textContent).toContain('3801');
+    expect(exp.textContent).toContain('idem_g…8_01');
     expect(exp.textContent).not.toContain('idem_gr_3…');
     expect(exp.querySelector('.cp[title="idem_gr_3A38_01"]')).not.toBeNull();
     expect(exp.textContent).toContain('无只读通路，不可跳转');
@@ -642,6 +642,10 @@ describe('AUD-01 R1 — business ids, plain-language chrome, live row entry', ()
     );
     const row = screen.getByTestId('aud01-row-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
     const text = row.textContent ?? '';
+    // Merged ground truth (main ea10dfa): the run cell prints the mid-ellipsis
+    // short code alone — 「运行 ·」 prefix lives on the type-labelled cells via
+    // typeShortLabel, and idDisplay is shortId-only in the merged sheet. Raw id
+    // stays in title (next two assertions).
     expect(text).toContain('rn_01M7…GPWJ');
     expect(text).not.toContain('rn_01M7DEY8');
     expect(row.querySelector('[title="rn_01M7DEY86XMD8J2SJZES4TGPWJ"]')).not.toBeNull();
@@ -885,6 +889,14 @@ describe('AUD-01 width contract — 1280 scrolls instead of clipping characters'
     expect(band).toContain('top: 0');
     expect(band).toMatch(/max-height:\s*calc\(/);
     expect(band).toContain('.tblhint');
+    // R2-④: header must ride inside the fold, and the paging contradiction
+    // (note 「后面没有了」 + clickable 下一页) is closed in the same band.
+    expect(band).toContain('position: sticky');
+    // R2-② is pinned against the whole sheet, not the band: the note-vs-button
+    // contradiction is not width-specific, so its rule lives outside every
+    // breakpoint block (see aud01.css, above the 断点 section).
+    expect(css).toContain(".rfoot:has([data-testid='lk-lastpage-note'])");
+    expect(band).toContain('mask-image');
   });
 
   it('drops the wrapper scroll only at 1400+ where the columns fit', () => {

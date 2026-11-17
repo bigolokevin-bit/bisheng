@@ -61,6 +61,7 @@ import {
   type AuditEvent,
   type AuditQuery,
   type WindowKey,
+  actionDisplay,
 } from './aud01';
 import './aud01.css';
 
@@ -541,7 +542,8 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
         {query.action ? (
           <RemovableTag
             label={t('agentConsole.v2.aud01.chipAction')}
-            value={query.action}
+            value={actionDisplay(query.action, t) ?? query.action}
+            title={query.action}
             ariaLabel={t('agentConsole.v2.aud01.removeAction')}
             onRemove={() => updateQuery({ action: '' })}
             testId="aud01-chip-action"
