@@ -4,7 +4,7 @@
  *
  * Guards three things:
  *  ① the registry still describes exactly the route table that was inline
- *     before the extraction (same 21 entries, same order, same param names,
+ *     before the extraction (same 22 entries, same order, same param names,
  *     same lazy boundaries, same settings redirect, same splat 404);
  *  ② every rail entry in Shell.tsx `L1_ENTRIES` has a route in the registry —
  *     this is the check that would have caught skills / chat / collab shipping
@@ -42,7 +42,7 @@ const routeKeys = CONSOLE_V2_CHILDREN.map((e) =>
 );
 
 describe('console page registry (routes/consolePages.tsx)', () => {
-  it('keeps the 21 entries of the former inline table, in order', () => {
+  it('keeps the 22 entries of the former inline table, in order', () => {
     expect(routeKeys).toEqual([
       '',
       'employees',
@@ -50,6 +50,8 @@ describe('console page registry (routes/consolePages.tsx)', () => {
       'employees/:id',
       'matrix',
       'skills',
+      // SK-01: the row detail stays inline; this path only makes it addressable
+      'skills/:skillId',
       'approvals',
       'approvals/:id',
       'tasks',

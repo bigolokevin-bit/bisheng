@@ -196,6 +196,7 @@
   color: hsl(var(--micro-foreground));
   flex: 0 1 260px;
   min-width: 0;
+  position: relative;
 }
 
 .agent-app .a2s-search input {
@@ -376,6 +377,11 @@
 @media (max-width: 767px) {
   .agent-app .a2s-frame {
     grid-template-columns: minmax(0, 1fr);
+    /* VG C4: with min-height:100vh and two auto rows the grid used to stretch
+     * the RAIL row to fill the leftover height, which floated the 「可左右滑动」
+     * hint ~150px below the strip and left a dead band above the breadcrumb.
+     * Rows keep their content height; the page below still fills the screen. */
+    align-content: start;
   }
 
   .agent-app .a2s-rail {
@@ -391,6 +397,23 @@
     border-bottom: 1px solid var(--hairline);
     overflow-x: auto;
     scrollbar-width: none;
+    /* VG C3: a half-glyph used to be cut by the hard edge. Feather both ends
+     * (the mask is fixed to the strip, so it follows the viewport edge while
+     * the entries scroll underneath). */
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 10px,
+      #000 calc(100% - 10px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 10px,
+      #000 calc(100% - 10px),
+      transparent 100%
+    );
   }
 
   .agent-app .a2s-rail::-webkit-scrollbar {
@@ -451,10 +474,26 @@
   }
 
   .agent-app .a2s-search {
-    width: 36px;
+    width: 32px;
+    height: 32px;
     flex: none;
     padding: 0;
     justify-content: center;
+  }
+
+  /* VG C5: a 36px pill clipped the note down to one 「全」. Below 768 the icon
+   * alone carries the slot; the full sentence stays in `title` and for screen
+   * readers instead of being half-drawn. */
+  .agent-app .a2s-search-off {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   .agent-app .a2s-search input,

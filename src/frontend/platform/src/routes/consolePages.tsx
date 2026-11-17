@@ -70,6 +70,10 @@ export const CONSOLE_V2_CHILDREN = [
   { path: "employees/:id", element: <ShellEmployeeDetailPage /> },
   { path: "matrix", element: <ShellMatrixPage /> },
   { path: "skills", element: <ShellSkillsPage /> },
+  // SK-01: the ledger row's detail is an inline expansion on the same page —
+  // this child route only makes that expansion addressable (`skills/<id>`);
+  // it reuses the very same lazy page module, no second detail screen.
+  { path: "skills/:skillId", element: <ShellSkillsPage /> },
   { path: "approvals", element: <ShellApprovalsPage /> },
   { path: "approvals/:id", element: <ShellApprovalDetailPage /> },
   { path: "tasks", element: <ShellTasksPage /> },

@@ -306,14 +306,40 @@ export function AgentConsoleShell() {
   // so both were dead affordances. The account chip is a passive label and
   // the search slot is a static 「暂不可用」 note.
 
-  // fix B (G8): on narrow screens the rail scrolls horizontally; bring the
-  // active entry into view on mount and on every route change so it is never
-  // off-screen. jsdom lacks scrollIntoView, hence the typeof guard.
+  // fix B (G8) + VG C3: on narrow screens the rail scrolls horizontally; bring
+  // the active entry into view. Two things made the old one-shot call miss:
+  // it ran before the freshly mounted page had settled the topbar/rail width,
+  // and a rotation (no pathname change) never re-ran it. So: scroll by hand
+  // after reading the rail's own scrollWidth, once now and once on the next
+  // frame, and again on resize. jsdom reports 0/0 and stays silent.
   useEffect(() => {
-    const el = document.querySelector('.a2s-nav.is-active');
-    if (el && typeof el.scrollIntoView === 'function') {
-      el.scrollIntoView({ inline: 'center', block: 'nearest' });
-    }
+    let frame = 0;
+    const rail = document.querySelector('.a2s-rail') as HTMLElement | null;
+
+    const centerActive = () => {
+      if (!rail) return;
+      const el = rail.querySelector('.a2s-nav.is-active') as HTMLElement | null;
+      if (!el) return;
+      const overflow = rail.scrollWidth - rail.clientWidth;
+      if (overflow <= 1) return;
+      const target = el.offsetLeft - (rail.clientWidth - el.offsetWidth) / 2;
+      rail.scrollLeft = Math.max(0, Math.min(overflow, target));
+    };
+
+    const run = () => {
+      centerActive();
+      if (typeof requestAnimationFrame === 'function') {
+        if (frame) cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(centerActive);
+      }
+    };
+
+    run();
+    if (typeof window !== 'undefined') window.addEventListener('resize', run);
+    return () => {
+      if (typeof window !== 'undefined') window.removeEventListener('resize', run);
+      if (frame && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(frame);
+    };
   }, [location.pathname]);
 
   const seg = location.pathname.split('/').filter(Boolean);

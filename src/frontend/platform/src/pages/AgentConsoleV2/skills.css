@@ -38,6 +38,83 @@
   display: block;
 }
 
+/* ---------- VG C2: the request line on a state screen ----------
+ * listkit.css styles .rid/.rid-copy, but only list pages import it; on this
+ * page the button had no border and sat flush against the id. Scoped here:
+ * a labelled value + a real button (gap, outline, hover, focus-visible). */
+.agent-app .skl-reqline {
+  display: block;
+  margin: 2px 0 4px;
+}
+
+.agent-app .skl-reqline .rid,
+.agent-app .skl-reqline .rid-absent {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+.agent-app .skl-reqline .rid .mono {
+  font-size: 12px;
+  color: hsl(var(--foreground));
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.agent-app .skl-reqline .rid-copy {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: none;
+  color: hsl(var(--muted-foreground));
+  font-size: 11.5px;
+  line-height: 16px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.agent-app .skl-reqline .rid-copy:hover {
+  background: var(--hover);
+  border-color: hsl(var(--muted-foreground));
+  color: hsl(var(--foreground));
+}
+
+.agent-app .skl-reqline .rid-copy:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
+/* SK-01 deep link: one neutral line when the id is outside this read. */
+.agent-app .skl-deepmiss {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.agent-app .skl-deepback {
+  color: hsl(var(--primary));
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.agent-app .skl-deepback:hover {
+  text-decoration: underline;
+}
+
+.agent-app .skl-deepback:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
 /* ---------- name cell ---------- */
 
 .agent-app .skl-name {

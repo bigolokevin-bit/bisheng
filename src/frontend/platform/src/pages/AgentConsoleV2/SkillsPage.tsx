@@ -4,8 +4,11 @@
  * One screen for the tenant skill ledger: name, version, content fingerprint,
  * owner, visibility (shared with N employees / exclusive to one / unused) and
  * the referencing employees (first three + 「另有 N 位」). Every row expands
- * inline — no new route — into the full ledger key, full fingerprint, version,
- * owner and the complete reference list.
+ * inline — the detail is never a second screen — into the full ledger key, full
+ * fingerprint, version, owner and the complete reference list. `skills/:skillId`
+ * only addresses that same expansion: the page reads the param and opens the
+ * matching row, and an id outside this read gets one neutral line instead of a
+ * different body (existence is never confirmed).
  *
  * Data source: BFF GET /agent-api/api/skills (read-only proxy of GET /v1/skills,
  * BFF c3b64b7 → domain list_skills). The body is { items, asOf, nextCursor? };
@@ -21,11 +24,13 @@
  * drawn from our a2-* design language.
  *
  * Zero engineering language: the raw scope enum, field names, error codes and
- * UTC stamps never reach the DOM. Only a failed screen may carry one status
- * number inside a human sentence; time is Asia/Shanghai via fmtTime.
+ * UTC stamps never reach the DOM. A failed screen states the outcome in plain
+ * Chinese and, when the gateway answered with a numeric status, keeps that
+ * number in a secondary `title` only — the body carries the request number as a
+ * labelled, copyable value. Time is Asia/Shanghai via fmtTime.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { Icon } from './OverviewBlocks';
@@ -151,9 +156,24 @@ function RefLink({ id, className = 'skl-ref' }: { id: string; className?: string
   );
 }
 
-function SkillRowView({ row, index }: { row: SkillRow; index: number }) {
+function SkillRowView({
+  row,
+  index,
+  forceOpen = false,
+}: {
+  row: SkillRow;
+  index: number;
+  forceOpen?: boolean;
+}) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(forceOpen);
+
+  /* SK-01 deep link: /agent/skills/<skillId> lands on the normal ledger with
+   * that one row already expanded. Manual collapse stays possible — this only
+   * opens, never re-opens after the reader folded it. */
+  useEffect(() => {
+    if (forceOpen) setOpen(true);
+  }, [forceOpen]);
 
   const id = readText(row.skillId) ?? readText(row.id);
   const name = readText(row.name);
@@ -328,8 +348,24 @@ function SkillRowView({ row, index }: { row: SkillRow; index: number }) {
   );
 }
 
+/* One neutral line when a deep-linked id is not part of this read. Never names
+ * the reason (missing vs out of scope) and keeps the list itself reachable. */
+function DeepMissNote() {
+  const { t } = useTranslation();
+  return (
+    <p className="a2-meta skl-deepmiss" data-testid="agent-v2-skills-deep-miss">
+      <Icon name="alert" size={13} />
+      <span>{t('agentConsole.v2.skills.deepMiss')}</span>
+      <Link className="skl-deepback" to="/agent/skills" data-testid="agent-v2-skills-deep-back">
+        {t('agentConsole.v2.skills.deepBack')}
+      </Link>
+    </p>
+  );
+}
+
 export default function SkillsPage() {
   const { t } = useTranslation();
+  const { skillId: routeSkillId } = useParams();
   const fetchApi: Fetcher = useMemo(() => makeFetcher(), []);
   const [res, setRes] = useState<ApiRes<SkillListBody | SkillRow[]> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -355,6 +391,16 @@ export default function SkillsPage() {
   const asOf = body && !Array.isArray(body) ? readText(body.asOf) : null;
   const hasMore = !!body && !Array.isArray(body) && !!readText(body.nextCursor);
   const stats = deriveStats(rows);
+
+  /* SK-01 deep link (/agent/skills/<skillId>): the detail itself is still the
+   * row's inline expansion. A wrong shape or an id outside this read gets one
+   * neutral line — same body for "never existed" and "not in your scope", so
+   * the screen never confirms an id exists elsewhere. */
+  const deepId =
+    typeof routeSkillId === 'string' && routeSkillId.trim() ? routeSkillId.trim() : null;
+  const deepMatched =
+    deepId != null && rows.some((r) => (readText(r.skillId) ?? readText(r.id)) === deepId);
+  const deepMissed = deepId != null && res != null && res.ok && !deepMatched;
 
   const isTimeout = res != null && !res.ok && res.status === 0 && res.code === 'console.timeout';
   const isNetwork = res != null && !res.ok && res.status === 0 && !isTimeout;
@@ -385,7 +431,7 @@ export default function SkillsPage() {
             {t('agentConsole.v2.skills.forbiddenTitle')}
           </p>
           <p className="a2-card-sub">{t('agentConsole.v2.skills.forbiddenDesc')}</p>
-          <span className="skl-block">
+          <span className="skl-block skl-reqline">
             <ReqId requestId={res?.requestId} testId="agent-v2-skills-forbidden-reqid" />
           </span>
           <Link className="a2-btn" to="/agent" data-testid="agent-v2-skills-back">
@@ -406,7 +452,7 @@ export default function SkillsPage() {
             {t('agentConsole.auth.expired')}
           </p>
           <p className="a2-card-sub">{t('agentConsole.v2.skills.errKeep')}</p>
-          <span className="skl-block">
+          <span className="skl-block skl-reqline">
             <ReqId requestId={res?.requestId} testId="agent-v2-skills-error-reqid" />
           </span>
           <button
@@ -424,11 +470,17 @@ export default function SkillsPage() {
 
   /* ---- request failed (honest degrade) ---- */
   if (res != null && !res.ok) {
+    /* VG C1: the sentence is human Chinese only. The numeric status survives
+     * as a secondary `title` hint for support, never in the body text. */
     const reason = isTimeout
       ? t('agentConsole.v2.skills.errTimeout')
       : isNetwork
         ? t('agentConsole.v2.skills.errNetwork')
-        : t('agentConsole.v2.skills.errHttp', { code: res.status });
+        : t('agentConsole.v2.skills.errHttp');
+    const statusHint =
+      isTimeout || isNetwork
+        ? undefined
+        : t('agentConsole.v2.skills.errStatusHint', { code: res.status });
     return (
       <div className="a2s-page" data-testid="agent-v2-skills-page">
         <PageHead asOf={null} />
@@ -437,9 +489,11 @@ export default function SkillsPage() {
             <Icon name="alert" size={16} />
             {t('agentConsole.v2.skills.errTitle')}
           </p>
-          <p className="a2-card-sub">{reason}</p>
+          <p className="a2-card-sub" title={statusHint}>
+            {reason}
+          </p>
           <p className="a2-card-sub">{t('agentConsole.v2.skills.errKeep')}</p>
-          <span className="skl-block">
+          <span className="skl-block skl-reqline">
             <ReqId requestId={res.requestId} testId="agent-v2-skills-error-reqid" />
           </span>
           <button
@@ -455,11 +509,12 @@ export default function SkillsPage() {
     );
   }
 
-  /* ---- empty ---- */
+  /* ---- empty (honest: 0 rows is 0 rows — no counts, no fake zeros) ---- */
   if (rows.length === 0) {
     return (
       <div className="a2s-page" data-testid="agent-v2-skills-page">
         <PageHead asOf={asOf} />
+        {deepMissed ? <DeepMissNote /> : null}
         <div className="a2-card" data-testid="agent-v2-skills-empty">
           <p className="a2-h2 skl-state-h">
             <Icon name="file" size={16} />
@@ -475,6 +530,7 @@ export default function SkillsPage() {
   return (
     <div className="a2s-page" data-testid="agent-v2-skills-page">
       <PageHead asOf={asOf} />
+      {deepMissed ? <DeepMissNote /> : null}
 
       <div className="a2-kpis" data-testid="agent-v2-skills-kpis">
         <div className="a2-kpi">
@@ -537,7 +593,12 @@ export default function SkillsPage() {
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <SkillRowView key={skillKey(row, i)} row={row} index={i} />
+                <SkillRowView
+                  key={skillKey(row, i)}
+                  row={row}
+                  index={i}
+                  forceOpen={deepId != null && (readText(row.skillId) ?? readText(row.id)) === deepId}
+                />
               ))}
             </tbody>
           </table>

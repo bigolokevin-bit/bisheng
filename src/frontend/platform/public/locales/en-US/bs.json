@@ -7064,7 +7064,8 @@
       "errTitle": "Could not read this time",
       "errTimeout": "The read timed out and the skill ledger did not return.",
       "errNetwork": "The network connection dropped and the skill ledger did not return.",
-      "errHttp": "The service is temporarily unavailable (status {{code}}); the skill ledger did not return.",
+      "errHttp": "The service is temporarily unavailable; the skill ledger did not return.",
+      "errStatusHint": "Service status code {{code}} (for support)",
       "errKeep": "The page layout is kept, so you can retry directly. Stale or guessed data is never shown.",
       "retry": "Retry",
       "forbiddenTitle": "Skill ledger unavailable",
@@ -7072,6 +7073,8 @@
       "backHome": "Back to console",
       "emptyTitle": "No skills yet",
       "emptyHint": "Skills appear here once an employee version references them. This console offers no create entry.",
+      "deepMiss": "This skill is not part of this read. It may not be in the ledger yet, or the link is out of date.",
+      "deepBack": "View all skills",
       "scrollHint": "Scroll sideways to see every column",
       "more": "{{count}} loaded; more skills exist beyond this read. The numbers above cover this read only."
     },

@@ -14,7 +14,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('@/components/bs-ui/message', () => ({
   default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
@@ -76,6 +76,18 @@ function renderPage(entry = '/agent/skills') {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <SkillsPage />
+    </MemoryRouter>,
+  );
+}
+
+/** Same page, mounted on the deep-link child route (skills/:skillId). */
+function renderDeep(entry: string) {
+  return render(
+    <MemoryRouter initialEntries={[entry]}>
+      <Routes>
+        <Route path="/agent/skills" element={<SkillsPage />} />
+        <Route path="/agent/skills/:skillId" element={<SkillsPage />} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -303,12 +315,19 @@ describe('SKILL-01 read-only skill governance', () => {
     skillsBody = { code: 'agent.internal', message: 'boom stack' };
     renderPage();
     await screen.findByTestId('agent-v2-skills-error');
-    const text = screen.getByTestId('agent-v2-skills-error').textContent ?? '';
+    const card = screen.getByTestId('agent-v2-skills-error');
+    const text = card.textContent ?? '';
     expect(text).toContain('本次未能读取');
-    expect(text).toContain('状态 500');
+    expect(text).toContain('服务暂时不可用');
+    // VG C1: no raw HTTP status / hex request id inline in the sentence
+    expect(text).not.toMatch(/状态\s*500|HTTP\s*500/);
     expect(text).not.toContain('agent.internal');
     expect(text).not.toContain('boom stack');
     expect(text).not.toContain('/api/');
+    // the number survives only as a secondary title hint
+    const reason = card.querySelector('[title]');
+    expect(reason?.getAttribute('title')).toContain('500');
+    expect(text).not.toContain('500');
     expect(screen.queryAllByTestId('agent-v2-skills-row')).toHaveLength(0);
     guardNoRawKeys();
   });
@@ -385,5 +404,69 @@ describe('SKILL-01 read-only skill governance', () => {
     expect(css).toContain('.skl-copy');
     expect(css).toMatch(/\.skl-copy\s*\{[^}]*white-space:\s*nowrap/);
     guardNoRawKeys();
+  });
+
+  /* ---- SK-01 deep link: skills/:skillId ---- */
+
+  it('opens the deep-linked row on the same page, with aria-expanded=true', async () => {
+    skillsBody = NORMAL_BODY;
+    renderDeep('/agent/skills/sk_01HZX9TEST0000000000000002');
+    const rows = await screen.findAllByTestId('agent-v2-skills-row');
+    expect(rows).toHaveLength(3);
+
+    // exactly the second row is expanded; the ledger itself is still there
+    const expanded = await screen.findAllByTestId('agent-v2-skills-expanded');
+    expect(expanded).toHaveLength(1);
+    expect(expanded[0].getAttribute('data-skill')).toBe('sk_01HZX9TEST0000000000000002');
+    expect(rows[1].textContent).toContain('发票核对');
+    expect(expanded[0].textContent).toContain('sk_01HZX9TEST0000000000000002');
+    expect(expanded[0].textContent).toContain('emp_zzz999');
+
+    const toggles = screen.getAllByTestId('agent-v2-skills-expand');
+    expect(toggles[1].getAttribute('aria-expanded')).toBe('true');
+    expect(toggles[0].getAttribute('aria-expanded')).toBe('false');
+    // no neutral "not found" line when the id is in this read
+    expect(screen.queryByTestId('agent-v2-skills-deep-miss')).toBeNull();
+    guardNoRawKeys();
+  });
+
+  it('keeps the ledger reachable when a deep-linked id is outside this read', async () => {
+    skillsBody = NORMAL_BODY;
+    renderDeep('/agent/skills/sk_00000000000000000000qav');
+    await screen.findAllByTestId('agent-v2-skills-row');
+
+    const note = screen.getByTestId('agent-v2-skills-deep-miss');
+    expect(note.textContent).toContain('该技能不在本次读取的范围内');
+    // same body for missing / out of scope: no 404 wording, no existence leak
+    expect(note.textContent).not.toMatch(/404|不存在|没有权限/);
+    expect(screen.getAllByTestId('agent-v2-skills-row')).toHaveLength(3);
+    expect(screen.queryByTestId('agent-v2-skills-expanded')).toBeNull();
+
+    const back = screen.getByTestId('agent-v2-skills-deep-back');
+    expect(back.getAttribute('href')).toBe('/agent/skills');
+    expect(back.textContent).toBe('查看全部技能');
+    guardNoRawKeys();
+  });
+
+  it('treats a malformed id as the same neutral line, without a second request', async () => {
+    skillsBody = NORMAL_BODY;
+    const before = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+    renderDeep('/agent/skills/sk_short');
+    await screen.findAllByTestId('agent-v2-skills-row');
+    expect(screen.getByTestId('agent-v2-skills-deep-miss')).toBeTruthy();
+    // the page reads the list once; a bad id never becomes an API call
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before + 1);
+    expect(urls.every((u) => !u.includes('sk_short'))).toBe(true);
+  });
+
+  it('files the request button as a real control with spacing and focus styles (VG C2)', () => {
+    const css = readFileSync(path.resolve(process.cwd(), 'src/pages/AgentConsoleV2/skills.css'), 'utf8');
+    // gap between the label/value and the button, not flush against it
+    expect(css).toMatch(/\.skl-reqline \.rid,[^}]*gap:\s*8px/);
+    // a visible edge + padding so it reads as clickable
+    expect(css).toMatch(/\.skl-reqline \.rid-copy\s*\{[^}]*border:\s*1px solid/);
+    expect(css).toMatch(/\.skl-reqline \.rid-copy\s*\{[^}]*padding:/);
+    expect(css).toMatch(/\.skl-reqline \.rid-copy:hover/);
+    expect(css).toMatch(/\.skl-reqline \.rid-copy:focus-visible/);
   });
 });
