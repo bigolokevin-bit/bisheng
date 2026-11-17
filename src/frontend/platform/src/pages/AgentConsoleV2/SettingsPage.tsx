@@ -38,6 +38,7 @@ import { userContext } from '@/contexts/userContext';
 import { AuditVerifyPanel, type AuditVerifyStatus } from './AuditVerifyPanel';
 import { createHttpAuditApi, type AuditApi } from './aud01';
 import { HelpTip } from './HelpTip';
+import { avatarChar } from './identity';
 import { Field, fmtClock } from './runDetailKit';
 import {
   ACCESS_ROWS,
@@ -388,7 +389,7 @@ function TenantGroup({
             {accountName ? (
               <span className="who">
                 <span className="ava" aria-hidden="true">
-                  {accountName.slice(0, 1)}
+                  {avatarChar(accountName) ?? <SetIcon name="user" size={12} />}
                 </span>
                 <span className="nm">{accountName}</span>
               </span>

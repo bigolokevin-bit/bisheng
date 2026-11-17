@@ -9,7 +9,8 @@
  *
  * Honest-data rules (SPEC §2 + M2-PRD-DEEP §3/§13):
  * - R2 GET /api/run-detail is the header; R3 GET /api/run-events the stream;
- *   E11 names the employee (a failed lookup degrades to the raw emp_ id).
+ *   E11 names the employee (a failed lookup degrades to 「员工 · 短码」 — S2,
+ *   the raw `emp_` id lives in the cell title only).
  * - lastEventSeq === 0 → NO R3 request at all (the empty state is the head).
  * - Trace layering is the pure runTrace.ts derivation, not a span tree: the
  *   nine shapes (待结果/已配对/重复调用/孤立结果/坏载荷/终态后/缺工具名/
@@ -51,6 +52,7 @@ import {
 } from '@/controllers/API/agentConsoleRuns';
 
 import { CopyId, LkIcon, StageCard } from './listkit';
+import { avatarChar, employeeLabelById } from './identity';
 import { useConsoleCrumbTail } from './Shell';
 import { buildRunTrace, TERMINAL_TRACE_EVENT_TYPES, type RunStep, type TraceEvent } from './runTrace';
 import {
@@ -543,7 +545,9 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
   const costMissing = costUsd === undefined || costUsd === null;
   const ratio = fmtRatio(costUsd, run.budgetCapUsd);
   const employeeName = names.get(run.employeeId);
-  const displayName = employeeName ?? run.employeeId;
+  // S2: unresolved employee → 「员工 · 短码」, never a bare `emp_` id.
+  const displayName = employeeLabelById(run.employeeId, names, t);
+  const avaChar = avatarChar(employeeName);
   const attemptLabel =
     run.attemptNo === 1
       ? t('agentConsole.v2.run02.relAttemptFirst')
@@ -740,7 +744,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
             >
               <span className="who" title={run.employeeId}>
                 <span className="ava" aria-hidden="true">
-                  {displayName.slice(0, 1)}
+                  {avaChar ?? <LkIcon name="users" size={12} />}
                 </span>
                 <span className="nm">{displayName}</span>
               </span>

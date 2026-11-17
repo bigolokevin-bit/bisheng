@@ -17,6 +17,13 @@ import { HelpTip } from './HelpTip';
 import { CopyId } from './listkit';
 import { LkIcon } from './listkit/icons';
 import {
+  actorLabel,
+  employeeResourceIdLabel,
+  humanRefLabel,
+  isPlaceholderIdentity,
+  resourceTypeLabel,
+} from './identity';
+import {
   actionLabelKey,
   CLOCK_SKEW_MS,
   DECISION_KEYS,
@@ -30,7 +37,6 @@ import {
   formatOccurred,
   formatSpan,
   isStructured,
-  onBehalfDisplay,
   outcomeTone,
   shortId,
   type AuditEvent,
@@ -52,9 +58,11 @@ const jsonText = (v: unknown): string => {
 export interface AuditEventRowProps {
   event: AuditEvent;
   t: TFunction;
+  /** S2: employeeId → name directory (E11). Cosmetic: absent ⇒ 「员工 · 短码」. */
+  names?: Map<string, string>;
 }
 
-export function AuditEventRow({ event, t }: AuditEventRowProps) {
+export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
   const [open, setOpen] = useState(false);
   const occurred = formatOccurred(event.occurredAt);
   const latency = formatLatency(event.occurredAt, event.recordedAt);
@@ -116,18 +124,18 @@ export function AuditEventRow({ event, t }: AuditEventRowProps) {
             <span className="ava">
               <LkIcon name={actorIcon(event.actor.type)} size={13} />
             </span>
-            {event.actor.displayName ? (
-              <span className="nm">{event.actor.displayName}</span>
-            ) : (
-              <span className="raw">{event.actor.id}</span>
-            )}
+            {/* S2: readable identity — displayName, 用户 #N, 员工名/员工 · 短码
+                or 「系统 · employee-api」; the raw ref stays in the title only. */}
+            <span className="nm">{actorLabel(event.actor, names, t)}</span>
           </span>
         </td>
 
         <td data-l={t('agentConsole.v2.aud01.colBehalf')}>
           {event.onBehalfOf ? (
             <span className="behalf" title={`onBehalfOf: ${event.onBehalfOf}`}>
-              → {onBehalfDisplay(event.onBehalfOf)}
+              → {isPlaceholderIdentity(event.onBehalfOf)
+                ? t('agentConsole.v2.id.unknown')
+                : humanRefLabel(event.onBehalfOf, t)}
             </span>
           ) : (
             <span className="faint">—</span>
@@ -208,10 +216,17 @@ export function AuditEventRow({ event, t }: AuditEventRowProps) {
                 : undefined
             }
           >
-            <span className="rt">{event.resource.type}</span>
+            {/* S2: type word is localized (EMPLOYEE → 员工) and employee
+                resources print the name or 「员工 · 短码」 — the CopyId keeps
+                the full `emp_…` id in title + copy (visual truncation rule). */}
+            <span className="rt">{resourceTypeLabel(event.resource.type, t)}</span>
             <CopyId
               value={event.resource.id}
-              display={shortId(event.resource.id)}
+              display={
+                event.resource.type === 'employee'
+                  ? employeeResourceIdLabel(event.resource.id, names, t)
+                  : shortId(event.resource.id)
+              }
               ariaLabel={t('agentConsole.v2.aud01.copyResource')}
               copiedLabel={t('agentConsole.v2.aud01.copied')}
             />

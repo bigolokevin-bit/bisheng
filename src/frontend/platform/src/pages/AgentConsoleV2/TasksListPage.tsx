@@ -27,6 +27,8 @@ import { useTranslation } from 'react-i18next';
 import { userContext } from '@/contexts/userContext';
 
 import { HelpTip } from './HelpTip';
+import { LkIcon } from './listkit/icons';
+import { avatarChar, humanLabel } from './identity';
 
 import {
   fetchEmployeesPage,
@@ -649,7 +651,9 @@ export function TasksListPage() {
           ? t('agentConsole.v2.tsk.assigneeSelf')
           : type === 'employee' && names[bare]
             ? names[bare]
-            : bare || assigneeFilter;
+            : bare
+              ? humanLabel(bare, t)
+              : assigneeFilter;
       parts.push(`${t('agentConsole.v2.tsk.filterAssignee')} = ${label}`);
     }
     if (dueKey) parts.push(`${t('agentConsole.v2.tsk.filterDue')} = ${t(`agentConsole.v2.tsk.due${dueKey === '7d' ? '7d' : dueKey === 'today' ? 'Today' : 'Overdue'}`)}`);
@@ -694,9 +698,9 @@ export function TasksListPage() {
         ? { nm: name, id: '', isMe: false, mono: false, roleKey: 'agentConsole.v2.tsk.roleEmployee' }
         : { nm: '—', id: '', isMe: false, mono: true, roleKey: 'agentConsole.v2.tsk.roleEmployee' };
     }
-    // human others: no human-name endpoint — mono uid stays honest (ellipsis
-    // + title in the cell), no role word, no fragment
-    return { nm: bare, id: '', isMe: false, mono: true, roleKey: '' };
+    // human others: no human-name endpoint — S2 readable fallback 「用户 #N」
+    // (the full raw ref stays in the cell title), no role word, no fragment
+    return { nm: humanLabel(bare, t), id: '', isMe: false, mono: true, roleKey: '' };
   };
 
   /* ---------- body by state ---------- */
@@ -1473,7 +1477,7 @@ function FragmentRow({ r, overdue, isOpen, av, stLabel, prio, prioKnown, onToggl
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%', minWidth: 0 }}>
             {!av.mono && av.nm !== '—' && (
               <span className="a2-who-avatar" aria-hidden data-testid="agent-v2-task-assignee-avatar">
-                {av.nm.slice(0, 1)}
+                {avatarChar(av.nm) ?? <LkIcon name="user" size={11} />}
               </span>
             )}
             <span

@@ -44,6 +44,7 @@ import {
 } from './v2Data';
 
 import { ApprovalDecisionDialog } from './ApprovalDecisionDialog';
+import { bareId, humanLabel, identityText } from './identity';
 
 // AP4 list body — keyset page; nextCursor only when more rows exist
 // (shape verified live + against services/domain approvals.list_approvals).
@@ -674,7 +675,13 @@ export function ApprovalsListPage() {
                           </span>
                         </td>
                         <td className="a2-cell-nowrap r" title={employee?.id}>
-                          {employee?.id ?? '—'}
+                          {/* S2: readable identity — 用户 #N / 员工 · 短码; the
+                              raw ref survives only in the cell title. */}
+                          {employee
+                            ? employee.type === 'human' || employee.type === 'user'
+                              ? humanLabel(bareId(employee.id), t)
+                              : identityText(employee.id, t)
+                            : '—'}
                         </td>
                         <td className="a2-cell-nowrap" data-testid="agent-v2-approval-risk">
                           <span className={`a2-pill ${riskTone(r.riskLevel)}`}>

@@ -5907,6 +5907,34 @@
         "footSource": "データソース：R5 実行リスト · 補足列は R2 から行ごとに遅延取得 · イベントストリームは実行詳細（RUN-02）へ",
         "footCaliber": "口径：北京時間 · USD コスト原値 · unknown を 0 にしない · 総数なしカーソルページング"
       },
+      "id": {
+        "unknown": "不明",
+        "none": "—",
+        "unnamed": "名称未設定",
+        "employee": "従業員",
+        "userRef": "ユーザー #{{id}}",
+        "employeeRef": "従業員 · {{tail}}",
+        "systemActor": "システム · {{id}}",
+        "serviceActor": "サービス · {{id}}",
+        "typeHuman": "人間",
+        "typeEmployee": "従業員",
+        "typeSystem": "システム",
+        "typeService": "サービス",
+        "res": {
+          "employee": "従業員",
+          "employee_version": "従業員バージョン",
+          "grant": "権限付与",
+          "action": "操作",
+          "approval": "承認",
+          "task": "タスク",
+          "run": "実行",
+          "policy": "ポリシー",
+          "policy_snapshot": "ポリシースナップショット",
+          "knowledge_base": "ナレッジベース",
+          "channel": "チャネル",
+          "workstation": "ワークステーション"
+        }
+      },
       "aud01": {
         "viewRunTitle": "実行 {{id}} の詳細を開く（RUN-02）",
         "sub": "権限判定・承認判断・権限変更・ワークステーション紐付けなどの読み取り専用の記録。イベントは書き込み後は確定で、このページに編集・削除・追記の入口はありません。",

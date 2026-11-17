@@ -180,7 +180,9 @@ describe('APR-01 approvals pending list', () => {
     expect(screen.getByTitle(A1).textContent).toContain('…');
     // action/changeKind, employee (onBehalfOf preferred), localized risk and status
     expect(rows[0].textContent).toContain('grant_escalation');
-    expect(rows[0].textContent).toContain('human:7');
+    // S2: the readable identity prints, the `human:` ref never does
+    expect(rows[0].textContent).toContain('用户 #7');
+    expect(rows[0].textContent).not.toContain('human:');
     expect(rows[0].textContent).toContain('高风险');
     expect(rows[0].textContent).toContain('待处理');
     // P1-4: countdown reads as a duration (hh:mm:ss), not a raw second count

@@ -6079,6 +6079,34 @@
         "footSource": "Source: R5 run list · supplementary columns lazily filled per row from R2 · event stream belongs to run detail (RUN-02)",
         "footCaliber": "Caliber: Beijing time · raw USD cost · unknown never becomes 0 · cursor pagination without total"
       },
+      "id": {
+        "unknown": "Unknown",
+        "none": "—",
+        "unnamed": "Unnamed",
+        "employee": "Employee",
+        "userRef": "User #{{id}}",
+        "employeeRef": "Employee · {{tail}}",
+        "systemActor": "System · {{id}}",
+        "serviceActor": "Service · {{id}}",
+        "typeHuman": "Human",
+        "typeEmployee": "Employee",
+        "typeSystem": "System",
+        "typeService": "Service",
+        "res": {
+          "employee": "Employee",
+          "employee_version": "Employee version",
+          "grant": "Grant",
+          "action": "Action",
+          "approval": "Approval",
+          "task": "Task",
+          "run": "Run",
+          "policy": "Policy",
+          "policy_snapshot": "Policy snapshot",
+          "knowledge_base": "Knowledge base",
+          "channel": "Channel",
+          "workstation": "Workstation"
+        }
+      },
       "aud01": {
         "viewRunTitle": "Open run {{id}} detail (RUN-02)",
         "sub": "A read-only trail of permission checks, approval decisions, grant changes and workstation bindings. Events are final once written: this page offers no edit, delete or backfill entry.",

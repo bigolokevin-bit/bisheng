@@ -249,13 +249,14 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(document.body.textContent).not.toContain(TENANT);
   });
 
-  it('E11: a failed employee lookup degrades to the raw emp_ id (never a fabricated name)', async () => {
+  it('E11 → S2: a failed employee lookup degrades to 「员工 · 短码」 (never a bare emp_ id, never a fabricated name)', async () => {
     renderPage(makeApi(), {
       listEmployees: vi.fn().mockRejectedValue(new Error('offline')),
     } as unknown as AgentConsoleApi);
     await waitReady();
     const employee = screen.getByTestId('agent-v2-rd-f-employee');
-    expect(employee.textContent).toContain(EMP_XIAOLI);
+    expect(employee.textContent).toContain('员工 · B540');
+    expect(employee.textContent).not.toContain('emp_');
     expect(employee.textContent).not.toContain('小鲤');
   });
 

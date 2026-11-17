@@ -9,9 +9,13 @@
  * text uses the localized blockUnavailable copy with the HTTP status as
  * parameter only (G15 rule inherited from OV-01). Cross-tenant and
  * unknown ids show the same 404 copy so existence is not leaked. */
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useParams, useSearchParams } from 'react-router-dom';
+
+import { userContext } from '@/contexts/userContext';
+import { LkIcon } from './listkit/icons';
+import { avatarChar, ownerDisplayLabel } from './identity';
 
 import {
   bucketSum,
@@ -116,6 +120,16 @@ export function EmployeeDetailPage() {
   const { id = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const fetch = makeFetcher();
+  /* S2: the session identity is the only human name the client may resolve
+     without a new endpoint (same convention as TSK-01). */
+  const ctx = useContext(userContext) as
+    | { user?: { user_id?: number | string; user_name?: string; name?: string; username?: string } }
+    | null;
+  const currentUid =
+    ctx?.user?.user_id === undefined || ctx?.user?.user_id === null
+      ? ''
+      : String(ctx.user.user_id);
+  const currentName = String(ctx?.user?.user_name || ctx?.user?.name || ctx?.user?.username || '');
   const [token, setToken] = useState(0);
   const [updatedAt, setUpdatedAt] = useState('');
   const [loading, setLoading] = useState(true);
@@ -232,8 +246,10 @@ export function EmployeeDetailPage() {
   }
 
   const d = detail.data ?? { id };
-  const name = d.name || d.id;
-  const initial = name.slice(0, 1).toUpperCase();
+  /* S2: an empty name reads 「未命名」 — the raw id stays in the id row, never
+     as the page's headline identity. */
+  const name = d.name?.trim() || t('agentConsole.v2.id.unnamed');
+  const initial = avatarChar(name);
   const currentVersion = (versions.data?.items ?? []).find(
     (v) => v.id === d.currentVersionId
   );
@@ -303,7 +319,7 @@ export function EmployeeDetailPage() {
             flexShrink: 0,
           }}
         >
-          {initial}
+          {initial ?? <LkIcon name="user" size={18} />}
         </div>
         <div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -317,7 +333,24 @@ export function EmployeeDetailPage() {
           </div>
           <p className="a2-meta" style={{ margin: '4px 0 0' }}>
             {t('agentConsole.v2.ed.bannerOwner')}{' '}
-            <span className="a2-mono">{d.ownerUserId ? `human:${d.ownerUserId}` : '—'}</span>
+            {/* S2: readable owner (「用户 #1」/「未知」); the raw combined ref
+                stays in the tooltip only, the prefix never prints inline. */}
+            {(() => {
+              const raw = (d.ownerUserId ?? '').trim();
+              const shown = ownerDisplayLabel(raw, t, {
+                currentUid,
+                currentName: currentName || undefined,
+              });
+              const ref = raw ? (raw.includes(':') ? raw : `human:${raw}`) : '';
+              return (
+                <span
+                  title={ref && shown !== t('agentConsole.v2.id.unknown') ? ref : undefined}
+                  data-testid="agent-v2-ed-owner"
+                >
+                  {shown}
+                </span>
+              );
+            })()}
             {d.ownerUserId ? <HelpTip term="humanPrefix" testId="agent-v2-ed-help-owner" /> : null}
             {' · '}
             {t('agentConsole.v2.ed.bannerRevision', { count: d.revision ?? 0 })}

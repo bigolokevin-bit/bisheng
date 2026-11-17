@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 
 import { userContext } from '@/contexts/userContext';
 import { createHttpAgentConsoleApi, type AgentConsoleApi } from '@/controllers/API/agent';
+import { avatarChar } from './identity';
 import {
   createHttpAgentConsoleHermesApi,
   type AgentConsoleHermesApi,
@@ -97,6 +98,14 @@ const RAIL_ICONS: Record<string, ReactNode> = {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
+  ),
+  /* S2: single-user fallback avatar — a stable neutral glyph replaces stray
+     Latin initials (「A」 for Alice says nothing). */
+  user: (
+    <>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
     </>
   ),
   clip: (
@@ -363,7 +372,7 @@ export function AgentConsoleShell() {
             title={accountLabel}
             aria-hidden="true"
           >
-            {accountLabel.slice(0, 1).toUpperCase()}
+            {avatarChar(accountLabel) ?? <RailIcon name="user" size={13} />}
           </span>
           <span className="a2s-railhint" aria-hidden="true">
             <RailIcon name="chevScroll" size={13} />
@@ -426,7 +435,7 @@ export function AgentConsoleShell() {
             </button>
             <span className="a2s-ume" data-testid="agent-v2-account" title={accountLabel}>
               <span className="a2s-ava a2-mono" aria-hidden="true">
-                {accountLabel.slice(0, 1).toUpperCase()}
+                {avatarChar(accountLabel) ?? <RailIcon name="user" size={13} />}
               </span>
               <span className="a2s-ume-nm">{accountLabel}</span>
               <RailIcon name="chevD" size={13} />

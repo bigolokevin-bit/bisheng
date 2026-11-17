@@ -41,6 +41,7 @@ import {
   type Approval,
 } from '@/controllers/API/agentConsoleApprovals';
 import { ChatTab } from '@/pages/AgentPage/ChatTab';
+import { ownerDisplayLabel } from './identity';
 import {
   createHttpAgentConsoleHermesApi,
   type AgentConsoleHermesApi,
@@ -382,11 +383,11 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsAp
                       {list.value.map((e) => (
                         <div key={e.employeeId} className="a2-card a2-card-item" data-testid="agent-v2-card">
                           <div className="a2-card-head">
-                            <span>{e.name}</span>
+                            <span>{e.name?.trim() || t('agentConsole.v2.id.unnamed')}</span>
                             {statePill(e.lifecycleState)}
                           </div>
                           <div className="a2-card-sub a2-mono">{e.employeeId}</div>
-                          <div className="a2-card-sub">{e.ownerUserId}</div>
+                          <div className="a2-card-sub">{ownerDisplayLabel(e.ownerUserId, t, { currentUid: uid })}</div>
                           <div className="a2-card-sub a2-mono">{String(e.updatedAt).slice(0, 16).replace("T", " ")}</div>
                           <div className="a2-card-actions">
                             <button type="button" className="a2-btn" onClick={() => openDetail(e)}>
@@ -410,10 +411,10 @@ export function AgentConsoleV2Page({ consoleApi, approvalsApi, trendsApi, runsAp
                       <tbody>
                         {list.value.map((e) => (
                           <tr key={e.employeeId} data-testid="agent-v2-row">
-                            <td>{e.name}</td>
+                            <td>{e.name?.trim() || t('agentConsole.v2.id.unnamed')}</td>
                             <td className="a2-mono">{e.employeeId}</td>
                             <td>{statePill(e.lifecycleState)}</td>
-                            <td className="a2-mono">{e.ownerUserId}</td>
+                            <td className="a2-mono">{ownerDisplayLabel(e.ownerUserId, t, { currentUid: uid })}</td>
                             <td>
                               <button type="button" className="a2-btn" onClick={() => openDetail(e)}>
                                 {t('agentConsole.v2.detail')}

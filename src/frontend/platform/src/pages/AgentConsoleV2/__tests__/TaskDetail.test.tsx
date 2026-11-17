@@ -208,13 +208,18 @@ describe('TSK-02 — header, meta row and the 17-field traversal', () => {
     );
 
     const creator = screen.getByTestId('agent-v2-task-f-creator');
-    expect(creator.textContent).toContain('human:u_c7f3d2a91b46');
+    // S2: readable 「用户 #…」 inline; the full raw ref lives in copy/title.
+    expect(creator.textContent).toContain('用户 #u_c7f3d2a91b46');
+    expect(creator.textContent).not.toContain('human:');
+    expect(screen.getByTestId('agent-v2-task-creator-raw').getAttribute('title')).toBe(
+      'human:u_c7f3d2a91b46',
+    );
     expect(creator.textContent).toContain('人类');
     expect(creator.textContent).toContain('不猜、不拼');
     expect(screen.queryByTestId('agent-v2-task-creator-link')).toBeNull();
   });
 
-  it('E02: an unknown employee degrades to the raw id — never a fabricated name', async () => {
+  it('E02 → S2: an unknown employee degrades to 「员工 · 短码」, never a bare emp_ id or a fabricated name', async () => {
     renderPage({
       consoleApi: {
         listEmployees: vi.fn().mockRejectedValue(new Error('offline')),
@@ -222,7 +227,8 @@ describe('TSK-02 — header, meta row and the 17-field traversal', () => {
     });
     await waitReady();
     const assignee = screen.getByTestId('agent-v2-task-f-assignee');
-    expect(assignee.textContent).toContain(EMP_XIAOLI);
+    expect(assignee.textContent).toContain('员工 · B540');
+    expect(assignee.textContent).not.toContain('emp_');
     expect(assignee.textContent).not.toContain('小鲤');
   });
 

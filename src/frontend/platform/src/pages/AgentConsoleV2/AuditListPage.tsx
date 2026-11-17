@@ -27,6 +27,7 @@ import type { AgentConsoleApi, EmployeeSummary } from '@/controllers/API/agent';
 
 import { AuditEventRow } from './AuditEventRow';
 import { AuditVerifyPanel } from './AuditVerifyPanel';
+import { employeeLabelById } from './identity';
 import { HelpTip } from './HelpTip';
 import {
   CursorFoot,
@@ -302,7 +303,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
   const hasExtra = hasExtraFilters(query);
   const empLabel = employeeId
     ? t('agentConsole.v2.aud01.filterEmployeeValue', {
-        name: names.get(employeeId) ?? employeeId,
+        name: employeeLabelById(employeeId, names, t),
       })
     : t('agentConsole.v2.aud01.filterEmployee');
 
@@ -344,7 +345,11 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
           active: employeeId !== '',
           options: [
             { value: '', label: t('agentConsole.v2.aud01.filterAll') },
-            ...(employees ?? []).map((e) => ({ value: e.employeeId, label: e.name })),
+            ...(employees ?? []).map((e) => ({
+              value: e.employeeId,
+              // S2: an employee without a name still reads 「员工 · 短码」
+              label: employeeLabelById(e.employeeId, names, t),
+            })),
           ],
           onChange: (v) => setEmployee(v, employeeMode),
         }}
@@ -555,7 +560,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
         {query.actorId ? (
           <RemovableTag
             label={t('agentConsole.v2.aud01.empAsActor')}
-            value={names.get(query.actorId) ?? shortId(query.actorId)}
+            value={employeeLabelById(query.actorId, names, t)}
             title={query.actorId}
             ariaLabel={t('agentConsole.v2.aud01.removeEmployee')}
             onRemove={() => updateQuery({ actorId: '' })}
@@ -565,7 +570,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
         {query.resourceId ? (
           <RemovableTag
             label={t('agentConsole.v2.aud01.empAsResource')}
-            value={names.get(query.resourceId) ?? shortId(query.resourceId)}
+            value={employeeLabelById(query.resourceId, names, t)}
             title={query.resourceId}
             ariaLabel={t('agentConsole.v2.aud01.removeResource')}
             onRemove={() => updateQuery({ resourceId: '' })}
@@ -741,7 +746,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
             }
           >
             {list.items.map((event) => (
-              <AuditEventRow key={event.eventId} event={event} t={t} />
+              <AuditEventRow key={event.eventId} event={event} t={t} names={names} />
             ))}
           </TableCard>
         )}

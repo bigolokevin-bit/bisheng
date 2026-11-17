@@ -6024,6 +6024,34 @@
         "footSource": "数据源：R5 运行列表 · 补充列单行懒拉 R2 · 事件流归运行详情（RUN-02）",
         "footCaliber": "口径：时间为北京时间 · 成本 USD 原值 · unknown 不顶 0 · 游标分页无总数"
       },
+      "id": {
+        "unknown": "未知",
+        "none": "—",
+        "unnamed": "未命名",
+        "employee": "员工",
+        "userRef": "用户 #{{id}}",
+        "employeeRef": "员工 · {{tail}}",
+        "systemActor": "系统 · {{id}}",
+        "serviceActor": "服务 · {{id}}",
+        "typeHuman": "人类",
+        "typeEmployee": "员工",
+        "typeSystem": "系统",
+        "typeService": "服务",
+        "res": {
+          "employee": "员工",
+          "employee_version": "员工版本",
+          "grant": "授权",
+          "action": "操作",
+          "approval": "审批",
+          "task": "任务",
+          "run": "运行",
+          "policy": "策略",
+          "policy_snapshot": "策略快照",
+          "knowledge_base": "知识库",
+          "channel": "渠道",
+          "workstation": "工位"
+        }
+      },
       "aud01": {
         "viewRunTitle": "打开运行 {{id}} 的详情（RUN-02）",
         "sub": "权限判定、审批决策、职权变更与工位绑定等动作的只读留痕。事件一经写入即终态，本页不提供修改、删除或补录入口",

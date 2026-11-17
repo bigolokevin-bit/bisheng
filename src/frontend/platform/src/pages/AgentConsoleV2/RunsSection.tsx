@@ -50,6 +50,7 @@ import {
   useCursorList,
   type LkColumn,
 } from './listkit';
+import { avatarChar, employeeLabelById } from './identity';
 
 /** RunStatus contract enum, in filter order (agentrun_models.py). */
 const RUN_STATUSES: RunStatus[] = [
@@ -392,7 +393,7 @@ export function RunsSection({ api, consoleApi, initialEmployeeId }: RunsSectionP
 
   const employeeLabel = query.employeeId
     ? t('agentConsole.v2.runs01.filterEmployeeValue', {
-        name: names.get(query.employeeId) ?? query.employeeId,
+        name: employeeLabelById(query.employeeId, names, t),
       })
     : t('agentConsole.v2.runs01.filterEmployee');
 
@@ -494,7 +495,11 @@ export function RunsSection({ api, consoleApi, initialEmployeeId }: RunsSectionP
             active: query.employeeId !== '',
             options: [
               { value: '', label: t('agentConsole.v2.runsFilterAll') },
-              ...(employees ?? []).map((e) => ({ value: e.employeeId, label: e.name })),
+              ...(employees ?? []).map((e) => ({
+                value: e.employeeId,
+                // S2: an employee without a name still reads 「员工 · 短码」
+                label: employeeLabelById(e.employeeId, names, t),
+              })),
             ],
             onChange: (v) => updateFilters({ employeeId: v }),
           },
@@ -665,7 +670,14 @@ function RunRow({ run, fill, onRetryFill, name, t }: RunRowProps) {
   const statusLabel = runStatusLabel(t, run.status);
   const pillCls = statusPillClass(run.status);
   const statusHintKey = `agentConsole.v2.runs01.statusHint.${run.status}`;
-  const displayName = name ?? run.employeeId;
+  // S2: an unresolved employee reads 「员工 · 短码」, never a bare `emp_` id
+  // (the raw id stays in the cell title for support).
+  const displayName = employeeLabelById(
+    run.employeeId,
+    name ? new Map([[run.employeeId, name]]) : undefined,
+    t,
+  );
+  const avaChar = avatarChar(name);
 
   const duration = formatDuration(run.startedAt, endedAt);
   const durationTitle =
@@ -687,7 +699,7 @@ function RunRow({ run, fill, onRetryFill, name, t }: RunRowProps) {
       <td className="lk-td-who">
         <span className="who" title={run.employeeId} data-testid="agent-v2-runs-employee">
           <span className="ava" aria-hidden="true">
-            {displayName.slice(0, 1)}
+            {avaChar ?? <LkIcon name="users" size={12} />}
           </span>
           <span className="nm">{displayName}</span>
         </span>

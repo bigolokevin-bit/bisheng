@@ -198,13 +198,14 @@ describe('EMP-01 r5 localized error states (G15)', () => {
     expect(card.textContent).toContain('复制诊断');
   });
 
-  it('P0-2: owner cell renders the full human ref, never a bare uid', async () => {
+  it('P0-2 → S2: owner cell prints a readable identity, the full human ref stays in the title', async () => {
     EMP.ownerUserId = '1';
     try {
       renderPage();
       const cell = await screen.findByTestId('agent-v2-col-owner');
-      expect(cell.textContent).toBe('human:1');
+      expect(cell.textContent).toBe('用户 #1');
       expect(cell.textContent).not.toBe('1');
+      expect(cell.textContent).not.toContain('human:');
       expect(cell.getAttribute('title')).toBe('human:1');
     } finally {
       EMP.ownerUserId = 'user_1';

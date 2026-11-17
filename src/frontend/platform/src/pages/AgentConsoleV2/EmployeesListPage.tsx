@@ -10,11 +10,19 @@
 // budget.range_too_large / agent.http.*) never reaches the screen. The
 // requestId is offered through an explicit "copy diagnostics" control and is
 // never inlined in body text.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { userContext } from '@/contexts/userContext';
 import { EmployeesHeatPanel } from './EmployeesHeatPanel';
 import { HelpTip } from './HelpTip';
+import { LkIcon } from './listkit/icons';
+import {
+  avatarChar,
+  duplicateNames,
+  employeeDisplayName,
+  ownerDisplayLabel,
+} from './identity';
 import {
   dayWindow,
   fetchActivity,
@@ -159,13 +167,9 @@ function sumCost(body: BudgetBody | null | undefined, ids: string[]): { total: n
   return { total, covered };
 }
 
-/* P0-2 (observer pixel audit): the owner cell printed the bare uid ("1"), so a
-   reviewer could not tell a person from a truncated fragment. The E11
-   projection carries only the userId, so the actor type defaults to `human` —
-   the same convention the detail banner and the approval-stats call already
-   use (`human:${owner}`) — while a value that already carries a type prefix is
-   kept verbatim. The cell prints the full ref (never a bare number) and the
-   title keeps that full value. */
+/* P0-2 (observer pixel audit) → S2: the FULL ref (`human:<uid>`) is kept in
+   the cell title for debugging, but the printed text is the readable identity
+   (ownerDisplayLabel below): 「用户 #1」/「未知」, never the raw prefix. */
 function ownerRef(ownerUserId?: string | null): string {
   if (!ownerUserId) return '';
   return ownerUserId.includes(':') ? ownerUserId : `human:${ownerUserId}`;
@@ -308,6 +312,20 @@ export function EmployeesListPage() {
     () => (listRes?.ok ? listRes.data?.items ?? [] : []),
     [listRes],
   );
+  /* S2: same-name distinguishers + the operator's own identity (session only,
+     no new endpoint) for the readable owner cell. */
+  const dups = useMemo(
+    () => duplicateNames(rows.map((r) => ({ id: r.employeeId, name: r.name }))),
+    [rows],
+  );
+  const ctx = useContext(userContext) as
+    | { user?: { user_id?: number | string; user_name?: string; name?: string; username?: string } }
+    | null;
+  const currentUid =
+    ctx?.user?.user_id === undefined || ctx?.user?.user_id === null
+      ? ''
+      : String(ctx.user.user_id);
+  const currentName = String(ctx?.user?.user_name || ctx?.user?.name || ctx?.user?.username || '');
   const rowIds = useMemo(() => rows.map((r) => r.employeeId), [rows]);
   const rowIdsKey = rowIds.join(',');
 
@@ -804,7 +822,8 @@ export function EmployeesListPage() {
                         {sortCol === 'owner' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                       </span>
                     </button>
-                    {/* P1 batch2: the owner cell prints a `human:<id>` ref — say what the prefix is. */}
+                    {/* P1 batch2 → S2: the owner tooltip keeps the full
+                        `human:<id>` ref — say what the prefix is. */}
                     <HelpTip term="humanPrefix" testId="agent-v2-emp-help-owner" />
                   </span>
                 </th>
@@ -906,15 +925,30 @@ export function EmployeesListPage() {
                   typeof monthCost?.costUsd === 'number' && typeof quota === 'number' && quota > 0
                     ? monthCost.costUsd / quota
                     : null;
+                /* S2 display identities: readable name (duplicates get the id
+                   tail), 「未命名」 when empty; owner never prints `human:`. */
+                const shownName = employeeDisplayName(
+                  { id: r.employeeId, name: r.name },
+                  dups,
+                  t,
+                );
+                const nameAva = avatarChar(shownName);
+                const ownerShown = ownerDisplayLabel(r.ownerUserId, t, {
+                  currentUid,
+                  currentName: currentName || undefined,
+                });
+                const ownerRaw = ownerRef(r.ownerUserId);
+                const ownerTitle =
+                  ownerRaw && ownerShown !== t('agentConsole.v2.id.unknown') ? ownerRaw : undefined;
                 return (
                   <tr key={r.employeeId} data-testid="agent-v2-employee-row">
                     <td className="a2-col-name" data-testid="agent-v2-col-name">
                       <div className="a2-card-head">
                         <span className="a2-pill" aria-hidden>
-                          {(r.name ?? '?').slice(0, 1)}
+                          {nameAva ?? <LkIcon name="user" size={12} />}
                         </span>
                         <span className="a2-name-cell">
-                          <span title={r.name ?? undefined}>{r.name ?? '—'}</span>
+                          <span title={r.name || undefined}>{shownName}</span>
                           <span className="a2-meta" title={r.title ?? undefined}>
                             {r.title ? ` · ${r.title}` : ''}
                           </span>
@@ -938,11 +972,11 @@ export function EmployeesListPage() {
                       {t(`agentConsole.lifecycle.${r.lifecycleState}`, r.lifecycleState)}
                     </td>
                     <td
-                      className="a2-mono a2-cell-nowrap r"
-                      title={ownerRef(r.ownerUserId) || undefined}
+                      className="a2-cell-nowrap r"
+                      title={ownerTitle}
                       data-testid="agent-v2-col-owner"
                     >
-                      {ownerRef(r.ownerUserId) || '—'}
+                      {ownerShown}
                     </td>
                     <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap r">
                       {en?.stations

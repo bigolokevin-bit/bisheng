@@ -540,7 +540,10 @@ describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
     expect(who.textContent).toContain('opsadmin');
     expect(who.textContent).toContain('本人');
     expect(who.textContent).not.toContain('…1');
-    expect(who.querySelector('[data-testid="agent-v2-task-assignee-avatar"]')?.textContent).toBe('o');
+    // S2: a Latin name no longer prints a stray letter — neutral icon instead
+    const ava0 = who.querySelector('[data-testid="agent-v2-task-assignee-avatar"]');
+    expect(ava0?.textContent).toBe('');
+    expect(ava0?.querySelector('svg')).not.toBeNull();
     expect(who.getAttribute('title')).toBe('human:1');
   });
 
@@ -561,7 +564,10 @@ describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
       expect(who.textContent).toContain('opsadmin');
       expect(who.textContent).toContain('本人');
       expect(who.textContent).not.toContain('…');
-      expect(who.querySelector('[data-testid="agent-v2-task-assignee-avatar"]')?.textContent).toBe('o');
+      // S2: a Latin name no longer prints a stray letter — neutral icon instead
+      const ava = who.querySelector('[data-testid="agent-v2-task-assignee-avatar"]');
+      expect(ava?.textContent).toBe('');
+      expect(ava?.querySelector('svg')).not.toBeNull();
       // no standalone bare uid anywhere in the cell
       expect(who.textContent).not.toMatch(/(^|[^\w])1($|[^\w])/);
     }
@@ -596,6 +602,9 @@ describe('TSK-01 VG FAIL fixes (observer 2026-11-16)', () => {
     const mono = who.querySelector('.a2-mono') as HTMLElement;
     expect(mono.style.textOverflow).toBe('ellipsis');
     expect(who.getAttribute('title')).toBe('human:999999999999');
+    // S2: readable 「用户 #…」 inline — the `human:` ref stays in the title.
+    expect(who.textContent).toContain('用户 #999999999999');
+    expect(who.textContent).not.toContain('human:');
     expect(who.textContent).not.toContain('…');
   });
 

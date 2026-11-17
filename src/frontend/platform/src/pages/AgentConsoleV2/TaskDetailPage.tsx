@@ -15,8 +15,8 @@
  *   记录」 + updatedAt, never a sentence invented here.
  * - blocked/cancelled without statusReason, and done without progressNote,
  *   are data anomalies: surfaced in a warning bar, not silently blanked.
- * - human actors print `human:<id>` verbatim — no name endpoint exists and the
- *   page never stitches a name out of fragments.
+ * - human actors read 「用户 #<uid>」 (S2): no name endpoint exists, so the
+ *   readable fallback form is the floor and the raw ref lives in copy/title.
  * - The state machine card is a drawing of the frozen table: zero buttons,
  *   zero links, zero form controls (E06); out-of-table transitions are text.
  * - Zero write entries: no reassign / edit / transition / batch / delete
@@ -50,6 +50,7 @@ import {
 
 import { HelpTip } from './HelpTip';
 import { CopyId, LkIcon, StageCard } from './listkit';
+import { avatarChar, employeeLabelById, humanLabel } from './identity';
 import { useConsoleCrumbTail } from './Shell';
 import { CopyText, Field, Panel, RUN_STATUS_KEYS, fmtClock, fmtMoment, fullIso, statusTone } from './runDetailKit';
 import {
@@ -986,9 +987,11 @@ function ttlMoment(updatedAt: string): string {
 }
 
 /**
- * One actor field. `employee` → 20px initial + E11 name + EMP-03 link;
- * `human` → the raw `human:<id>` mono value + 「人类」 badge. A human name is
- * never stitched from fragments: there is no name-resolution endpoint.
+ * One actor field (S2: readable identities only). `employee` → 20px avatar +
+ * E11 name (fallback 「员工 · 短码」) + EMP-03 link; `human` → 「用户 #<uid>」
+ * with the full raw ref kept in the copy/title — the `human:` prefix never
+ * prints inline. A human name is still never stitched from fragments: there
+ * is no name-resolution endpoint, so the readable fallback form is the floor.
  */
 function actorView(
   ref: TaskActorRef | undefined,
@@ -1004,14 +1007,15 @@ function actorView(
   const bare = id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
   if (type === 'employee' || id.startsWith('employee:')) {
     const name = names.get(bare);
+    const ava = avatarChar(name);
     return {
       node: (
         <>
           <span className="who" title={id}>
             <span className="ava" aria-hidden="true">
-              {(name ?? bare).slice(0, 1)}
+              {ava ?? <LkIcon name="users" size={12} />}
             </span>
-            <span className="nm">{name ?? id}</span>
+            <span className="nm">{name ?? employeeLabelById(bare, names, t)}</span>
           </span>
           <span className="pill nt xs">{t('agentConsole.v2.tsk02.actorEmployee')}</span>
         </>
@@ -1035,7 +1039,7 @@ function actorView(
       <>
         <CopyId
           value={raw}
-          display={raw}
+          display={humanLabel(bare, t)}
           ariaLabel={t('agentConsole.v2.tsk02.copyActor')}
           copiedLabel={t('agentConsole.v2.tsk.copied')}
           testId={`agent-v2-task-${kind}-raw`}

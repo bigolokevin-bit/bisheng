@@ -21,6 +21,7 @@ import {
   type EmployeeRow,
   type RunStatsBody,
 } from './v2Data';
+import { identityText } from './identity';
 
 export type UnknownRecord = { [key: string]: unknown };
 
@@ -292,13 +293,14 @@ const STATUS_KEY: Record<string, string> = {
   paused: 'paused',
 };
 
-/* C1 item 8: operators render as bare names (opsadmin / runtime / system).
- * The audit bodies carry prefixed actor ids (human:opsadmin, service:…),
- * so strip the principal prefix for display only — never fabricate. */
-export function displayActor(raw: string | null): string | null {
-  if (!raw) return null;
-  const m = /^(human|service|system|agent):(.+)$/.exec(raw);
-  return m ? m[2] : raw;
+/* C1 item 8 → S2: operators render as readable identities. The audit bodies
+ * carry prefixed actor ids (human:opsadmin, service:…), so the principal
+ * prefix becomes a type word — 「用户 #1」 for numeric uids, 「未知」 for
+ * placeholder seeds, bare display names (opsadmin / runtime) kept as-is. */
+export function displayActor(raw: string | null, t: TFn): string | null {
+  if (!raw || !raw.trim()) return null;
+  const out = identityText(raw, t);
+  return out === '—' ? null : out;
 }
 
 type TFn = (k: string, o?: Record<string, unknown>) => string;
@@ -440,8 +442,8 @@ function QueueRow({ src, onRetry }: { src: QueueSource; onRetry: () => void }) {
                 })()}
               </span>
               <span className="l2">
-                {firstString(item, ['assignee', 'ownerUserId', 'createdBy']) ? (
-                  <span>{firstString(item, ['assignee', 'ownerUserId', 'createdBy'])}</span>
+                {displayActor(firstString(item, ['assignee', 'ownerUserId', 'createdBy']), t) ? (
+                  <span>{displayActor(firstString(item, ['assignee', 'ownerUserId', 'createdBy']), t)}</span>
                 ) : null}
                 <span className="a2-mono">{fmtId(firstString(item, ['approvalId', 'taskId', 'runId', 'id']))}</span>
                 <NavLink className="ov-lnk" to={src.to}>
@@ -936,8 +938,8 @@ export function ActivityBlock({
                           {row.action ? <span className="raw a2-mono">{row.action}</span> : null}
                         </div>
                       </td>
-                      <td className="ov-hide-sm ov-clip" title={displayActor(firstString(row.raw, ['actorUserId', 'actor', 'actorId', 'userId'])) ?? undefined}>
-                        {displayActor(firstString(row.raw, ['actorUserId', 'actor', 'actorId', 'userId'])) ?? '—'}
+                      <td className="ov-hide-sm ov-clip" title={displayActor(firstString(row.raw, ['actorUserId', 'actor', 'actorId', 'userId']), t) ?? undefined}>
+                        {displayActor(firstString(row.raw, ['actorUserId', 'actor', 'actorId', 'userId']), t) ?? '—'}
                       </td>
                       <td>
                         <span className={`ov-pill ${tone} xs`}>

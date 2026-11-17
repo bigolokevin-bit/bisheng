@@ -39,6 +39,8 @@ import {
 } from './approvalDetailKit';
 
 import { HelpTip } from './HelpTip';
+import { LkIcon } from './listkit/icons';
+import { actorTypeLabel, avatarChar, bareId, employeeLabelById, humanLabel, identityText } from './identity';
 import { useConsoleCrumbTail } from './Shell';
 import { ApprovalDecisionDialog } from './ApprovalDecisionDialog';
 
@@ -307,15 +309,26 @@ export function ApprovalDetailPage() {
     if (name) {
       return (
         <span className="a2d-who" title={`${ref.type} · ${ref.id}`}>
-          <span className="a2d-ava" aria-hidden="true">{name.slice(0, 1)}</span>
+          <span className="a2d-ava" aria-hidden="true">
+            {avatarChar(name) ?? <LkIcon name="user" size={12} />}
+          </span>
           {name}
-          <span className="a2d-u">{ref.type}</span>
+          <span className="a2d-u">{actorTypeLabel(ref.type, t)}</span>
         </span>
       );
     }
+    // S2: no raw `type · human:id` line — each type degrades to a readable
+    // form (「用户 #7」/「员工 · 短码」); the full ref stays in the title.
+    const bare = bareId(ref.id);
+    const label =
+      ref.type === 'human' || ref.type === 'user'
+        ? humanLabel(bare, t)
+        : ref.type === 'employee'
+          ? employeeLabelById(ref.id, undefined, t)
+          : identityText(ref.id, t);
     return (
       <span className="a2d-who" title={`${ref.type} · ${ref.id}`}>
-        <span className="a2-mono">{ref.type} · {ref.id}</span>
+        {label}
       </span>
     );
   };
@@ -512,7 +525,7 @@ export function ApprovalDetailPage() {
             <span className="a2d-appr">
               {(row.approvers ?? []).map((a) => (
                 <span key={a.userId} className="a2-pill a2d-xs" title={`userId=${a.userId} · role=${a.role ?? ''}`}>
-                  <span className="a2-mono">{a.userId}</span>
+                  <span>{identityText(a.userId, t)}</span>
                   {a.role ? <span className="a2d-u">{apdDef(`role.${a.role}`, a.role)}</span> : null}
                 </span>
               ))}
@@ -561,7 +574,7 @@ export function ApprovalDetailPage() {
           </Field>
           <Field label={apd('fSubject')}>
             <span className="a2d-who" title={`binding.subjectId=${binding.subjectId}`}>
-              {subjectName ? <span className="a2d-ava" aria-hidden="true">{subjectName.slice(0, 1)}</span> : null}
+              {subjectName ? <span className="a2d-ava" aria-hidden="true">{avatarChar(subjectName) ?? <LkIcon name="user" size={12} />}</span> : null}
               <span className="a2-mono" style={{ fontSize: 12 }}>{fmtId(binding.subjectId)}</span>
               {subjectName ? <span className="a2d-u">{subjectName}</span> : null}
             </span>
@@ -636,7 +649,7 @@ export function ApprovalDetailPage() {
                     <I className="a2d-i" >{d.verdict === 'approve' ? ICheck : d.verdict === 'reject' ? IX : IUndo}</I>
                   </span>
                   <div className="a2d-thd">
-                    <span className="a2d-nm a2-mono" title={`userId=${d.userId}`}>{d.userId}</span>
+                    <span className="a2d-nm" title={`userId=${d.userId}`}>{identityText(d.userId, t)}</span>
                     <span className={`a2-pill a2d-xs${verdictTone(d.verdict)}`} title={`verdict=${d.verdict}`}>
                       <span className="a2-pill-dot" aria-hidden="true" />
                       {verdictLabel(d.verdict)}

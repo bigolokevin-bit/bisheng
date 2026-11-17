@@ -38,6 +38,7 @@ import type {
 } from '@/controllers/API/agentConsoleHermes';
 
 import { HelpTip } from './HelpTip';
+import { employeeLabelById } from './identity';
 import { MetIcon } from './metIcons';
 import { HeatGrid, HeatSideStats, HEAT_DAY_KEYS } from './MetricsHeat';
 import {
@@ -917,7 +918,7 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
                 <option value="">{t('agentConsole.v2.met.empSelectPlaceholder')}</option>
                 {(employees ?? []).map((e) => (
                   <option key={e.employeeId} value={e.employeeId}>
-                    {e.name || fmtId(e.employeeId)}
+                    {e.name || employeeLabelById(e.employeeId, undefined, t)}
                   </option>
                 ))}
               </select>
@@ -996,7 +997,7 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
                       `/agent/runs?since=${encodeURIComponent(cellSinceIso(dow, hour, now))}&from=metrics&employeeId=${encodeURIComponent(empId)}`
                     }
                     ariaLabel={t('agentConsole.v2.met.heatAriaEmp', {
-                      name: empNames.get(empId) ?? fmtId(empId),
+                      name: empNames.get(empId) ?? employeeLabelById(empId, empNames, t),
                       total: fmtInt(empScaled.total),
                     })}
                   />
@@ -1863,7 +1864,8 @@ function UsageBlock({
                                 </>
                               ) : (
                                 <>
-                                  <span className="a2-mono">{fmtId(row.employee_id)}</span>{' '}
+                                  {/* S2: 「员工 · 短码」 — no bare `emp_` id text */}
+                                  {employeeLabelById(row.employee_id, empNames, t)}{' '}
                                   <span className="met-notfound-note">{t('agentConsole.v2.met.costEmpNotFound')}</span>
                                 </>
                               )}

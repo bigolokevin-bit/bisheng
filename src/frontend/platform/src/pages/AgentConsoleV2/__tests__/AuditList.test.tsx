@@ -576,3 +576,50 @@ describe('AUD-01 empty / error / forbidden (§1.10)', () => {
     expect(screen.getByTestId('aud01-forbidden').textContent).toContain('HTTP 403');
   });
 });
+// ---------------------------------------------------------------- S2 identity
+
+describe('AUD-01 S2 — readable identities in list rows', () => {
+  it('system actor reads 「系统 · employee-api」; an unlisted employee resource reads 「员工 · 短码」, no bare emp_ id', async () => {
+    const h = harness({ pages: [okList([FAILED_EVENT])] });
+    const { container } = renderPage(h, '?action=employee.version.create');
+    await waitFor(() => expect(screen.getByTestId('aud01-row-ev_FAILED')).toBeInTheDocument());
+    const row = screen.getByTestId('aud01-row-ev_FAILED');
+
+    const who = row.querySelector('.who') as HTMLElement;
+    expect(who.textContent).toContain('系统 · employee-api');
+
+    const resCell = row.querySelector('.rescell') as HTMLElement;
+    expect(resCell.querySelector('.rt')?.textContent).toBe('员工');
+    expect(resCell.textContent).toContain('员工 · D7E9');
+    expect(resCell.textContent).not.toContain('emp_5B3C7A9D');
+    // the full raw id stays where support needs it: title + copy
+    expect(resCell.querySelector('.cp')?.getAttribute('title')).toBe(
+      'emp_5B3C7A9D1E2F4068B5C3D7E9',
+    );
+    expect(container.textContent).not.toContain('EMPLOYEE');
+  });
+
+  it('a directory-listed employee prints its name; onBehalfOf prints 「用户 #…」 without the human: prefix', async () => {
+    const named = event({
+      eventId: 'ev_NAMED',
+      actor: { type: 'employee', id: 'emp_86A81CE8FF6F42E187BCF2B540' },
+      resource: { type: 'employee', id: 'emp_86A81CE8FF6F42E187BCF2B540' },
+    });
+    const h = harness({ pages: [okList([named, event()])] });
+    renderPage(h);
+    await waitFor(() => expect(screen.getByTestId('aud01-row-ev_NAMED')).toBeInTheDocument());
+
+    const row = screen.getByTestId('aud01-row-ev_NAMED');
+    // E11 names land asynchronously: wait for the upgrade, never assert the
+    // pre-load snapshot.
+    await waitFor(() =>
+      expect((row.querySelector('.who') as HTMLElement).textContent).toContain('小鲤'),
+    );
+    expect((row.querySelector('.rescell') as HTMLElement).textContent).toContain('小鲤');
+
+    const base = screen.getByTestId('aud01-row-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
+    const behalf = (base.querySelector('.behalf') as HTMLElement).textContent ?? '';
+    expect(behalf).toContain('用户 #u_10001');
+    expect(behalf).not.toContain('human:');
+  });
+});

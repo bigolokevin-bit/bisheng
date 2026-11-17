@@ -1,5 +1,6 @@
 // 7x24 activity heatmap panel (R7 run-activity), platform-wide or per employee.
 import { useTranslation } from 'react-i18next';
+import { employeeLabelById } from './identity';
 import type { ActivityBody, EmployeeRow } from './v2Data';
 
 export function EmployeesHeatPanel({
@@ -52,7 +53,7 @@ export function EmployeesHeatPanel({
             <option value="">{t('agentConsole.v2.emp.heatEmployee')}</option>
             {body.map((r) => (
               <option key={r.employeeId} value={r.employeeId}>
-                {r.name ?? r.employeeId}
+                {r.name?.trim() || employeeLabelById(r.employeeId, undefined, t)}
               </option>
             ))}
           </select>
