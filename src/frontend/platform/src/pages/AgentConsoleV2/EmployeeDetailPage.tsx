@@ -17,6 +17,7 @@ import { userContext } from '@/contexts/userContext';
 import { LkIcon } from './listkit/icons';
 import { ReqId } from './listkit/ReqId';
 import { avatarChar } from './identity';
+import { actionDisplay } from './aud01';
 import {
   budgetView,
   fmtBeijingFull,
@@ -35,6 +36,7 @@ import {
   fetchEmployeeVersions,
   fetchRunStats,
   fetchWorkstations,
+  fmtId,
   makeFetcher,
   monthPeriod,
   sparkPoints,
@@ -53,6 +55,22 @@ import { KpiSpark } from './OverviewBlocks';
 import type { OverviewQueueBody } from './OverviewBlocks';
 
 type UnknownRecord = { [key: string]: unknown };
+
+const TASK_STATUS: Record<string, string> = {
+  open: 'open',
+  in_progress: 'in_progress',
+  blocked: 'blocked',
+  done: 'done',
+  cancelled: 'cancelled',
+};
+const RUN_STATUS: Record<string, string> = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  cancelled: 'cancelled',
+  interrupted: 'interrupted',
+};
 
 interface Box<T> {
   loading: boolean;
@@ -96,13 +114,11 @@ function str(item: UnknownRecord, keys: string[]): string {
 /** Localized block error with a block-level retry (same idiom as OV-01
  * G10/G15: retry re-runs the whole silent refetch of this page). */
 function BlockError({
-  block,
-  status,
+  state,
   onRetry,
   retryTestId,
 }: {
-  block: string;
-  status: number;
+  state: Box<unknown>;
   onRetry: () => void;
   retryTestId: string;
 }) {
@@ -110,8 +126,9 @@ function BlockError({
   return (
     <>
       <p className="a2-meta" data-testid={`${retryTestId}-text`}>
-        {t('agentConsole.v2.ov.blockUnavailable', { block, code: status })}
+        {t('agentConsole.v2.errorQuery')}
       </p>
+      <ReqId requestId={state.rid} testId={`${retryTestId}-rid`} />
       <button
         type="button"
         className="a2-btn"
@@ -260,12 +277,7 @@ export function EmployeeDetailPage() {
       <div className="a2s-page" data-testid="agent-v2-employee-detail">
         <div className="a2-card" data-testid="agent-v2-ed-unavailable">
           <h1 className="a2-h1">{t('agentConsole.v2.ed.readFailedTitle')}</h1>
-          <p className="a2-meta">
-            {t('agentConsole.v2.ov.blockUnavailable', {
-              block: t('agentConsole.v2.navEmployees'),
-              code: detail.status,
-            })}
-          </p>
+          <p className="a2-meta">{t('agentConsole.v2.errorQuery')}</p>
           <p style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button type="button" className="a2-btn" data-testid="agent-v2-ed-retry" onClick={refresh}>
               {t('agentConsole.v2.retry')}
@@ -330,13 +342,13 @@ export function EmployeeDetailPage() {
   const terminal = sums.succeeded + sums.failed;
   const successRate = terminal > 0 ? sums.succeeded / terminal : null;
   const pendingCount = pending?.ok ? pending.data?.pending ?? null : null;
-  const stationItems = stations.data?.items ?? [];
+  const stationItems = Array.isArray(stations.data?.items) ? stations.data.items : null;
 
-  const kpi = (key: string, value: string, foot: ReactNode) => (
+  const kpi = (key: string, value: string, foot: ReactNode, label?: string) => (
     <div className="a2-kpi" data-testid={`agent-v2-ed-kpi-${key}`}>
       <span className="a2-kpi-num">{value}</span>
       <span className="a2-meta">
-        {t(`agentConsole.v2.ed.kpi_${key}`)}
+        {label ?? t(`agentConsole.v2.ed.kpi_${key}`)}
       </span>
       {foot}
     </div>
@@ -421,7 +433,9 @@ export function EmployeeDetailPage() {
               <HelpTip term="humanPrefix" testId="agent-v2-ed-help-owner" />
             ) : null}
             {' · '}
-            {t('agentConsole.v2.ed.bannerRevision', { count: d.revision ?? 0 })}
+            {d.revision != null
+              ? t('agentConsole.v2.ed.bannerRevision', { count: d.revision })
+              : '—'}
             {' · '}
             {d.updatedAt ? `${t('agentConsole.v2.ed.bannerUpdated')} ${fmtBeijingFull(d.updatedAt)}` : ''}
           </p>
@@ -451,13 +465,16 @@ export function EmployeeDetailPage() {
           },
           {
             label: t('agentConsole.v2.ed.fieldStations'),
-            value: stations.ok ? String(stationItems.length) : '—',
+            value: stations.ok && stationItems ? String(stationItems.length) : '—',
           },
           {
             label: t('agentConsole.v2.ed.fieldBudget'),
-            value: currentVersion?.budget?.monthlyCostUsd != null
-              ? `${fmtMoney(currentVersion.budget.monthlyCostUsd)} / ${t('agentConsole.v2.ed.month')}`
-              : '—',
+            value:
+              budgetShape.kind === 'configured' && budgetShape.monthlyUsd != null
+                ? `${fmtMoney(budgetShape.monthlyUsd)} / ${t('agentConsole.v2.ed.month')}`
+                : budgetShape.kind === 'unset'
+                  ? budgetUnset
+                  : '—',
           },
           {
             label: t('agentConsole.v2.ed.fieldKnowledge'),
@@ -491,17 +508,18 @@ export function EmployeeDetailPage() {
             )
           ) : (
             <BlockError
-              block={t('agentConsole.v2.ed.kpi_runs')}
-              status={runs.status}
+              state={runs}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-runs-kpi"
             />
-          )
+          ),
+          t('agentConsole.v2.ov.kpiWeekRuns')
         )}
         {kpi(
           'success',
           successRate === null ? '—' : `${Math.round(successRate * 100)}%`,
-          <span className="a2-micro">{t('agentConsole.v2.ed.kpiSuccessFoot')}</span>
+          <span className="a2-micro">{t('agentConsole.v2.ed.kpiSuccessFoot')}</span>,
+          `${t('agentConsole.v2.ov.range7d')} · ${t('agentConsole.v2.ed.kpi_success')}`
         )}
         {kpi(
           'cost',
@@ -515,8 +533,7 @@ export function EmployeeDetailPage() {
             <span className="a2-micro">{t('agentConsole.v2.ed.kpiPendingNoOwner')}</span>
           ) : pending.ok ? null : (
             <BlockError
-              block={t('agentConsole.v2.ed.kpi_pending')}
-              status={pending.status}
+              state={pending}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-pending"
             />
@@ -551,8 +568,7 @@ export function EmployeeDetailPage() {
           <h2 className="a2-h2">{t('agentConsole.v2.ed.chainTitle')}</h2>
           {!versions.ok ? (
             <BlockError
-              block={t('agentConsole.v2.ed.chainTitle')}
-              status={versions.status}
+              state={versions}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-chain"
             />
@@ -599,8 +615,7 @@ export function EmployeeDetailPage() {
           </h2>
           {!config.ok ? (
             <BlockError
-              block={t('agentConsole.v2.ed.blastTitle')}
-              status={config.status}
+              state={config}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-blast"
             />
@@ -611,15 +626,24 @@ export function EmployeeDetailPage() {
           ) : (
             <>
               {grants.map((g) => (
-                <div key={g.id} className="a2-card-item" data-testid="agent-v2-ed-grant-row">
-                  <span className="a2-mono">{g.id}</span>
+                <div
+                  key={g.id}
+                  className="a2-card-item"
+                  data-testid="agent-v2-ed-grant-row"
+                  title={[
+                    g.scopeType,
+                    (g.resourceSelector?.types ?? []).join('/'),
+                    (g.actions ?? []).join('/'),
+                    g.source,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                >
+                  <span className="a2-mono">{fmtId(g.id)}</span>
                   <p className="a2-meta">
-                    {g.scopeType ?? '—'} · {(g.resourceSelector?.types ?? []).join('/') || '—'} ·{' '}
-                    {(g.actions ?? []).join('/') || '—'}
                     {g.expiresAt
-                      ? ` · ${t('agentConsole.v2.ed.blastExpires', { time: fmtBeijingFull(g.expiresAt) })}`
-                      : ''}
-                    {g.source ? ` · ${t('agentConsole.v2.ed.blastSource', { source: g.source })}` : ''}
+                      ? t('agentConsole.v2.ed.blastExpires', { time: fmtBeijingFull(g.expiresAt) })
+                      : '—'}
                   </p>
                 </div>
               ))}
@@ -674,8 +698,7 @@ export function EmployeeDetailPage() {
             </p>
           ) : (
             <BlockError
-              block={t('agentConsole.v2.ed.budgetTitle')}
-              status={budget.status}
+              state={budget}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-budget"
             />
@@ -687,23 +710,28 @@ export function EmployeeDetailPage() {
           </h2>
           {!stations.ok ? (
             <BlockError
-              block={t('agentConsole.v2.ed.stationsTitle')}
-              status={stations.status}
+              state={stations}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-stations"
             />
+          ) : stationItems == null ? (
+            <p className="a2-meta" data-testid="agent-v2-ed-stations-empty">—</p>
           ) : stationItems.length === 0 ? (
             <p className="a2-meta" data-testid="agent-v2-ed-stations-empty">
               {t('agentConsole.v2.ed.stationsEmpty')}
             </p>
           ) : (
             stationItems.map((s) => (
-              <div key={s.id} className="a2-card-item" data-testid="agent-v2-ed-station-row">
-                <span className="a2-mono">{s.id}</span>
+              <div
+                key={s.id}
+                className="a2-card-item"
+                data-testid="agent-v2-ed-station-row"
+                title={[s.bindingType, s.channel, s.status].filter(Boolean).join(' · ')}
+              >
+                <span className="a2-mono">{fmtId(s.id)}</span>
                 <p className="a2-meta">
-                  {s.bindingType ?? '—'}
-                  {s.channel ? ` · ${s.channel}` : ''}
-                  {s.status ? ` · ${s.status}` : ''}
+                  {t('agentConsole.v2.ed.stationsTitle')}
+                  {s.channel === 'feishu' ? ` · ${t('agentConsole.v2.set01.channelFeishu')}` : ''}
                 </p>
               </div>
             ))
@@ -742,8 +770,7 @@ export function EmployeeDetailPage() {
           <h2 className="a2-h2">{t('agentConsole.v2.ed.tasksTitle')}</h2>
           {!tasks.ok ? (
             <BlockError
-              block={t('agentConsole.v2.ed.tasksTitle')}
-              status={tasks.status}
+              state={tasks}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-tasks"
             />
@@ -760,7 +787,10 @@ export function EmployeeDetailPage() {
               >
                 <p className="a2-meta">
                   {str(it, ['title', 'name', 'summary']) || '—'} ·{' '}
-                  <span className="a2-mono">{str(it, ['status', 'state']) || '—'}</span>
+                  {(() => {
+                    const raw = str(it, ['status', 'state']);
+                    return raw && TASK_STATUS[raw] ? t(`agentConsole.v2.tsk.statusLabel.${TASK_STATUS[raw]}`) : '—';
+                  })()}
                 </p>
               </div>
             ))
@@ -773,8 +803,7 @@ export function EmployeeDetailPage() {
           <h2 className="a2-h2">{t('agentConsole.v2.ed.runsTitle')}</h2>
           {!runRows.ok ? (
             <BlockError
-              block={t('agentConsole.v2.ed.runsTitle')}
-              status={runRows.status}
+              state={runRows}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-runslist"
             />
@@ -783,19 +812,31 @@ export function EmployeeDetailPage() {
               {t('agentConsole.v2.ed.runsEmpty')}
             </p>
           ) : (
-            (runRows.data?.items ?? []).map((it, i) => (
-              <div
-                key={str(it, ['runId', 'id']) || i}
-                className="a2-card-item"
-                data-testid="agent-v2-ed-run-row"
-              >
-                <span className="a2-mono">{str(it, ['runId', 'id']) || '—'}</span>
-                <p className="a2-meta">
-                  <span className="a2-mono">{str(it, ['status']) || '—'}</span>
-                  {it.employeeVersionNo != null ? ` · v${String(it.employeeVersionNo)}` : ''}
-                </p>
-              </div>
-            ))
+            (runRows.data?.items ?? []).map((it, i) => {
+              const runId = str(it, ['runId', 'id']);
+              const rawStatus = str(it, ['status']);
+              const statusKey = rawStatus && RUN_STATUS[rawStatus];
+              return (
+                <div
+                  key={runId || i}
+                  className="a2-card-item"
+                  data-testid="agent-v2-ed-run-row"
+                  title={rawStatus ?? undefined}
+                >
+                  {runId ? (
+                    <NavLink className="a2-mono" to={`/agent/runs/${encodeURIComponent(runId)}`}>
+                      {fmtId(runId)}
+                    </NavLink>
+                  ) : (
+                    <span className="a2-mono">—</span>
+                  )}
+                  <p className="a2-meta">
+                    {statusKey ? t(`agentConsole.runs.status.${statusKey}`) : '—'}
+                    {it.employeeVersionNo != null ? ` · v${String(it.employeeVersionNo)}` : ''}
+                  </p>
+                </div>
+              );
+            })
           )}
         </div>
       ) : null}
@@ -805,8 +846,7 @@ export function EmployeeDetailPage() {
           <h2 className="a2-h2">{t('agentConsole.v2.ed.auditTitle')}</h2>
           {!audit.ok ? (
             <BlockError
-              block={t('agentConsole.v2.ed.auditTitle')}
-              status={audit.status}
+              state={audit}
               onRetry={refresh}
               retryTestId="agent-v2-ed-retry-audit"
             />
@@ -815,20 +855,31 @@ export function EmployeeDetailPage() {
               {t('agentConsole.v2.ed.auditEmpty')}
             </p>
           ) : (
-            (audit.data?.events ?? []).map((ev, i) => (
-              <div
-                key={str(ev, ['eventId', 'id']) || i}
-                className="a2-card-item"
-                data-testid="agent-v2-ed-audit-row"
-              >
-                <p className="a2-meta">
-                  {str(ev, ['occurredAt', 'recordedAt'])
-                    ? fmtBeijingFull(str(ev, ['occurredAt', 'recordedAt']))
-                    : '—'}{' '}
-                  · {str(ev, ['action', 'type', 'eventId']) || '—'}
-                </p>
-              </div>
-            ))
+            (audit.data?.events ?? []).map((ev, i) => {
+              const evId = str(ev, ['eventId', 'id']);
+              const rawAction = str(ev, ['action', 'type']);
+              const label = actionDisplay(rawAction, t) ?? t('agentConsole.v2.ov.sourceAudit');
+              return (
+                <div
+                  key={evId || i}
+                  className="a2-card-item"
+                  data-testid="agent-v2-ed-audit-row"
+                  title={rawAction ?? undefined}
+                >
+                  <p className="a2-meta">
+                    {str(ev, ['occurredAt', 'recordedAt'])
+                      ? fmtBeijingFull(str(ev, ['occurredAt', 'recordedAt']))
+                      : '—'}{' '}
+                    ·{' '}
+                    {evId ? (
+                      <NavLink to={`/agent/audit/${encodeURIComponent(evId)}`}>{label}</NavLink>
+                    ) : (
+                      label
+                    )}
+                  </p>
+                </div>
+              );
+            })
           )}
           <p className="a2-micro" data-testid="agent-v2-ed-audit-window">
             {t('agentConsole.v2.ed.auditWindow')}

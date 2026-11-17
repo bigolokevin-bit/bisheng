@@ -252,7 +252,9 @@ describe('EMP-03 employee detail honesty', () => {
     detailBody = { code: 'console.upstream_error' };
     renderDetail();
     const card = await screen.findByTestId('agent-v2-ed-unavailable');
-    expect(card.textContent).toContain('数字员工暂时取不到（HTTP 500）');
+    expect(card.textContent).toContain('本次未能读取');
+    expect(card.textContent).toContain('请求编号');
+    expect(card.textContent).not.toContain('HTTP');
     expect(screen.queryByTestId('agent-v2-ed-notFound')).toBeNull();
     const body = document.body.textContent ?? '';
     expect(body).not.toContain('console.upstream_error');
