@@ -10,13 +10,13 @@
 |---|---|---|---|---|---|---|---|
 | EMP-FILTER-01 | `/api/employees?keyword=` | 正常/筛选空/加载/错 | 读 | action:filter（300ms 防抖，URL 持久） | `v2.search`、`v2.emp01.clearFilters`、`v2.emp01.noMatch` | 关键字防抖重取、无匹配清筛选 | 已核销 |
 | EMP-FILTER-02 | `/api/employees?lifecycleState=` | 正常/加载/错 | 读 | action:filter（默认在岗；URL 持久） | `lifecycle.active`、`lifecycle.paused`、`v2.emp.filterAll` | 默认 active、切 paused、全部省略参数 | 已核销（文案偏差：PRD「停用」= 现有 `lifecycle.paused`「已暂停」） |
-| EMP-TABLE-01 | `/api/employees?expand=version,workstations,knowledge,pending` | 正常/真空/筛选空/加载/错/401/403 | 读 | 行姓名 → `/agent/employees/:id` | `v2.colName`、`v2.emp01.shortCode`、`v2.colStatus`、`v2.emp.colWorkstation`、`v2.mtx.skills`、`v2.mtx.runs`、`v2.mtx.budgetMonthly` | 六列固定顺序、真实姓名、短码、预算三态、今日运行窗口 | 已核销（技能数列因 E11 无 `skillCount` 恒为 —） |
+| EMP-TABLE-01 | `/api/employees?expand=version,workstations,knowledge,pending` | 正常/真空/筛选空/加载/错/401/403/404 | 读 | 行姓名 → `/agent/employees/:id` | `v2.colName`、`v2.emp01.shortCode`、`v2.colStatus`、`v2.emp.colWorkstation`、`v2.mtx.skills`、`v2.mtx.runs`、`v2.mtx.budgetMonthly` | 六列固定顺序、真实姓名、短码、预算三态、今日运行窗口；行内运行补数失败仅降级为 —，悬浮人话+请求号，不显 0/HTTP | 已核销（技能数列因 E11 无 `skillCount` 恒为 —；行内运行失败无独立重试） |
 | EMP-TABLE-02 | 行 `id` | 正常 | 读 | title 属性（不屏显） | `v2.id.employeeRef` | 屏显仅 `员工 · 8位大写`，无裸 `emp_` | 已核销 |
 | EMP-ROW-01 | 行 `employeeId` | 正常 | 会话权限（无来源） | `/agent/chat?employeeId=:id` | `chat.dialogue` | 行内对话 href 断言（`agent-v2-emp-chat-*`）；无权限位时不隐藏 | 已核销（依赖共享文件未改：`src/contexts/userContext.tsx` 无会话权限位） |
 | EMP-ACT-01 | — | 正常 | 新建 grant（无来源） | `/agent/employees/new` | `v2.emp.createEntry` | 页头主按钮 href 断言（`agent-v2-employees-create`）；无 grant 来源时不隐藏 | 已核销（依赖共享文件未改：`src/contexts/userContext.tsx` 无新建 grant 来源） |
 | EMP-PAGE-01 | `nextCursor` | 正常/加载/错 | 读 | action:next（追加，无更多按钮消失） | `v2.mtx.loaded`、`v2.emp.nextPage` | 游标下一页、追加、末页按钮消失、失败重试 | 已核销 |
 | EMP-EMPTY-01 | 同上 | 真空 | 读 | `/agent/employees/new` | `v2.emp.emptyEmployees`、`v2.emp.createEntry` | 真空与筛选空分离 | 已核销 |
-| EMP-ERR-01 | 同上 | 401/403/5xx/网络 | 读 | 重试 / 重新登录 | `v2.emp.authExpired`、`v2.emp.noPermission`、`v2.ed.readFailedTitle`、`v2.retry` | 401、403 无重试、500 重试、网络态 | 已核销 |
+| EMP-ERR-01 | 同上 | 401/403/404/5xx/网络 | 读 | 重试 / 重新登录 | `v2.emp.authExpired`、`v2.emp.noPermission`、`v2.ed.readFailedTitle`、`v2.errorQuery`、`v2.retry` | 401、403/404 同体无重试、500 人话+请求号+重试（无 HTTP 码）、网络态 | 已核销 |
 | EMP-DETAIL-01 | `/api/employee` | 正常/加载/401/403/404/5xx | 读 | — | `v2.ed.bannerOwner`、`v2.ed.fieldRole` 等 | 身份横幅、404 同体、5xx 独立卡 | 已核销 |
 | EMP-DETAIL-02 | `ownerUserId` | 正常 | 读 | — | `v2.emp01.unassigned` | 占位 owner 屏显「未指派」，不发 approval-stats | 已核销 |
 | EMP-DETAIL-03 | `/api/employee-versions` | 正常/空 | 读 | — | `v2.ed.chainTitle`、`v2.ed.fieldEffective` | 版本链与生效时间北京时间到分（`YYYY-MM-DD HH:mm`） | 已核销 |
@@ -33,6 +33,19 @@
 - 需共享文件：0（2 项依赖 `src/contexts/userContext.tsx` 的权限来源未改，已在对应行标注；本轮不擅自改共享件）
 - 核销率：16 / 16 = **100%**
 - 死控件数：**0**（所有可点元素均有真实路由或 action；停用/改预算未渲染为灰色按钮）
+## Q2 第三轮诚实性复核（2026-11-18）
+
+| 检查 | 结果 | 证据 |
+|---|---|---|
+| 列表 5xx 去 HTTP 码，改人话 + 请求号 + 重试 | 通过 | `agent-v2-employees-error` 含「查询失败，请重试」「req-500」，不再含 `HTTP 500`；重试恢复表格 |
+| 403 与 404 同体 | 通过 | 同一标题/正文/请求号；404 无重试；仅 testid 区分 `agent-v2-employees-403/404` |
+| 行内运行补数失败不伪造 0 / 不显 HTTP | 通过 | 单元格显 —；`title` 为「运行记录加载失败 · 请求编号 req-runs」，原始状态码不上屏 |
+| 状态原值进 title | 通过 | 生命周期 pill 可见中文，`title` 为原始枚举（如 `active`） |
+| 裸员工 ID 不上屏 | 通过 | 可见文本仅「员工 · AB12CD34」；原始 `emp_` 只在 `title` |
+| 无写权限不留死按钮 | 通过 | 新建/对话均为真实 `Link`；危险操作不渲染按钮 |
+
+元素数：16　已核销：16　部分：0　待实现：0　需共享文件：0（2 项依赖共享文件未改）　核销率：100%　死控件数：0
+
 ## Q2 诚实性复验（2026-11-17 夜）
 
 | 检查 | 结果 | 证据 |

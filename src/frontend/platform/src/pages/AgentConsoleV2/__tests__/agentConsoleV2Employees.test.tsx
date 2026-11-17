@@ -65,6 +65,8 @@ let urls: string[] = [];
 let listStatus = 200;
 let listBody: unknown = { items: [EMP_A, EMP_B, EMP_C], nextCursor: null };
 let listRequestId: string | null = null;
+let runStatus = 200;
+let runRequestId: string | null = null;
 let listByCursor: Record<string, unknown> = {};
 
 function response(status: number, body: unknown, requestId: string | null = null) {
@@ -86,7 +88,7 @@ function stubFetch() {
       return response(listStatus, listBody, listRequestId);
     }
     if (url.includes('/api/run-stats')) {
-      return response(200, { buckets: [{ bucketStart: '2026-11-17T00:00:00Z', runs: 3, succeeded: 2, failed: 1 }] });
+      return response(runStatus, { buckets: [{ bucketStart: '2026-11-17T00:00:00Z', runs: 3, succeeded: 2, failed: 1 }] }, runRequestId);
     }
     return response(200, {});
   }) as never;
@@ -116,6 +118,8 @@ beforeEach(() => {
   listStatus = 200;
   listBody = { items: [EMP_A, EMP_B, EMP_C], nextCursor: null };
   listRequestId = null;
+  runStatus = 200;
+  runRequestId = null;
   listByCursor = {};
   stubFetch();
 });
@@ -157,6 +161,8 @@ describe('EMP-01 employee list', () => {
     expect(screen.getByTestId('agent-v2-emp-name-emp_AB12CD34').textContent).toBe('小鲤');
     expect(screen.getByTestId('agent-v2-emp-code-emp_AB12CD34').textContent).toBe('员工 · AB12CD34');
     expect(screen.getByTestId('agent-v2-emp-row-emp_AB12CD34').textContent).toContain('产品助理');
+    const pill = screen.getByTestId('agent-v2-emp-row-emp_AB12CD34').querySelector('.emp-pill');
+    expect(pill?.getAttribute('title')).toBe('active');
     guardNoRawKeys();
   });
 
@@ -310,6 +316,17 @@ describe('EMP-01 employee list', () => {
     guardNoRawKeys();
   });
 
+  it('turns 403 and 404 into the same permission body', async () => {
+    listStatus = 404;
+    listBody = { code: 'console.not_found' };
+    listRequestId = 'req-404';
+    renderPage();
+    const card = await screen.findByTestId('agent-v2-employees-404');
+    expect(card.textContent).toContain('没有管理控制台权限');
+    expect(card.textContent).toContain('req-404');
+    expect(screen.queryByTestId('agent-v2-employees-retry')).toBeNull();
+  });
+
   it('turns a 401 into the session-expired card', async () => {
     listStatus = 401;
     listBody = { code: 'console.unauthenticated' };
@@ -319,19 +336,35 @@ describe('EMP-01 employee list', () => {
     expect(card.textContent).toContain('请重新登录');
   });
 
-  it('keeps a request number, one status number and a working retry on 500', async () => {
+  it('keeps a human message, a request number and a working retry on 500', async () => {
     listStatus = 500;
     listBody = { code: 'console.upstream_error' };
     listRequestId = 'req-500';
     renderPage();
     const card = await screen.findByTestId('agent-v2-employees-error');
     expect(card.textContent).toContain('本次未能读取');
-    expect(card.textContent).toContain('数字员工暂时取不到（HTTP 500）');
+    expect(card.textContent).toContain('查询失败，请重试');
     expect(card.textContent).toContain('req-500');
+    expect(card.textContent).not.toContain('HTTP');
+    expect(card.textContent).not.toContain('HTTP 500');
     listStatus = 200;
     listBody = { items: [EMP_A], nextCursor: null };
     fireEvent.click(screen.getByTestId('agent-v2-employees-retry'));
     expect(await screen.findByTestId('agent-v2-emp-row-emp_AB12CD34')).toBeTruthy();
+  });
+
+  it('degrades a failed per-row run read to — with a human title and request id, no HTTP', async () => {
+    runStatus = 502;
+    runRequestId = 'req-runs';
+    renderPage();
+    await screen.findByTestId('agent-v2-emp-table');
+    await waitFor(() => {
+      expect(screen.getByTestId('agent-v2-emp-runs-emp_AB12CD34').getAttribute('title')).toContain('req-runs');
+    });
+    const cell = screen.getByTestId('agent-v2-emp-runs-emp_AB12CD34');
+    expect(cell.textContent).toBe('—');
+    expect(cell.getAttribute('title')).toContain('运行记录加载失败');
+    expect(cell.getAttribute('title')).not.toContain('HTTP');
   });
 
   it('reads a dead network as a timeout/network failure, never as not found', async () => {
