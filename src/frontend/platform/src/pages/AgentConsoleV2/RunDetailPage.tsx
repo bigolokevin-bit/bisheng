@@ -469,11 +469,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
             icon="lock"
             title={t('agentConsole.v2.run02.forbiddenTitle')}
             desc={
-              <>
-                {t('agentConsole.v2.run02.forbiddenDescPre')}
-                <span className="mono">HTTP {head.status}</span>
-                {t('agentConsole.v2.run02.forbiddenDescPost')}
-              </>
+              <>{t('agentConsole.v2.run02.forbiddenDescPre').replace(/（$/, '')}。{t('agentConsole.v2.run02.forbiddenDescPost').replace(/^）。/, '')}</>
             }
             testId="agent-v2-rd-forbidden"
           >
@@ -500,18 +496,11 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
   if (head.kind === 'error') {
     const is400 = head.status === 400;
     const desc = is400 ? (
-      <>
-        {t('agentConsole.v2.run02.errorDesc400Pre')}
-        <span className="mono">HTTP 400</span>
-        {t('agentConsole.v2.run02.errorDesc400Post')}
-      </>
+      <>{t('agentConsole.v2.run02.errorDesc400Pre').replace(/（$/, '')}。{t('agentConsole.v2.run02.errorDesc400Post').replace(/^）。/, '')}</>
     ) : (
       <>
-        {t('agentConsole.v2.run02.errorDescPre')}
-        <span className="mono">
-          {head.status > 0 ? `HTTP ${head.status}` : t('agentConsole.v2.run02.errorNetworkCode')}
-        </span>
-        {t('agentConsole.v2.run02.errorDescPost')}
+        {head.status <= 0 ? `${t('agentConsole.v2.run02.errorNetworkCode')}。` : ''}
+        {t('agentConsole.v2.run02.errorDescPost').replace(/^）。/, '')}
       </>
     );
     return (
@@ -1425,7 +1414,7 @@ function StepRowView({ step, gapMs, t }: { step: RunStep; gapMs: number | null; 
       </summary>
       <div className="a2r-dtl">
         <KV k={t('agentConsole.v2.run02.kvTool')} v={step.toolName} mono />
-        <KV k={t('agentConsole.v2.run02.kvStepSeq')} v={`stepSeq ${step.stepSeq}`} mono />
+        <KV k={t('agentConsole.v2.run02.kvStepSeq')} v={String(step.stepSeq)} mono />
         <KV
           k={t('agentConsole.v2.run02.kvCall')}
           v={`seq ${step.callEvent.seq} · ${fmtMinuteFull(step.callEvent.occurredAt)}`}
@@ -1564,7 +1553,7 @@ function EventRowView({ event, gapMs, t }: { event: TraceEvent; gapMs: number | 
         />
         <KV k={t('agentConsole.v2.run02.kvBelong')} v={verdict} sans />
         {event.stepSeq !== undefined ? (
-          <KV k={t('agentConsole.v2.run02.kvStepSeq')} v={`stepSeq ${event.stepSeq}`} mono />
+          <KV k={t('agentConsole.v2.run02.kvStepSeq')} v={String(event.stepSeq)} mono />
         ) : null}
         {TERMINAL_TRACE_EVENT_TYPES.has(event.eventType) ? (
           <KV k={t('agentConsole.v2.run02.kvTerminalSeq')} v={`terminalSeq = ${event.seq}`} mono />
