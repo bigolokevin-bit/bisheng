@@ -171,16 +171,16 @@ afterEach(() => {
 // ---------------------------------------------------------------- header / fields
 
 describe('TSK-02 — header, meta row and the 17-field traversal', () => {
-  it('E01: T2 is the named source and the page header carries pill + title + truncated id', async () => {
+  it('E01: the page header carries pill + title + truncated id, with no endpoint text', async () => {
     const api = makeApi();
     renderPage({ api });
     await waitReady();
 
     expect(api.getTaskDetail).toHaveBeenCalledWith({ id: TASK_ID });
-    expect(screen.getByTestId('agent-v2-task-fresh').textContent).toContain(
-      'GET /api/task-detail?id=',
-    );
-    expect(screen.getByTestId('agent-v2-task-fresh').textContent).toContain('只读详情');
+    /* Q2: the endpoint and the T2 phase code are engineering language. */
+    expect(screen.getByTestId('agent-v2-task-fresh').textContent).not.toContain('GET /api');
+    expect(screen.getByTestId('agent-v2-task-fresh').textContent).not.toContain('T2');
+    expect(screen.getByTestId('agent-v2-task-fresh').textContent).toContain('更新于');
 
     const h1 = screen.getByRole('heading', { level: 1 });
     expect(h1.textContent).toContain('核对订单 SO-20261116-0842 的发货时效并回写客户备注');

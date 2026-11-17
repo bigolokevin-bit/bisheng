@@ -346,14 +346,6 @@ export function TaskDetailPage({
             {t('agentConsole.v2.tsk02.updated')}{' '}
             <span className="mono">{fmtClock(head.pulledAt)}</span>
           </span>
-          <span className="faint" aria-hidden="true">
-            ·
-          </span>
-          <span>
-            {t('agentConsole.v2.tsk02.sourceRowPrefix')}{' '}
-            <span className="mono">GET /api/task-detail?id=</span>{' '}
-            {t('agentConsole.v2.tsk02.sourceRowSuffix')}
-          </span>
         </div>
 
         {/* Page-level read-only boundary: the DOM has no write entry, and the
@@ -951,13 +943,6 @@ export function TaskDetailPage({
 
             <Panel
               title={t('agentConsole.v2.tsk02.calTitle')}
-              foot={
-                <>
-                  {t('agentConsole.v2.tsk02.calFootPrefix')}{' '}
-                  <span className="mono">GET /api/task-detail?id=</span>
-                  {t('agentConsole.v2.tsk02.calFootSuffix')}
-                </>
-              }
               testId="agent-v2-task-caliber"
             >
               <div className="a2t-rows">
