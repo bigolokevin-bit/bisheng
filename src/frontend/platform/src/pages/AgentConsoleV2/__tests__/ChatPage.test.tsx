@@ -162,6 +162,9 @@ describe('L4p2 console chat page', () => {
     expect(go.getAttribute('href')).toBe('/agent/employees');
     expect(screen.getByTestId('agent-v2-chat-idle')).toBeInTheDocument();
     expect(screen.getByTestId('agent-v2-chat-idle')).not.toHaveTextContent('还没有会话');
+    /* Q2: zero sessions must not imply any past conversation. */
+    expect(screen.queryAllByTestId('agent-v2-chat-session')).toHaveLength(0);
+    expect(document.body.textContent).not.toContain('历史');
     expect(screen.getByTestId('agent-v2-chat-input')).toBeDisabled();
     expect(screen.getByTestId('agent-v2-chat-send')).toBeDisabled();
     guardNoRawKeys();
