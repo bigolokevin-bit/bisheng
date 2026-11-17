@@ -1,1128 +1,488 @@
-// W2 employees list (parity spec §4, EMP-01 page card).
-// Every cross-employee aggregate comes from a service endpoint (E14 stats /
-// AP8 approval-stats / R6 run-stats / P9 budget-usage / R7 run-activity).
-// The client never reduces one page of rows into a fleet-wide number.
-// Missing data renders as an em-dash or an explicit honest note — no fake
-// zeroes, no fake curves, no internal keys leaking as labels.
-// EMP-01 r5 (G15, same idiom as OV-01 blockUnavailable): error copy is fully
-// localized; the HTTP status is only an interpolation parameter and the
-// internal machine code (console.forbidden / run.invalid_query /
-// budget.range_too_large / agent.http.*) never reaches the screen. The
-// requestId is offered through an explicit "copy diagnostics" control and is
-// never inlined in body text.
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, NavLink, useSearchParams } from 'react-router-dom';
+/**
+ * EMP-01 employee list, rebuilt for the S3 console PRD v0.3.
+ *
+ * Only the six columns the PRD names: name, short code, role, skill count,
+ * today's runs and budget. Every value is traceable to a service response —
+ * a missing value renders '—', never a zero, never a fabricated curve. The
+ * page is read-only apart from the create entry and the row-level chat link.
+ */
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { userContext } from '@/contexts/userContext';
-import { EmployeesHeatPanel } from './EmployeesHeatPanel';
+
+import { ReqId } from './listkit/ReqId';
 import { HelpTip } from './HelpTip';
-import { LkIcon } from './listkit/icons';
+import { avatarChar, duplicateNames, employeeDisplayName } from './identity';
 import {
-  avatarChar,
-  duplicateNames,
-  employeeDisplayName,
-  ownerDisplayLabel,
-} from './identity';
+  budgetView,
+  employeeShortCode,
+  fmtMoney,
+  isUnassignedOwner,
+  ownerSlotLabel,
+  parseStatusKey,
+  rowSkillCount,
+  todayBeijingWindow,
+  type StatusKey,
+} from './employeesShared';
 import {
-  dayWindow,
-  fetchActivity,
-  fetchApprovalStats,
-  fetchBudgetMonth,
-  fetchEmployeesPage,
-  fetchEmployeeStats,
-  fetchRunStats,
-  fetchWorkstations,
-  fmtRatio,
-  fmtTime,
-  fmtUsd,
   bucketSum,
+  fetchEmployeesPage,
+  fetchRunStats,
   makeFetcher,
   mapLimit,
-  monthPeriod,
-  summarizeStations,
-  LIFECYCLE_ORDER,
-  type ActivityBody,
   type ApiRes,
-  type ApprovalStats,
-  type BudgetBody,
+  type EmployeeListBody,
   type EmployeeRow,
-  type EmployeeStats,
-  type RunStatsBody,
-  type StationSummary,
-  type Fetcher,
 } from './v2Data';
 
-// Real expansion dimensions supported by the domain service (B3). The
-// work-order wording `stats,cost,owner` is not a valid dimension set and
-// would be rejected upstream with 400 request.invalid_query.
+import './employeesList.css';
+
 const EXPAND = 'version,workstations,knowledge,pending';
 const PAGE_LIMIT = 20;
-const ROW_CAP = 4; // bounded per-row fan-out: never N+1 against a fleet
+const RUN_CAP = 4;
 
-// EMP-01 C2: in-page sorting. E11 has no server-side sort, so the order is
-// applied to the currently loaded page only and recorded in the URL (?sort=
-// col:asc|desc). Scope is stated in EVIDENCE.md; no cross-page promise.
-type SortCol =
-  | 'name'
-  | 'version'
-  | 'status'
-  | 'owner'
-  | 'workstation'
-  | 'pending'
-  | 'lastRun'
-  | 'success'
-  | 'cost';
+type RowRuns =
+  | { state: 'loading' }
+  | { state: 'failed' }
+  | { state: 'ok'; total: number; ok: number; fail: number };
 
-const SORT_COLS: SortCol[] = [
-  'name',
-  'version',
-  'status',
-  'owner',
-  'workstation',
-  'pending',
-  'lastRun',
-  'success',
-  'cost',
-];
+const LIFECYCLE_KEYS = new Set([
+  'draft',
+  'onboarding',
+  'active',
+  'paused',
+  'offboarding',
+  'suspended',
+  'archived',
+]);
 
-interface RowEnrich {
-  stations?: StationSummary;
-  stationsFailed?: boolean;
-  runs?: RunStatsBody | null;
-  runsFailed?: boolean;
+function lifecycleKey(state: string): string {
+  return LIFECYCLE_KEYS.has(state) ? `agentConsole.lifecycle.${state}` : 'agentConsole.v2.id.none';
 }
 
-interface KpiState {
-  stats?: ApiRes<EmployeeStats>;
-  approvals?: ApiRes<ApprovalStats>;
-  anomalyNow?: ApiRes<RunStatsBody>;
-  anomalyPrev?: ApiRes<RunStatsBody>;
-  costNow?: ApiRes<BudgetBody>;
-  costPrev?: ApiRes<BudgetBody>;
+function isAuthFailure(res: ApiRes<unknown>): boolean {
+  return res.status === 401 || res.code === 'console.unauthenticated';
 }
 
-function isoShift(baseIso: string, days: number): string {
-  return new Date(new Date(baseIso).getTime() - days * 86400000).toISOString();
-}
-
-// G15: copies ONLY the request id (safe diagnostic handle). Never the token,
-// never the response body, never the internal machine code.
-function DiagCopyButton({
-  requestId,
-  testId,
-  showAbsent,
-}: {
-  requestId?: string;
-  testId: string;
-  /** S4: page-level error screens show 「未提供」 when the id is missing;
-   *  KPI micro-blocks stay minimal (the value line is already 「—」). */
-  showAbsent?: boolean;
-}) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  if (!requestId) {
-    return showAbsent ? (
-      <span className="a2-meta" data-testid={`${testId}-absent`}>
-        {t('agentConsole.v2.id.requestId')}：{t('agentConsole.v2.id.requestIdAbsent')}
-      </span>
-    ) : null;
-  }
-  const handleCopy = () => {
-    if (!navigator.clipboard?.writeText) return;
-    void navigator.clipboard.writeText(requestId).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    });
-  };
-  return (
-    <button type="button" className="a2-btn" data-testid={testId} onClick={handleCopy}>
-      {copied ? t('agentConsole.v2.emp.copiedToast') : t('agentConsole.v2.emp.copyDiag')}
-    </button>
-  );
-}
-
-// P0-1 (observer pixel audit): the KPI failure line used to print the HTTP
-// status ("…暂时取不到（HTTP 500）"), so one error state read as three
-// different things (dark: code on screen, light/375: bare "—"). It now keeps
-// the SAME shape as the healthy KPI — value line "—" + one reason line — and
-// the HTTP status / internal code never reach the DOM. Only the requestId
-// stays reachable, behind the copy-diagnostics control.
-function KpiBlockError({
-  res,
-  reason,
-  testIdBase,
-}: {
-  res: ApiRes<unknown>;
-  reason: string;
-  testIdBase: string;
-}) {
-  return (
-    <>
-      <span className="a2-kpi-num" data-testid={testIdBase}>
-        —
-      </span>
-      <span className="a2-meta" data-testid={`${testIdBase}-error`}>
-        {reason}
-      </span>
-      <DiagCopyButton requestId={res.requestId} testId={`${testIdBase}-diag`} />
-    </>
-  );
-}
-
-function sumCost(body: BudgetBody | null | undefined, ids: string[]): { total: number | null; covered: number } {
-  const items = body?.items ?? [];
-  let total: number | null = null;
-  let covered = 0;
-  ids.forEach((id) => {
-    const row = items.find((i) => i.employeeId === id);
-    if (row && typeof row.costUsd === 'number' && Number.isFinite(row.costUsd)) {
-      total = (total ?? 0) + row.costUsd;
-      covered += 1;
-    }
-  });
-  return { total, covered };
-}
-
-/* P0-2 (observer pixel audit) → S2: the FULL ref (`human:<uid>`) is kept in
-   the cell title for debugging, but the printed text is the readable identity
-   (ownerDisplayLabel below): 「用户 #1」/「未知」, never the raw prefix. */
-function ownerRef(ownerUserId?: string | null): string {
-  if (!ownerUserId) return '';
-  return ownerUserId.includes(':') ? ownerUserId : `human:${ownerUserId}`;
+function isForbidden(res: ApiRes<unknown>): boolean {
+  return res.status === 403 || res.code === 'console.forbidden';
 }
 
 export function EmployeesListPage() {
   const { t } = useTranslation();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const fetchApi: Fetcher = useMemo(() => makeFetcher(), []);
+  const [params, setParams] = useSearchParams();
+  const fetchApi = useMemo(() => makeFetcher(), []);
 
-  const keyword = searchParams.get('keyword') ?? '';
-  const lifecycleState = searchParams.get('lifecycleState') ?? '';
-  const cursor = searchParams.get('cursor') ?? '';
-  const view = searchParams.get('view') ?? 'table';
-  const sortParam = searchParams.get('sort') ?? '';
-  const rawLimit = Number.parseInt(searchParams.get('limit') ?? '', 10);
-  const pageLimit = Number.isFinite(rawLimit)
-    ? Math.min(Math.max(rawLimit, 1), 50)
-    : PAGE_LIMIT;
+  const rawStatus = params.get('lifecycleState');
+  const status: StatusKey = parseStatusKey(rawStatus === 'all' ? 'all' : rawStatus);
+  const keyword = params.get('keyword') ?? '';
 
-  const [draftKeyword, setDraftKeyword] = useState(keyword);
-  const [reloadToken, setReloadToken] = useState(0);
-  const [listRes, setListRes] = useState<ApiRes<{ items: EmployeeRow[]; nextCursor?: string }> | null>(null);
-  const [listLoading, setListLoading] = useState(true);
-  const [kpi, setKpi] = useState<KpiState>({});
-  const [heat, setHeat] = useState<{ body?: ActivityBody; failed?: boolean }>({});
-  const [heatEmployeeId, setHeatEmployeeId] = useState('');
-  const [rowEnrich, setRowEnrich] = useState<Record<string, RowEnrich>>({});
-  const [copiedId, setCopiedId] = useState('');
-  const [tableOverflows, setTableOverflows] = useState(false);
-  const tableScrollRef = useRef<HTMLDivElement | null>(null);
-  const pagesRef = useRef<string[]>(['']);
-  const debounceRef = useRef<number | undefined>(undefined);
+  const [draft, setDraft] = useState(keyword);
+  const [items, setItems] = useState<EmployeeRow[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [result, setResult] = useState<ApiRes<EmployeeListBody> | null>(null);
+  const [nonce, setNonce] = useState(0);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const [moreError, setMoreError] = useState<ApiRes<EmployeeListBody> | null>(null);
+  const [runs, setRuns] = useState<Record<string, RowRuns>>({});
 
-  useEffect(() => {
-    setDraftKeyword(keyword);
-  }, [keyword]);
-
-  const patchParams = useCallback(
-    (patch: Record<string, string | null>) => {
-      const next = new URLSearchParams(searchParams);
-      Object.entries(patch).forEach(([k, v]) => {
-        if (v === null || v === '') next.delete(k);
-        else next.set(k, v);
-      });
-      setSearchParams(next);
-    },
-    [searchParams, setSearchParams],
+  const genRef = useRef(0);
+  const requestedRuns = useRef<Set<string>>(new Set());
+  const dups = useMemo(
+    () => duplicateNames(items.map((row) => ({ id: row.employeeId, name: row.name }))),
+    [items]
   );
 
-  const commitKeyword = useCallback(
-    (value: string) => {
-      pagesRef.current = [''];
-      patchParams({ keyword: value, cursor: null });
-    },
-    [patchParams],
-  );
-
-  const handleKeywordChange = (value: string) => {
-    setDraftKeyword(value);
-    window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => commitKeyword(value.trim()), 300);
-  };
-
-  const handleLifecycleTab = (state: string) => {
-    pagesRef.current = [''];
-    patchParams({ lifecycleState: state, cursor: null });
-  };
-
-  const handleView = (next: string) => {
-    patchParams({ view: next === 'table' ? null : next });
-  };
-
-  const handleSort = (col: SortCol) => {
-    pagesRef.current = [''];
-    if (!sortCol || sortCol !== col) patchParams({ sort: `${col}:asc`, cursor: null });
-    else if (sortDir === 'asc') patchParams({ sort: `${col}:desc`, cursor: null });
-    else patchParams({ sort: null, cursor: null });
-  };
-
-  const handleNextPage = () => {
-    const nc = listRes?.data?.nextCursor;
-    if (!nc) return;
-    pagesRef.current.push(nc);
-    patchParams({ cursor: nc });
-  };
-
-  const handlePrevPage = () => {
-    if (pagesRef.current.length <= 1) return;
-    pagesRef.current.pop();
-    const prev = pagesRef.current[pagesRef.current.length - 1] ?? '';
-    patchParams({ cursor: prev || null });
-  };
-
-  const handleRetry = () => {
-    setReloadToken((n) => n + 1);
-  };
-
-  // ---- employee page request (E11 with batched enrichment) ----
+  // Keyword commits after a short pause; the URL stays the single source of
+  // truth so going to a detail page and back keeps the filter.
   useEffect(() => {
-    let alive = true;
-    setListLoading(true);
-    fetchEmployeesPage(fetchApi, {
+    const trimmed = draft.trim();
+    if (trimmed === keyword) return undefined;
+    const timer = window.setTimeout(() => {
+      const next = new URLSearchParams(params);
+      if (trimmed) next.set('keyword', trimmed);
+      else next.delete('keyword');
+      setParams(next, { replace: true });
+    }, 300);
+    return () => window.clearTimeout(timer);
+    // params is intentionally read at commit time only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, keyword]);
+
+  useEffect(() => {
+    const gen = genRef.current + 1;
+    genRef.current = gen;
+    setResult(null);
+    setMoreError(null);
+    void fetchEmployeesPage(fetchApi, {
       keyword: keyword || undefined,
-      lifecycleState: lifecycleState || undefined,
-      limit: pageLimit,
-      cursor: cursor || undefined,
+      lifecycleState: status === 'all' ? undefined : status,
+      limit: PAGE_LIMIT,
       expand: EXPAND,
     }).then((res) => {
-      if (alive) {
-        setListRes(res);
-        setListLoading(false);
+      if (genRef.current !== gen) return;
+      setResult(res);
+      if (res.ok) {
+        setItems(res.data?.items ?? []);
+        setNextCursor(res.data?.nextCursor ?? null);
+      } else {
+        setItems([]);
+        setNextCursor(null);
       }
     });
-    return () => {
-      alive = false;
-    };
-  }, [fetchApi, keyword, lifecycleState, cursor, pageLimit, reloadToken]);
+  }, [fetchApi, keyword, status, nonce]);
 
-  /* S2/S4: the operator's own identity (session only, no new endpoint) feeds
-     both the readable owner cell (S2) and the 「待我审批」 KPI (S4). The KPI
-     used to fetch `human:1` unconditionally — a seed identity: every operator
-     saw user #1's queue. Now: current session uid, or NO request at all. */
-  const ctx = useContext(userContext) as
-    | { user?: { user_id?: number | string; user_name?: string; name?: string; username?: string } }
-    | null;
-  const currentUid =
-    ctx?.user?.user_id === undefined || ctx?.user?.user_id === null
-      ? ''
-      : String(ctx.user.user_id);
-  const currentName = String(ctx?.user?.user_name || ctx?.user?.name || ctx?.user?.username || '');
-
-  // ---- KPI aggregates: E14 + AP8 + R6 two rolling windows + P9 months ----
+  // Today's runs per visible row: the list response has no run counter, so the
+  // page reads the same 7-day stats endpoint the matrix uses, capped at four
+  // rows in flight and cached per employee for the session.
   useEffect(() => {
-    let alive = true;
-    const win = dayWindow(7);
-    const prevWin = { from: isoShift(win.from, 7), to: win.from };
-    Promise.all([
-      fetchEmployeeStats(fetchApi),
-      currentUid
-        ? fetchApprovalStats(fetchApi, `human:${currentUid}`)
-        : Promise.resolve<ApiRes<ApprovalStats>>({
-            ok: false,
-            status: 0,
-            data: null,
-            code: 'console.no-identity',
-          }),
-      fetchRunStats(fetchApi, { from: win.from, to: win.to }),
-      fetchRunStats(fetchApi, { from: prevWin.from, to: prevWin.to }),
-    ]).then(([stats, approvals, anomalyNow, anomalyPrev]) => {
-      if (alive) setKpi((k) => ({ ...k, stats, approvals, anomalyNow, anomalyPrev }));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [fetchApi, currentUid, reloadToken]);
-
-  // Keep `rows` referentially stable per listRes so downstream memos are sound.
-  const rows = useMemo(
-    () => (listRes?.ok ? listRes.data?.items ?? [] : []),
-    [listRes],
-  );
-  /* S2: same-name distinguishers for the readable name cell. */
-  const dups = useMemo(
-    () => duplicateNames(rows.map((r) => ({ id: r.employeeId, name: r.name }))),
-    [rows],
-  );
-  const rowIds = useMemo(() => rows.map((r) => r.employeeId), [rows]);
-  const rowIdsKey = rowIds.join(',');
-
-  // ---- EMP-01 C2: in-page sort over the loaded rows only ----
-  const sortMatch = /^([A-Za-z]+):(asc|desc)$/.exec(sortParam);
-  const sortCol: SortCol | null =
-    sortMatch && SORT_COLS.indexOf(sortMatch[1] as SortCol) >= 0
-      ? (sortMatch[1] as SortCol)
-      : null;
-  const sortDir: 'asc' | 'desc' = sortMatch?.[2] === 'desc' ? 'desc' : 'asc';
-
-  const sortValue = useCallback(
-    (r: EmployeeRow): number | string | null => {
-      if (!sortCol) return null;
-      const en = rowEnrich[r.employeeId];
-      const runs7 = en?.runs ? bucketSum(en.runs.buckets) : null;
-      const costRow = (kpi.costNow?.data?.items ?? []).find(
-        (i) => i.employeeId === r.employeeId
-      );
-      switch (sortCol) {
-        case 'name':
-          return r.name ?? null;
-        case 'version':
-          return r.enrichment?.currentVersionNo ?? null;
-        case 'status':
-          return r.lifecycleState ?? null;
-        case 'owner':
-          return r.ownerUserId ?? null;
-        case 'workstation':
-          return en?.stations?.total ?? r.enrichment?.workstationCount ?? null;
-        case 'pending':
-          return r.enrichment?.pendingApprovalCount ?? null;
-        case 'lastRun':
-          return runs7 && runs7.runs > 0 ? runs7.runs : null;
-        case 'success':
-          return runs7 && runs7.runs > 0 ? runs7.succeeded / runs7.runs : null;
-        case 'cost':
-          return typeof costRow?.costUsd === 'number' ? costRow.costUsd : null;
-        default:
-          return null;
-      }
-    },
-    [sortCol, rowEnrich, kpi.costNow]
-  );
-
-  const displayRows = useMemo(() => {
-    if (!sortCol) return rows;
-    return [...rows].sort((a, b) => {
-      const av = sortValue(a);
-      const bv = sortValue(b);
-      // Rows missing the sort value always sink to the bottom, either direction.
-      if (av === null && bv === null) return 0;
-      if (av === null) return 1;
-      if (bv === null) return -1;
-      const cmp =
-        typeof av === 'number' && typeof bv === 'number'
-          ? av - bv
-          : String(av).localeCompare(String(bv));
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-  }, [rows, sortCol, sortDir, sortValue]);
-
-  // ---- month cost KPI once ids are known (P9 batched, never per row) ----
-  useEffect(() => {
-    if (!rowIdsKey) return;
-    let alive = true;
-    const ids = rowIdsKey.split(',');
-    const now = monthPeriod();
-    const prev = (() => {
-      const [y, m] = now.split('-').map(Number);
-      const d = new Date(Date.UTC(m === 1 ? y - 1 : y, m === 1 ? 11 : m - 2, 1));
-      return monthPeriod(d);
-    })();
-    Promise.all([fetchBudgetMonth(fetchApi, ids, now), fetchBudgetMonth(fetchApi, ids, prev)]).then(
-      ([costNow, costPrev]) => {
-        if (alive) setKpi((k) => ({ ...k, costNow, costPrev }));
-      }
-    );
-    return () => {
-      alive = false;
-    };
-  }, [fetchApi, rowIdsKey, reloadToken]);
-
-  // ---- R7 heatmap, platform or single employee ----
-  useEffect(() => {
-    let alive = true;
-    fetchActivity(fetchApi, { weeks: 1, tz: 'Asia/Shanghai', employeeId: heatEmployeeId || undefined }).then(
-      (res) => {
-        if (alive) setHeat(res.ok ? { body: res.data ?? undefined } : { failed: true });
-      }
-    );
-    return () => {
-      alive = false;
-    };
-  }, [fetchApi, heatEmployeeId, reloadToken]);
-
-  // ---- per-row bounded columns: E10 station detail + R6 rolling 7d ----
-  useEffect(() => {
-    if (!rowIdsKey) {
-      setRowEnrich({});
-      return;
-    }
-    let alive = true;
-    const ids = rowIdsKey.split(',');
-    const win = dayWindow(7);
-    mapLimit(ids, ROW_CAP, async (id) => {
-      const [ws, rs] = await Promise.all([
-        fetchWorkstations(fetchApi, id),
-        fetchRunStats(fetchApi, { from: win.from, to: win.to, employeeId: id }),
-      ]);
-      const enrich: RowEnrich = {};
-      if (ws.ok && ws.data) enrich.stations = summarizeStations(ws.data.items);
-      else enrich.stationsFailed = true;
-      if (rs.ok) enrich.runs = rs.data ?? null;
-      else enrich.runsFailed = true;
-      return [id, enrich] as const;
-    }).then((pairs) => {
-      if (alive) setRowEnrich(Object.fromEntries(pairs));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [fetchApi, rowIdsKey, reloadToken]);
-
-  const handleCopyId = (id: string) => {
-    if (navigator.clipboard?.writeText) {
-      void navigator.clipboard.writeText(id).then(() => {
-        setCopiedId(id);
-        window.setTimeout(() => setCopiedId((c) => (c === id ? '' : c)), 2000);
+    const pending = items.filter((row) => !requestedRuns.current.has(row.employeeId));
+    if (pending.length === 0) return undefined;
+    let cancelled = false;
+    pending.forEach((row) => requestedRuns.current.add(row.employeeId));
+    setRuns((prev) => {
+      const next = { ...prev };
+      pending.forEach((row) => {
+        next[row.employeeId] = { state: 'loading' };
       });
-    }
+      return next;
+    });
+    const win = todayBeijingWindow();
+    void mapLimit(pending, RUN_CAP, async (row) => {
+      const res = await fetchRunStats(fetchApi, {
+        from: win.from,
+        to: win.to,
+        bucket: 'day',
+        employeeId: row.employeeId,
+      });
+      if (cancelled) return;
+      if (!res.ok) {
+        setRuns((prev) => ({ ...prev, [row.employeeId]: { state: 'failed' } }));
+        return;
+      }
+      const sum = bucketSum(res.data?.buckets);
+      setRuns((prev) => ({
+        ...prev,
+        [row.employeeId]: { state: 'ok', total: sum.runs, ok: sum.succeeded, fail: sum.failed },
+      }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [items, fetchApi]);
+
+  const patchStatus = (next: StatusKey) => {
+    const search = new URLSearchParams(params);
+    if (next === 'active') search.delete('lifecycleState');
+    else search.set('lifecycleState', next);
+    setParams(search, { replace: true });
   };
 
-  // ---------- derived KPI values (service aggregates only) ----------
-  const statsData = kpi.stats?.ok ? kpi.stats.data : undefined;
-  const anomalyNowSum = kpi.anomalyNow?.ok ? bucketSum(kpi.anomalyNow.data?.buckets) : null;
-  const anomalyPrevSum = kpi.anomalyPrev?.ok ? bucketSum(kpi.anomalyPrev.data?.buckets) : null;
-  const costNowSum = kpi.costNow?.ok ? sumCost(kpi.costNow.data, rowIds) : null;
-  const costPrevSum = kpi.costPrev?.ok ? sumCost(kpi.costPrev.data, rowIds) : null;
-  const costIds = kpi.costNow?.data?.items?.length ?? 0;
+  const clearFilters = () => {
+    setDraft('');
+    const search = new URLSearchParams(params);
+    search.delete('keyword');
+    search.delete('lifecycleState');
+    setParams(search, { replace: true });
+  };
 
-  const costTrend =
-    costNowSum && costPrevSum && costPrevSum.total !== null && costPrevSum.total > 0 && costNowSum.total !== null
-      ? costNowSum.total / costPrevSum.total - 1
-      : null;
-  const anomalyTrend =
-    anomalyNowSum && anomalyPrevSum && anomalyPrevSum.runs > 0 && anomalyNowSum.runs !== null
-      ? anomalyNowSum.runs / anomalyPrevSum.runs - 1
-      : null;
+  const loadMore = async () => {
+    if (!nextCursor || moreLoading) return;
+    const gen = genRef.current;
+    setMoreLoading(true);
+    setMoreError(null);
+    const res = await fetchEmployeesPage(fetchApi, {
+      keyword: keyword || undefined,
+      lifecycleState: status === 'all' ? undefined : status,
+      limit: PAGE_LIMIT,
+      cursor: nextCursor,
+      expand: EXPAND,
+    });
+    if (genRef.current !== gen) {
+      setMoreLoading(false);
+      return;
+    }
+    if (!res.ok) {
+      setMoreError(res);
+      setMoreLoading(false);
+      return;
+    }
+    setItems((prev) => [...prev, ...(res.data?.items ?? [])]);
+    setNextCursor(res.data?.nextCursor ?? null);
+    setMoreLoading(false);
+  };
 
-  // ---------- top-level states ----------
-  const isAuth = listRes && !listRes.ok && (listRes.code === 'console.unauthenticated' || listRes.status === 401);
-  const isForbidden =
-    listRes && !listRes.ok && (listRes.code === 'console.forbidden' || listRes.status === 403);
-  const isError = listRes && !listRes.ok && !isAuth && !isForbidden;
+  const statusLabel = (key: StatusKey): string => {
+    if (key === 'all') return t('agentConsole.v2.emp.filterAll');
+    return t(key === 'active' ? 'agentConsole.lifecycle.active' : 'agentConsole.lifecycle.paused');
+  };
 
-  /* P1-3: the phone-width table scrolls inside its card; say so ONLY while the
-     wrapper actually overflows (measured), so 1440 — where the table fits —
-     never shows a hint that contradicts reality. */
-  useEffect(() => {
-    const measure = () => {
-      const el = tableScrollRef.current;
-      setTableOverflows(!!el && el.scrollWidth > el.clientWidth);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [displayRows, view, listLoading, listRes]);
+  const filtered = keyword !== '' || status !== 'active';
+  const showSkeleton = result === null;
+  const listError = result !== null && !result.ok ? result : null;
+  const filterSummary = [
+    keyword ? `「${keyword}」` : '',
+    status !== 'active' ? statusLabel(status) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const runsCell = (row: EmployeeRow) => {
+    const stat = runs[row.employeeId];
+    if (!stat || stat.state === 'loading') {
+      return (
+        <span className="emp-muted" aria-busy="true" data-testid={`agent-v2-emp-runs-${row.employeeId}`}>
+          —
+        </span>
+      );
+    }
+    if (stat.state === 'failed') {
+      return (
+        <span
+          className="emp-muted"
+          title={t('agentConsole.v2.ov.blockUnavailable', { block: t('agentConsole.v2.navEmployees'), code: moreError.status })}
+          data-testid={`agent-v2-emp-runs-${row.employeeId}`}
+        >
+          —
+        </span>
+      );
+    }
+    return (
+      <span data-testid={`agent-v2-emp-runs-${row.employeeId}`}>
+        {t('agentConsole.v2.mtx.runsDetail', { total: stat.total, ok: stat.ok, fail: stat.fail })}
+      </span>
+    );
+  };
+
+  const budgetCell = (row: EmployeeRow) => {
+    const view = budgetView(row.enrichment?.effectiveBudget);
+    if (view.kind === 'missing') {
+      return <span className="emp-muted" data-testid={`agent-v2-emp-budget-${row.employeeId}`}>—</span>;
+    }
+    if (view.kind === 'unset') {
+      return (
+        <span className="emp-muted" data-testid={`agent-v2-emp-budget-${row.employeeId}`}>
+          {t('agentConsole.v2.mtx.budgetUnset')}
+        </span>
+      );
+    }
+    return (
+      <span className="emp-mono" data-testid={`agent-v2-emp-budget-${row.employeeId}`}>
+        {fmtMoney(view.monthlyUsd)}
+      </span>
+    );
+  };
 
   return (
     <div className="a2s-page" data-testid="agent-v2-employees-page">
-      <div className="a2-card-head">
+      <header className="emp-head">
         <div>
           <h1 className="a2-h1">{t('agentConsole.v2.navEmployees')}</h1>
-          <p className="a2-meta">{t('agentConsole.v2.shell.employeesDesc')}</p>
+          <p className="a2-meta">{t('agentConsole.v2.mtx.desc')}</p>
         </div>
-        <div className="a2-card-actions">
-          <Link
-            className="a2-btn"
-            to="/agent/employees/new"
-            data-testid="agent-v2-employees-create"
-          >
-            {t('agentConsole.v2.emp.createEntry')}
-          </Link>
-        </div>
-      </div>
+        <Link className="a2-btn is-primary" to="/agent/employees/new" data-testid="agent-v2-employees-create">
+          {t('agentConsole.v2.emp.createEntry')}
+        </Link>
+      </header>
 
-      {/* ---------- four KPI cards, service aggregates ---------- */}
-      <div className="a2-kpis" data-testid="agent-v2-employees-kpis">
-        <div className="a2-kpi">
-          <span className="a2-meta">{t('agentConsole.v2.emp.kpiOnDuty')}</span>
-          {kpi.stats && !kpi.stats.ok ? (
-            <KpiBlockError
-              res={kpi.stats}
-              reason={t('agentConsole.v2.metricsUnavailable')}
-              testIdBase="agent-v2-kpi-onduty"
-            />
-          ) : (
-            <>
-              <span className="a2-kpi-num" data-testid="agent-v2-kpi-onduty">
-                {statsData ? statsData.byLifecycle.active : '—'}
-              </span>
-              <span className="a2-meta">
-                {statsData ? t('agentConsole.v2.emp.kpiNoteTotal', { count: statsData.total }) : ''}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="a2-kpi">
-          <span className="a2-meta">{t('agentConsole.v2.emp.kpiPending')}</span>
-          {kpi.approvals && !kpi.approvals.ok ? (
-            <KpiBlockError
-              res={kpi.approvals}
-              reason={
-                kpi.approvals.code === 'console.no-identity'
-                  ? t('agentConsole.v2.emp.kpiPendingNoIdentity')
-                  : t('agentConsole.overview.pendingUnavailable')
-              }
-              testIdBase="agent-v2-kpi-pending"
-            />
-          ) : (
-            <>
-              <span className="a2-kpi-num" data-testid="agent-v2-kpi-pending">
-                {kpi.approvals?.ok ? kpi.approvals.data?.pending ?? '—' : '—'}
-              </span>
-              <span className="a2-meta">
-                {(kpi.approvals?.data?.dueSoon ?? 0) > 0
-                  ? t('agentConsole.v2.emp.kpiDueSoonNote', { count: kpi.approvals?.data?.dueSoon ?? 0 })
-                  : ''}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="a2-kpi">
-          <span className="a2-meta">{t('agentConsole.v2.emp.kpiCost')}</span>
-          {kpi.costNow && !kpi.costNow.ok ? (
-            <KpiBlockError
-              res={kpi.costNow}
-              reason={t('agentConsole.v2.emp.kpiCostUnavailable')}
-              testIdBase="agent-v2-kpi-cost"
-            />
-          ) : (
-            <>
-              <span className="a2-kpi-num" data-testid="agent-v2-kpi-cost">
-                {costNowSum ? fmtUsd(costNowSum.total) : '—'}
-              </span>
-              <span className="a2-meta">
-                {costTrend !== null ? fmtRatio(costTrend) : t('agentConsole.v2.emp.kpiTrendUnavailable')}
-              </span>
-              <span className="a2-meta" data-testid="agent-v2-kpi-cost-caliber">
-                {t('agentConsole.v2.emp.kpiCaliberLedger')} · {costIds}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="a2-kpi">
-          <span className="a2-meta">{t('agentConsole.v2.emp.kpiAnomaly')}</span>
-          {kpi.anomalyNow && !kpi.anomalyNow.ok ? (
-            <KpiBlockError
-              res={kpi.anomalyNow}
-              reason={t('agentConsole.v2.ov.anomalyUnavailable')}
-              testIdBase="agent-v2-kpi-anomaly"
-            />
-          ) : (
-            <>
-              <span className="a2-kpi-num" data-testid="agent-v2-kpi-anomaly">
-                {anomalyNowSum ? anomalyNowSum.failed : '—'}
-              </span>
-              <span className="a2-meta">
-                {anomalyTrend !== null ? fmtRatio(anomalyTrend) : t('agentConsole.v2.emp.kpiTrendUnavailable')}
-              </span>
-              <span className="a2-meta">{t('agentConsole.v2.emp.anomalyWindowNote')}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      <EmployeesHeatPanel
-        heat={heat}
-        body={rows}
-        heatEmployeeId={heatEmployeeId}
-        onEmployeeChange={setHeatEmployeeId}
-      />
-
-      {/* ---------- filters ---------- */}
-      <div className="a2-card" data-testid="agent-v2-employees-filters">
-        <div className="a2-chips">
-          <button
-            type="button"
-            className={`a2-pill${lifecycleState === '' ? ' active' : ''}`}
-            onClick={() => handleLifecycleTab('')}
-          >
-            {t('agentConsole.v2.emp.filterAll')} {statsData ? statsData.total : ''}
-          </button>
-          {LIFECYCLE_ORDER.map((state) => (
+      <div className="a2-card emp-toolbar">
+        <div className="emp-tabs" role="group" aria-label={t('agentConsole.v2.colStatus')}>
+          {(['active', 'paused', 'all'] as StatusKey[]).map((key) => (
             <button
-              key={state}
+              key={key}
               type="button"
-              className={`a2-pill${lifecycleState === state ? ' active' : ''}`}
-              data-testid={`agent-v2-filter-${state}`}
-              onClick={() => handleLifecycleTab(state)}
+              className={['a2-btn', 'emp-tab', status === key ? 'is-on' : ''].join(' ').trim()}
+              aria-pressed={status === key}
+              onClick={() => patchStatus(key)}
+              data-testid={`agent-v2-emp-status-${key}`}
             >
-              {t(`agentConsole.lifecycle.${state}`)} {statsData ? statsData.byLifecycle[state] ?? 0 : ''}
+              {statusLabel(key)}
             </button>
           ))}
         </div>
-        <div className="a2-card-head">
+        <div className="emp-search">
           <input
-            className="a2-input"
-            value={draftKeyword}
+            className="a2-search"
+            type="search"
+            value={draft}
             placeholder={t('agentConsole.v2.search')}
-            data-testid="agent-v2-employees-search"
-            onChange={(e) => handleKeywordChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commitKeyword(draftKeyword.trim());
-            }}
+            aria-label={t('agentConsole.v2.search')}
+            onChange={(event) => setDraft(event.target.value)}
+            data-testid="agent-v2-emp-search"
           />
-          <button type="button" className="a2-btn" onClick={() => commitKeyword(draftKeyword.trim())}>
-            {t('agentConsole.v2.query')}
-          </button>
-        </div>
-        <div className="a2-chips" data-testid="agent-v2-employees-disabled-filters">
-          <select className="a2-input" disabled aria-label={t('agentConsole.v2.emp.filterDept')}>
-            <option>{t('agentConsole.v2.emp.filterDept')}</option>
-          </select>
-          <select className="a2-input" disabled aria-label={t('agentConsole.v2.emp.filterOwner')}>
-            <option>{t('agentConsole.v2.emp.filterOwner')}</option>
-          </select>
-          <select className="a2-input" disabled aria-label={t('agentConsole.v2.emp.filterSeat')}>
-            <option>{t('agentConsole.v2.emp.filterSeat')}</option>
-          </select>
-          <select className="a2-input" disabled aria-label={t('agentConsole.v2.emp.filterKnowledge')}>
-            <option>{t('agentConsole.v2.emp.filterKnowledge')}</option>
-          </select>
-        </div>
-        <p className="a2-meta" data-testid="agent-v2-filter-unavailable-note">
-          {t('agentConsole.v2.emp.filterUnavailableNote')}
-        </p>
-        <div className="a2-chips">
-          <button
-            type="button"
-            className={`a2-pill${view === 'table' ? ' active' : ''}`}
-            onClick={() => handleView('table')}
-          >
-            {t('agentConsole.v2.emp.viewTable')}
-          </button>
-          <button
-            type="button"
-            className={`a2-pill${view === 'chat' ? ' active' : ''}`}
-            onClick={() => handleView('chat')}
-          >
-            {t('agentConsole.v2.emp.viewChat')}
-          </button>
+          {filtered ? (
+            <button
+              type="button"
+              className="a2-btn"
+              onClick={clearFilters}
+              data-testid="agent-v2-emp-clear"
+            >
+              {t('agentConsole.v2.tsk.clear')}
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {/* ---------- main content by state ---------- */}
-      {isAuth ? (
-        <div className="a2-card" data-testid="agent-v2-employees-auth">
-          <p className="a2-h2">{t('agentConsole.v2.emp.authExpired')}</p>
-          <p className="a2-card-sub">{t('agentConsole.v2.emp.authHint')}</p>
-          <div className="a2-card-actions">
-            <button
-              type="button"
-              className="a2-btn"
-              data-testid="agent-v2-employees-retry"
-              onClick={handleRetry}
-            >
-              {t('agentConsole.v2.retry')}
-            </button>
-            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" showAbsent />
-          </div>
-        </div>
-      ) : isForbidden ? (
-        <div className="a2-card" data-testid="agent-v2-employees-403">
-          <p className="a2-h2">{t('agentConsole.v2.emp.noPermission')}</p>
-          <p className="a2-card-sub">{t('agentConsole.v2.emp.forbiddenHint')}</p>
-          <div className="a2-card-actions">
-            <button
-              type="button"
-              className="a2-btn"
-              data-testid="agent-v2-employees-retry"
-              onClick={handleRetry}
-            >
-              {t('agentConsole.v2.retry')}
-            </button>
-            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" showAbsent />
-          </div>
-        </div>
-      ) : isError ? (
-        <div className="a2-card" data-testid="agent-v2-employees-error">
-          <p className="a2-h2">{t('agentConsole.v2.errorQuery')}</p>
-          {/* G15: localized line with the HTTP status as an interpolation
-              parameter only — the internal code is never rendered. */}
-          <p className="a2-card-sub" data-testid="agent-v2-employees-error-detail">
-            {t('agentConsole.v2.ov.blockUnavailable', {
-              block: t('agentConsole.v2.navEmployees'),
-              code: listRes?.status ?? '',
-            })}
-          </p>
-          <div className="a2-card-actions">
-            <button
-              type="button"
-              className="a2-btn"
-              data-testid="agent-v2-employees-retry"
-              onClick={handleRetry}
-            >
-              {t('agentConsole.v2.retry')}
-            </button>
-            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" showAbsent />
-          </div>
-        </div>
-      ) : listLoading && !listRes ? (
-        <div className="a2s-skeleton" data-testid="agent-v2-employees-loading" aria-hidden>
-          {Array.from({ length: 10 }, (_, i) => (
-            <span className="a2s-sk-row" key={i} />
+      {showSkeleton ? (
+        <div className="a2-card a2s-skeleton" data-testid="agent-v2-employees-loading">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div className="a2s-sk-row" key={index} />
           ))}
         </div>
-      ) : rows.length === 0 ? (
-        <div className="a2-card" data-testid="agent-v2-employees-empty">
-          <p className="a2-h2">{t('agentConsole.v2.emp.emptyEmployees')}</p>
-          <p className="a2-card-sub">{t('agentConsole.v2.emp.filterUnavailableNote')}</p>
-        </div>
-      ) : view === 'chat' ? (
-        <div className="a2-card" data-testid="agent-v2-employees-chatview">
-          <p className="a2-card-sub">{t('agentConsole.v2.emp.chatViewEmptyNote')}</p>
-        </div>
-      ) : (
-        <div className="a2-card">
-          <div
-            className="a2-table-scroll"
-            ref={tableScrollRef}
-            data-testid="agent-v2-employees-table-scroll"
-          >
-          <table className="a2-table" data-testid="agent-v2-employees-table">
-            <thead>
-              <tr>
-                <th aria-sort={sortCol === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-name"
-                    onClick={() => handleSort('name')}
-                  >
-                    {t('agentConsole.v2.colName')}
-                    <span aria-hidden>
-                      {sortCol === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th
-                  className="r"
-                  aria-sort={sortCol === 'version' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-version"
-                    onClick={() => handleSort('version')}
-                  >
-                    {t('agentConsole.v2.emp.colVersion')}
-                    <span aria-hidden>
-                      {sortCol === 'version' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th aria-sort={sortCol === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-status"
-                    onClick={() => handleSort('status')}
-                  >
-                    {t('agentConsole.v2.colStatus')}
-                    <span aria-hidden>
-                      {sortCol === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th
-                  className="r"
-                  aria-sort={sortCol === 'owner' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <span className="a2-th-help">
-                    <button
-                      type="button"
-                      className="a2-th-btn"
-                      data-testid="agent-v2-sort-owner"
-                      onClick={() => handleSort('owner')}
-                    >
-                      {t('agentConsole.v2.colOwner')}
-                      <span aria-hidden>
-                        {sortCol === 'owner' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                      </span>
-                    </button>
-                    {/* P1 batch2 → S2: the owner tooltip keeps the full
-                        `human:<id>` ref — say what the prefix is. */}
-                    <HelpTip term="humanPrefix" testId="agent-v2-emp-help-owner" />
-                  </span>
-                </th>
-                <th
-                  className="r"
-                  aria-sort={sortCol === 'workstation' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-workstation"
-                    onClick={() => handleSort('workstation')}
-                  >
-                    {t('agentConsole.v2.emp.colWorkstation')}
-                    <span aria-hidden>
-                      {sortCol === 'workstation' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th
-                  className="r"
-                  aria-sort={sortCol === 'pending' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-pending"
-                    onClick={() => handleSort('pending')}
-                  >
-                    {t('agentConsole.v2.emp.colPending')}
-                    <span aria-hidden>
-                      {sortCol === 'pending' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th
-                  className="r"
-                  aria-sort={sortCol === 'lastRun' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-lastRun"
-                    onClick={() => handleSort('lastRun')}
-                  >
-                    {t('agentConsole.v2.emp.colLastRun')}
-                    <span aria-hidden>
-                      {sortCol === 'lastRun' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th
-                  className="r"
-                  aria-sort={sortCol === 'success' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-success"
-                    onClick={() => handleSort('success')}
-                  >
-                    {t('agentConsole.v2.emp.colSuccessRate')}
-                    <span aria-hidden>
-                      {sortCol === 'success' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th
-                  className="r"
-                  aria-sort={sortCol === 'cost' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                >
-                  <button
-                    type="button"
-                    className="a2-th-btn"
-                    data-testid="agent-v2-sort-cost"
-                    onClick={() => handleSort('cost')}
-                  >
-                    {t('agentConsole.v2.emp.colMonthCost')}
-                    <span aria-hidden>
-                      {sortCol === 'cost' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-                    </span>
-                  </button>
-                </th>
-                <th>{t('agentConsole.v2.colAction')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayRows.map((r) => {
-                const en = rowEnrich[r.employeeId];
-                const runs7 = en?.runs && en.runs !== null ? bucketSum(en.runs.buckets) : null;
-                const lastBucket = en?.runs?.buckets?.length
-                  ? en.runs.buckets[en.runs.buckets.length - 1]
-                  : undefined;
-                const monthCost = (kpi.costNow?.data?.items ?? []).find(
-                  (i) => i.employeeId === r.employeeId
-                );
-                const quota = r.enrichment?.effectiveBudget?.monthlyCostUsd;
-                const ratio =
-                  typeof monthCost?.costUsd === 'number' && typeof quota === 'number' && quota > 0
-                    ? monthCost.costUsd / quota
-                    : null;
-                /* S2 display identities: readable name (duplicates get the id
-                   tail), 「未命名」 when empty; owner never prints `human:`. */
-                const shownName = employeeDisplayName(
-                  { id: r.employeeId, name: r.name },
-                  dups,
-                  t,
-                );
-                const nameAva = avatarChar(shownName);
-                const ownerShown = ownerDisplayLabel(r.ownerUserId, t, {
-                  currentUid,
-                  currentName: currentName || undefined,
-                });
-                const ownerRaw = ownerRef(r.ownerUserId);
-                const ownerTitle =
-                  ownerRaw && ownerShown !== t('agentConsole.v2.id.unknown') ? ownerRaw : undefined;
-                return (
-                  <tr key={r.employeeId} data-testid="agent-v2-employee-row">
-                    <td className="a2-col-name" data-testid="agent-v2-col-name">
-                      <div className="a2-card-head">
-                        <span className="a2-pill" aria-hidden>
-                          {nameAva ?? <LkIcon name="user" size={12} />}
-                        </span>
-                        <span className="a2-name-cell">
-                          <span title={r.name || undefined}>{shownName}</span>
-                          <span className="a2-meta" title={r.title ?? undefined}>
-                            {r.title ? ` · ${r.title}` : ''}
-                          </span>
-                        </span>
-                      </div>
-                    </td>
-                    <td className="r" data-testid="agent-v2-col-version">
-                      {r.enrichment?.currentVersionNo !== undefined ? (
-                        <>
-                          v{r.enrichment.currentVersionNo}
-                          {" · "}
-                          <span className="a2-meta">{fmtTime(r.enrichment.effectiveFrom)}</span>
-                        </>
-                      ) : (
-                        <>
-                          —<span className="a2-meta">{t('agentConsole.v2.emp.versionUnavailableNote')}</span>
-                        </>
-                      )}
-                    </td>
-                    <td className="a2-cell-nowrap" data-testid="agent-v2-col-status">
-                      {t(`agentConsole.lifecycle.${r.lifecycleState}`, r.lifecycleState)}
-                    </td>
-                    <td
-                      className="a2-cell-nowrap r"
-                      title={ownerTitle}
-                      data-testid="agent-v2-col-owner"
-                    >
-                      {ownerShown}
-                    </td>
-                    <td data-testid="agent-v2-col-workstation" className="a2-cell-nowrap r">
-                      {en?.stations
-                        ? `${en.stations.groups} · ${en.stations.dms} · ${en.stations.crons}`
-                        : r.enrichment?.workstationCount !== undefined
-                          ? r.enrichment.workstationCount
-                          : en?.stationsFailed
-                            ? '—'
-                            : '…'}
-                    </td>
-                    <td className="r" data-testid="agent-v2-col-pending">
-                      {r.enrichment?.pendingApprovalCount ?? (en ? '—' : '…')}
-                    </td>
-                    <td className="r" data-testid="agent-v2-col-lastrun">
-                      {runs7 && runs7.runs > 0 ? (
-                        <>
-                          {/* Separator keeps count and timestamp readable as two values. */}
-                          {runs7.runs}
-                          {' · '}
-                          <span className="a2-meta">{fmtTime(lastBucket?.bucketStart)}</span>
-                        </>
-                      ) : en
-                        ? en.runsFailed
-                          ? '—'
-                          : t('agentConsole.v2.trendEmpty')
-                        : '…'}
-                    </td>
-                    <td className="r" data-testid="agent-v2-col-success">
-                      {runs7 && runs7.runs > 0 ? fmtRatio(runs7.succeeded / runs7.runs) : '—'}
-                    </td>
-                    <td className="r" data-testid="agent-v2-col-cost">
-                      {kpi.costNow && !kpi.costNow.ok
-                        ? '—'
-                        : typeof monthCost?.costUsd === 'number'
-                          ? fmtUsd(monthCost.costUsd)
-                          : '—'}
-                      {ratio !== null && (
-                        <span
-                          className={`a2-pill${ratio >= 0.85 ? ' a2-danger' : ratio >= 0.6 ? ' a2-warn' : ''}`}
-                          data-testid="agent-v2-col-cost-ratio"
-                        >
-                          {fmtRatio(ratio)}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <div className="a2-card-actions">
-                        <button
-                          type="button"
-                          className="a2-btn"
-                          onClick={() => handleCopyId(r.employeeId)}
-                          data-testid="agent-v2-copy-id"
-                        >
-                          {t('agentConsole.v2.emp.copyId')}
-                        </button>
-                        {/* EMP-03: detail route is live — link instead of disabled stub. */}
-                        <NavLink
-                          className="a2-btn"
-                          to={`/agent/employees/${r.employeeId}`}
-                          data-testid="agent-v2-employee-detail-link"
-                        >
-                          {t('agentConsole.v2.detail')}
-                        </NavLink>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      ) : null}
+
+      {listError ? (
+        isAuthFailure(listError) ? (
+          <div className="a2-card emp-state" data-testid="agent-v2-employees-auth">
+            <h2 className="a2-h2">{t('agentConsole.v2.emp.authExpired')}</h2>
+            <p className="a2-meta">{t('agentConsole.v2.emp.authHint')}</p>
           </div>
-          <div className="a2-card-head">
-            <button
-              type="button"
-              className="a2-btn"
-              onClick={handlePrevPage}
-              disabled={pagesRef.current.length <= 1}
-            >
-              {t('agentConsole.v2.emp.prevPage')}
-            </button>
-            <span className="a2-meta" data-testid="agent-v2-page-info">
-              {t('agentConsole.v2.emp.pageInfo', { page: pagesRef.current.length, count: rows.length })}
-            </span>
-            <button
-              type="button"
-              className="a2-btn"
-              onClick={handleNextPage}
-              disabled={!listRes?.data?.nextCursor}
-              data-testid="agent-v2-next-page"
-            >
-              {t('agentConsole.v2.emp.nextPage')}
-            </button>
+        ) : isForbidden(listError) ? (
+          <div className="a2-card emp-state" data-testid="agent-v2-employees-403">
+            <h2 className="a2-h2">{t('agentConsole.v2.emp.noPermission')}</h2>
+            <p className="a2-meta">{t('agentConsole.v2.emp.forbiddenHint')}</p>
+            <ReqId requestId={listError.requestId} testId="agent-v2-employees-403-rid" />
           </div>
-          {/* P1-3: conditional, measurement-backed — hidden when the table fits */}
-          {tableOverflows && (
-            <p className="a2-scroll-hint" data-testid="agent-v2-employees-scroll-hint">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <polyline points="18 8 22 12 18 16" />
-                <polyline points="6 8 2 12 6 16" />
-                <line x1="2" x2="22" y1="12" y2="12" />
-              </svg>
-              {t('agentConsole.v2.tableScrollHint')}
+        ) : (
+          <div className="a2-card emp-state" data-testid="agent-v2-employees-error">
+            <h2 className="a2-h2">{t('agentConsole.v2.ed.readFailedTitle')}</h2>
+            <p className="a2-meta">
+              {listError.status === 0
+                ? t('agentConsole.v2.ed.readFailedDesc')
+                : t('agentConsole.v2.ov.blockUnavailable', {
+                    block: t('agentConsole.v2.navEmployees'),
+                    code: listError.status,
+                  })}
             </p>
-          )}
+            <ReqId requestId={listError.requestId} testId="agent-v2-employees-error-rid" />
+            <button
+              type="button"
+              className="a2-btn"
+              onClick={() => setNonce((value) => value + 1)}
+              data-testid="agent-v2-employees-retry"
+            >
+              {t('agentConsole.v2.mtx.retry')}
+            </button>
+          </div>
+        )
+      ) : null}
+
+      {result?.ok && items.length === 0 ? (
+        filtered ? (
+          <div className="a2-card emp-state" data-testid="agent-v2-employees-nomatch">
+            <h2 className="a2-h2">{t('agentConsole.v2.mtx.emptyTitle')}</h2>
+            <p className="a2-meta">{t('agentConsole.v2.tsk.filterSummary', { filters: filterSummary })}</p>
+            <button type="button" className="a2-btn" onClick={clearFilters} data-testid="agent-v2-emp-nomatch-clear">
+              {t('agentConsole.v2.tsk.clear')}
+            </button>
+          </div>
+        ) : (
+          <div className="a2-card emp-state" data-testid="agent-v2-employees-empty">
+            <h2 className="a2-h2">{t('agentConsole.v2.emp.emptyEmployees')}</h2>
+            <Link className="a2-btn" to="/agent/employees/new">
+              {t('agentConsole.v2.emp.createEntry')}
+            </Link>
+          </div>
+        )
+      ) : null}
+
+      {result?.ok && items.length > 0 ? (
+        <div className="a2-card emp-table-card">
+          <div className="emp-table" role="table" data-testid="agent-v2-emp-table">
+            <div className="emp-tr emp-th" role="row">
+              <span role="columnheader">{t('agentConsole.v2.colName')}</span>
+              <span role="columnheader">{t('agentConsole.v2.colId')}</span>
+              <span role="columnheader">{t('agentConsole.v2.ed.fieldRole')}</span>
+              <span role="columnheader">{t('agentConsole.v2.mtx.skills')}</span>
+              <span role="columnheader">{t('agentConsole.v2.mtx.runs')}</span>
+              <span role="columnheader">{t('agentConsole.v2.mtx.budgetMonthly')}</span>
+              <span role="columnheader">{t('agentConsole.v2.colAction')}</span>
+            </div>
+            {items.map((row) => {
+              const short = employeeShortCode(row.employeeId);
+              const owner = ownerSlotLabel(row.ownerUserId, t);
+              const char = avatarChar(row.name);
+              return (
+                <div className="emp-tr" role="row" key={row.employeeId} data-testid={`agent-v2-emp-row-${row.employeeId}`}>
+                  <span className="emp-name-cell" role="cell" data-label={t('agentConsole.v2.colName')}>
+                    {char ? <span className="emp-avatar" aria-hidden="true">{char}</span> : null}
+                    <span className="emp-name-lines">
+                      <Link
+                        className="emp-name-link"
+                        to={`/agent/employees/${encodeURIComponent(row.employeeId)}`}
+                        data-testid={`agent-v2-emp-name-${row.employeeId}`}
+                      >
+                        {employeeDisplayName({ id: row.employeeId, name: row.name }, dups, t)}
+                      </Link>
+                      <span className={`a2-pill emp-pill is-${row.lifecycleState}`}>
+                        {t(lifecycleKey(row.lifecycleState))}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="emp-mono" role="cell" data-label={t('agentConsole.v2.colId')} data-testid={`agent-v2-emp-code-${row.employeeId}`} title={row.employeeId}>
+                    {short ? t('agentConsole.v2.id.employeeRef', { tail: short }) : '—'}
+                  </span>
+                  <span role="cell" data-label={t('agentConsole.v2.ed.fieldRole')}>
+                    <span className="emp-role">{row.title || '—'}</span>
+                    <span className="emp-sub" data-testid={`agent-v2-emp-owner-${row.employeeId}`}>
+                      {t('agentConsole.v2.ed.bannerOwner')}：{owner}
+                      {!isUnassignedOwner(row.ownerUserId) ? (
+                        <HelpTip term="humanPrefix" testId={`agent-v2-emp-help-owner-${row.employeeId}`} />
+                      ) : null}
+                    </span>
+                  </span>
+                  <span role="cell" data-label={t('agentConsole.v2.mtx.skills')} data-testid={`agent-v2-emp-skills-${row.employeeId}`}>
+                    {rowSkillCount(row) ?? '—'}
+                  </span>
+                  <span role="cell" data-label={t('agentConsole.v2.mtx.runs')}>{runsCell(row)}</span>
+                  <span role="cell" data-label={t('agentConsole.v2.mtx.budgetMonthly')}>{budgetCell(row)}</span>
+                  <span role="cell" data-label={t('agentConsole.v2.colAction')}>
+                    <Link
+                      className="a2-btn emp-row-action"
+                      to={`/agent/chat?employeeId=${encodeURIComponent(row.employeeId)}`}
+                      data-testid={`agent-v2-emp-chat-${row.employeeId}`}
+                    >
+                      {t('chat.dialogue')}
+                    </Link>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <footer className="emp-foot">
+            <span className="a2-meta" data-testid="agent-v2-emp-loaded">
+              {t('agentConsole.v2.mtx.loaded', { count: items.length })}
+            </span>
+            {moreError ? (
+              <span className="emp-more-error" role="alert">
+                <span className="a2-meta">
+                  {moreError.status === 0
+                    ? t('agentConsole.v2.ed.readFailedDesc')
+                    : t('agentConsole.v2.ov.blockUnavailable', {
+                        block: t('agentConsole.v2.navEmployees'),
+                        code: moreError.status,
+                      })}
+                </span>
+                <ReqId requestId={moreError.requestId} />
+                <button type="button" className="a2-btn" onClick={loadMore} data-testid="agent-v2-emp-next-retry">
+                  {t('agentConsole.v2.mtx.retry')}
+                </button>
+              </span>
+            ) : null}
+            {nextCursor ? (
+              <button
+                type="button"
+                className="a2-btn"
+                disabled={moreLoading}
+                onClick={loadMore}
+                data-testid="agent-v2-emp-next"
+              >
+                {moreLoading ? t('agentConsole.v2.loading') : t('agentConsole.v2.emp.nextPage')}
+              </button>
+            ) : null}
+          </footer>
         </div>
-      )}
-      <span aria-live="polite" data-testid="agent-v2-copy-toast">
-        {copiedId ? t('agentConsole.v2.emp.copiedToast') : ''}
-      </span>
+      ) : null}
     </div>
   );
 }

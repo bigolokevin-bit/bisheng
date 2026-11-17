@@ -11,12 +11,19 @@
  * unknown ids show the same 404 copy so existence is not leaked. */
 import { useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink, useParams, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useParams, useSearchParams } from 'react-router-dom';
 
 import { userContext } from '@/contexts/userContext';
 import { LkIcon } from './listkit/icons';
 import { ReqId } from './listkit/ReqId';
-import { avatarChar, ownerDisplayLabel } from './identity';
+import { avatarChar } from './identity';
+import {
+  budgetView,
+  fmtBeijingFull,
+  fmtMoney,
+  isUnassignedOwner,
+  ownerSlotLabel,
+} from './employeesShared';
 
 import {
   bucketSum,
@@ -28,8 +35,6 @@ import {
   fetchEmployeeVersions,
   fetchRunStats,
   fetchWorkstations,
-  fmtTime,
-  fmtUsd,
   makeFetcher,
   monthPeriod,
   sparkPoints,
@@ -184,7 +189,7 @@ export function EmployeeDetailPage() {
         fetchWorkstations(fetch, id),
         fetchRunStats(fetch, { ...w7, bucket: 'day', employeeId: id }),
         fetchBudgetMonth(fetch, [id], monthPeriod()),
-        owner
+        owner && !isUnassignedOwner(owner)
           ? fetchApprovalStats(fetch, `human:${owner}`)
           : Promise.resolve(null),
         fetch<OverviewQueueBody>('/api/tasks', {
@@ -209,7 +214,7 @@ export function EmployeeDetailPage() {
       setTasks(box(t5));
       setRunRows(box(r5));
       setAudit(box(a3));
-      setUpdatedAt(fmtTime(new Date().toISOString()));
+      setUpdatedAt(fmtBeijingFull(new Date().toISOString()));
     })();
     return () => {
       alive = false;
@@ -248,6 +253,33 @@ export function EmployeeDetailPage() {
     );
   }
 
+  /* A 5xx means the employee service is unavailable — it says nothing about
+   * whether the employee exists, so it must never borrow the 404 copy. */
+  if (!detail.ok && detail.status >= 500) {
+    return (
+      <div className="a2s-page" data-testid="agent-v2-employee-detail">
+        <div className="a2-card" data-testid="agent-v2-ed-unavailable">
+          <h1 className="a2-h1">{t('agentConsole.v2.ed.readFailedTitle')}</h1>
+          <p className="a2-meta">
+            {t('agentConsole.v2.ov.blockUnavailable', {
+              block: t('agentConsole.v2.navEmployees'),
+              code: detail.status,
+            })}
+          </p>
+          <p style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" className="a2-btn" data-testid="agent-v2-ed-retry" onClick={refresh}>
+              {t('agentConsole.v2.retry')}
+            </button>
+            <NavLink className="a2-btn" to="/agent/employees">
+              {t('agentConsole.v2.ed.back')}
+            </NavLink>
+            <ReqId requestId={detail.rid} testId="agent-v2-ed-unavailable-rid" />
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   /* Whole-page access states: 401 re-login hint, 403 explicit forbidden,
    * 404 / unknown = one single copy shared with cross-tenant (no
    * existence leak). Nothing else renders as a fake detail. */
@@ -267,6 +299,7 @@ export function EmployeeDetailPage() {
               {t('agentConsole.v2.ed.back')}
             </NavLink>
           </p>
+          <ReqId requestId={detail.rid} testId={`agent-v2-ed-${code}-rid`} />
         </div>
       </div>
     );
@@ -285,16 +318,12 @@ export function EmployeeDetailPage() {
   );
   const grants = config.data?.grants ?? [];
   const knowledge = currentVersion?.knowledgeScopes ?? [];
-  /* GAP-2: an unset limit is not a limit of 0 — the version budget paragraph
-     prints 「未配置」 per missing field (and one line when all are unset)
-     instead of a fabricated 0 / USD 0.00. */
+  /* PRD L5: three honest budget states — configured (at least one finite
+     limit), not configured (a budget object with every limit unset), and
+     unknown (no budget object at all, shown as '—'). */
   const versionBudget = currentVersion?.budget;
+  const budgetShape = budgetView(versionBudget);
   const budgetUnset = t('agentConsole.v2.ed.budgetUnset');
-  const budgetConfigured =
-    versionBudget != null &&
-    (versionBudget.dailyTokens != null ||
-      versionBudget.monthlyCostUsd != null ||
-      versionBudget.perRunMaxUsd != null);
   const budgetRow = budget.data?.items?.[0];
   const sums = bucketSum(runs.data?.buckets);
   const runsSpark = sparkPoints(runs.data?.buckets, 7);
@@ -374,25 +403,27 @@ export function EmployeeDetailPage() {
                 stays in the tooltip only, the prefix never prints inline. */}
             {(() => {
               const raw = (d.ownerUserId ?? '').trim();
-              const shown = ownerDisplayLabel(raw, t, {
+              const shown = ownerSlotLabel(raw, t, {
                 currentUid,
                 currentName: currentName || undefined,
               });
               const ref = raw ? (raw.includes(':') ? raw : `human:${raw}`) : '';
               return (
                 <span
-                  title={ref && shown !== t('agentConsole.v2.id.unknown') ? ref : undefined}
+                  title={ref && !isUnassignedOwner(raw) ? ref : undefined}
                   data-testid="agent-v2-ed-owner"
                 >
                   {shown}
                 </span>
               );
             })()}
-            {d.ownerUserId ? <HelpTip term="humanPrefix" testId="agent-v2-ed-help-owner" /> : null}
+            {!isUnassignedOwner(d.ownerUserId) ? (
+              <HelpTip term="humanPrefix" testId="agent-v2-ed-help-owner" />
+            ) : null}
             {' · '}
             {t('agentConsole.v2.ed.bannerRevision', { count: d.revision ?? 0 })}
             {' · '}
-            {d.updatedAt ? `${t('agentConsole.v2.ed.bannerUpdated')} ${fmtTime(d.updatedAt)}` : ''}
+            {d.updatedAt ? `${t('agentConsole.v2.ed.bannerUpdated')} ${fmtBeijingFull(d.updatedAt)}` : ''}
           </p>
         </div>
       </div>
@@ -416,7 +447,7 @@ export function EmployeeDetailPage() {
           },
           {
             label: t('agentConsole.v2.ed.fieldEffective'),
-            value: currentVersion?.effectiveFrom ? fmtTime(currentVersion.effectiveFrom) : '—',
+            value: currentVersion?.effectiveFrom ? fmtBeijingFull(currentVersion.effectiveFrom) : '—',
           },
           {
             label: t('agentConsole.v2.ed.fieldStations'),
@@ -425,7 +456,7 @@ export function EmployeeDetailPage() {
           {
             label: t('agentConsole.v2.ed.fieldBudget'),
             value: currentVersion?.budget?.monthlyCostUsd != null
-              ? `${fmtUsd(currentVersion.budget.monthlyCostUsd)} / ${t('agentConsole.v2.ed.month')}`
+              ? `${fmtMoney(currentVersion.budget.monthlyCostUsd)} / ${t('agentConsole.v2.ed.month')}`
               : '—',
           },
           {
@@ -474,7 +505,7 @@ export function EmployeeDetailPage() {
         )}
         {kpi(
           'cost',
-          budget.ok && budgetRow?.costUsd != null ? fmtUsd(budgetRow.costUsd) : '—',
+          budget.ok && budgetRow?.costUsd != null ? fmtMoney(budgetRow.costUsd) : '—',
           <span className="a2-micro">{t('agentConsole.v2.ed.kpiCostFoot')}</span>
         )}
         {kpi(
@@ -547,8 +578,8 @@ export function EmployeeDetailPage() {
                       </span>
                     ) : null}
                     <span className="a2-micro">
-                      {v.effectiveFrom ? fmtTime(v.effectiveFrom) : '—'} →{' '}
-                      {v.effectiveTo ? fmtTime(v.effectiveTo) : t('agentConsole.v2.ed.chainUntilNow')}
+                      {v.effectiveFrom ? fmtBeijingFull(v.effectiveFrom) : '—'} →{' '}
+                      {v.effectiveTo ? fmtBeijingFull(v.effectiveTo) : t('agentConsole.v2.ed.chainUntilNow')}
                     </span>
                   </div>
                   <p className="a2-meta" style={{ overflowWrap: 'anywhere' }}>
@@ -586,7 +617,7 @@ export function EmployeeDetailPage() {
                     {g.scopeType ?? '—'} · {(g.resourceSelector?.types ?? []).join('/') || '—'} ·{' '}
                     {(g.actions ?? []).join('/') || '—'}
                     {g.expiresAt
-                      ? ` · ${t('agentConsole.v2.ed.blastExpires', { time: fmtTime(g.expiresAt) })}`
+                      ? ` · ${t('agentConsole.v2.ed.blastExpires', { time: fmtBeijingFull(g.expiresAt) })}`
                       : ''}
                     {g.source ? ` · ${t('agentConsole.v2.ed.blastSource', { source: g.source })}` : ''}
                   </p>
@@ -595,7 +626,7 @@ export function EmployeeDetailPage() {
               <p className="a2-micro" data-testid="agent-v2-ed-blast-snapshot">
                 {t('agentConsole.v2.ed.blastSnapshot', {
                   ref: config.data?.snapshotRef ?? '—',
-                  at: config.data?.resolvedAt ? fmtTime(config.data.resolvedAt) : '—',
+                  at: config.data?.resolvedAt ? fmtBeijingFull(config.data.resolvedAt) : '—',
                 })}
               </p>
             </>
@@ -605,28 +636,28 @@ export function EmployeeDetailPage() {
           <h2 className="a2-h2" style={{ marginTop: 16 }}>
             {t('agentConsole.v2.ed.budgetTitle')}
           </h2>
-          {versionBudget == null ? (
+          {budgetShape.kind === 'missing' ? (
             <p className="a2-meta" data-testid="agent-v2-ed-budget-row">
               —
             </p>
-          ) : budgetConfigured ? (
+          ) : budgetShape.kind === 'configured' ? (
             <p className="a2-meta" data-testid="agent-v2-ed-budget-row">
               {t('agentConsole.v2.ed.budgetDailyTokens', {
                 value:
-                  versionBudget.dailyTokens != null
-                    ? String(versionBudget.dailyTokens)
+                  budgetShape.dailyTokens != null
+                    ? String(budgetShape.dailyTokens)
                     : budgetUnset,
               })}{' · '}
               {t('agentConsole.v2.ed.budgetMonthly', {
                 value:
-                  versionBudget.monthlyCostUsd != null
-                    ? fmtUsd(versionBudget.monthlyCostUsd)
+                  budgetShape.monthlyUsd != null
+                    ? fmtMoney(budgetShape.monthlyUsd)
                     : budgetUnset,
               })}{' · '}
               {t('agentConsole.v2.ed.budgetPerRun', {
                 value:
-                  versionBudget.perRunMaxUsd != null
-                    ? fmtUsd(versionBudget.perRunMaxUsd)
+                  budgetShape.perRunUsd != null
+                    ? fmtMoney(budgetShape.perRunUsd)
                     : budgetUnset,
               })}
             </p>
@@ -638,7 +669,7 @@ export function EmployeeDetailPage() {
           {budget.ok ? (
             <p className="a2-micro" data-testid="agent-v2-ed-budget-actual">
               {budgetRow && budgetRow.costUsd != null
-                ? t('agentConsole.v2.ed.budgetActual', { usd: fmtUsd(budgetRow.costUsd) })
+                ? t('agentConsole.v2.ed.budgetActual', { usd: fmtMoney(budgetRow.costUsd) })
                 : t('agentConsole.v2.ed.budgetActualMissing')}
             </p>
           ) : (
@@ -686,20 +717,23 @@ export function EmployeeDetailPage() {
             {t(`agentConsole.v2.ed.lifecycle.${d.lifecycleState ?? 'unknown'}`, {
               defaultValue: d.lifecycleState ?? '—',
             })}
-            {d.createdAt ? ` · ${t('agentConsole.v2.ed.bannerCreated')} ${fmtTime(d.createdAt)}` : ''}
-            {d.updatedAt ? ` · ${t('agentConsole.v2.ed.bannerUpdated')} ${fmtTime(d.updatedAt)}` : ''}
+            {d.createdAt ? ` · ${t('agentConsole.v2.ed.bannerCreated')} ${fmtBeijingFull(d.createdAt)}` : ''}
+            {d.updatedAt ? ` · ${t('agentConsole.v2.ed.bannerUpdated')} ${fmtBeijingFull(d.updatedAt)}` : ''}
           </p>
         </div>
       ) : null}
 
       {tab === 'chat' ? (
         <div className="a2-card" data-testid="agent-v2-ed-panel-chat" role="tabpanel">
-          {/* EMP-03 keeps the chat panel read-only: the conversation surface
-           * belongs to P1-8 and no real binding exists to open it from here,
-           * so no jump button is rendered (honest state, no fake link). */}
-          <p className="a2-meta" data-testid="agent-v2-ed-chat-readonly">
-            {t('agentConsole.v2.ed.chatReadonly')}
-          </p>
+          {/* EMP-03 → CHAT: the conversation lives on its own page and takes
+           * the employee id as a query parameter. */}
+          <Link
+            className="a2-btn"
+            to={`/agent/chat?employeeId=${encodeURIComponent(id)}`}
+            data-testid="agent-v2-ed-chat-link"
+          >
+            {t('agentConsole.v2.navChat')}
+          </Link>
         </div>
       ) : null}
 
@@ -789,7 +823,7 @@ export function EmployeeDetailPage() {
               >
                 <p className="a2-meta">
                   {str(ev, ['occurredAt', 'recordedAt'])
-                    ? fmtTime(str(ev, ['occurredAt', 'recordedAt']))
+                    ? fmtBeijingFull(str(ev, ['occurredAt', 'recordedAt']))
                     : '—'}{' '}
                   · {str(ev, ['action', 'type', 'eventId']) || '—'}
                 </p>

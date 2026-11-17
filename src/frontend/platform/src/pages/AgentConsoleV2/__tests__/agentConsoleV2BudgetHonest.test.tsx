@@ -3,7 +3,7 @@
  * GAP-2 (Wave 1): the employee-detail budget paragraph must never fabricate a
  * numeric limit. An unset `dailyTokens` / `monthlyCostUsd` / `perRunMaxUsd`
  * used to be coerced with `?? 0`, so a version that configures nothing read
- * 「日 token 额度 0 · 月度成本上限 USD 0.00 · 单次上限 USD 0.00」. It now reads
+ * 「日 token 额度 0 · 月度成本上限 $0.00 · 单次上限 $0.00」. It now reads
  * 「未配置」 per missing field, and one honest line when the version sets no
  * budget at all.
  *
@@ -153,7 +153,7 @@ describe('EmployeeDetailPage budget limits (GAP-2 honest empty state)', () => {
     renderDetail();
     const text = await budgetRowText();
     expect(text).toContain('日 token 额度 未配置');
-    expect(text).toContain('月度成本上限 USD 10.00');
+    expect(text).toContain('月度成本上限 $10.00');
     expect(text).toContain('单次上限 未配置');
     expect(text).not.toContain('USD 0.00');
   });
@@ -163,8 +163,8 @@ describe('EmployeeDetailPage budget limits (GAP-2 honest empty state)', () => {
     renderDetail();
     const text = await budgetRowText();
     expect(text).toContain('日 token 额度 100000');
-    expect(text).toContain('月度成本上限 USD 10.00');
-    expect(text).toContain('单次上限 USD 0.50');
+    expect(text).toContain('月度成本上限 $10.00');
+    expect(text).toContain('单次上限 $0.50');
     expect(text).not.toContain('未配置');
   });
 
@@ -173,8 +173,8 @@ describe('EmployeeDetailPage budget limits (GAP-2 honest empty state)', () => {
     renderDetail();
     const text = await budgetRowText();
     expect(text).toContain('日 token 额度 0');
-    expect(text).toContain('月度成本上限 USD 0.00');
-    expect(text).toContain('单次上限 USD 0.00');
+    expect(text).toContain('月度成本上限 $0.00');
+    expect(text).toContain('单次上限 $0.00');
     expect(text).not.toContain('未配置');
   });
 
