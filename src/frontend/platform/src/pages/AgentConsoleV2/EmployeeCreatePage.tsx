@@ -32,6 +32,7 @@ import { userContext } from '@/contexts/userContext';
 import { HelpTip } from './HelpTip';
 import { useConsoleCrumbTail } from './Shell';
 import { LkIcon } from './listkit';
+import { ReqId } from './listkit/ReqId';
 import { avatarChar } from './identity';
 import { FETCH_TIMEOUT_MS } from './v2Data';
 import {
@@ -58,9 +59,13 @@ interface ResultState {
 interface FieldErrors {
   name?: string;
   title?: string;
+  duty?: string;
 }
 
-const PRISTINE = { name: '', title: '', note: '' };
+/* EMP-02 R3: the fourth input is the first version's job description. The
+ * domain requires an `initialVersion` Mapping on create (service.py:138-190),
+ * and this page — not the BFF — is the sanctioned place that builds it. */
+const PRISTINE = { name: '', title: '', duty: '', note: '' };
 
 export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof submitWrite>[0]['env'] }) {
   const { t } = useTranslation();
@@ -84,9 +89,11 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [failure, setFailure] = useState<{ kind: 'invalid' | 'unavailable'; requestId?: string } | null>(
-    null
-  );
+  const [failure, setFailure] = useState<{
+    kind: 'invalid' | 'unavailable';
+    requestId?: string;
+    status?: number;
+  } | null>(null);
   const [result, setResult] = useState<ResultState | null>(null);
   const [copied, setCopied] = useState(false);
   const [escWarn, setEscWarn] = useState(false);
@@ -94,6 +101,7 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
 
   const nameRef = useRef<HTMLInputElement | null>(null);
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const dutyRef = useRef<HTMLTextAreaElement | null>(null);
   const keyRef = useRef<string | null>(null);
   const attemptsRef = useRef(0);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,7 +177,7 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
 
   const setField = (key: keyof typeof PRISTINE, next: string) => {
     setValues((prev) => ({ ...prev, [key]: next }));
-    if (key === 'name' || key === 'title') {
+    if (key === 'name' || key === 'title' || key === 'duty') {
       setErrors((prev) => ({ ...prev, [key]: undefined }));
     }
   };
@@ -182,8 +190,13 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
     if (!values.title.trim()) {
       next.title = t('agentConsole.v2.emp02.errTitleRequired');
     }
+    if (!values.duty.trim()) {
+      next.duty = values.duty
+        ? t('agentConsole.v2.emp02.errDutyBlank')
+        : t('agentConsole.v2.emp02.errDutyRequired');
+    }
     return next;
-  }, [t, values.name, values.title]);
+  }, [t, values.name, values.title, values.duty]);
 
   const onSubmit = async (ev?: { preventDefault?: () => void }) => {
     ev?.preventDefault?.();
@@ -196,7 +209,8 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
       setFailure(null);
       // Focus the first field that needs attention (§3 invalid row).
       if (nextErrors.name) nameRef.current?.focus();
-      else titleRef.current?.focus();
+      else if (nextErrors.title) titleRef.current?.focus();
+      else dutyRef.current?.focus();
       return;
     }
 
@@ -208,12 +222,25 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
     setSubmitting(true);
     setFailure(null);
 
-    const body: Record<string, string> = {
+    const body: Record<string, string | Record<string, unknown>> = {
       name: values.name.trim(),
       title: values.title.trim(),
     };
     if (currentUid) body.ownerUserId = currentUid;
     if (values.note.trim()) body.note = values.note.trim();
+    /* EMP-02 R3 root cause: the domain hard-requires this Mapping
+     * (`initialVersion is required`, rid 20699f438d83). We only carry what the
+     * operator actually typed. knowledgeScopes / skillRefs / grantIds stay
+     * empty arrays rather than invented values, and `budget` is omitted on
+     * purpose: the domain falls back to the policy default only when the key
+     * is absent, so sending null or a guess would fail closed. */
+    body.initialVersion = {
+      jobDescription: values.duty.trim(),
+      knowledgeScopes: [],
+      skillRefs: [],
+      grantIds: [],
+      effectiveFrom: new Date().toISOString(),
+    };
 
     const outcome = await submitWrite<unknown>({ path: '/api/employees', body, key, env: writeEnv });
     setSubmitting(false);
@@ -233,10 +260,14 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
       return;
     }
 
-    applyFailure(outcome.kind ?? 'unavailable', outcome.requestId);
+    applyFailure(outcome.kind ?? 'unavailable', outcome.requestId, outcome.status);
   };
 
-  const applyFailure = (kind: WriteFailureKind, requestId?: string) => {
+  const applyFailure = (
+    kind: WriteFailureKind,
+    requestId?: string,
+    status?: number,
+  ) => {
     if (kind === 'conflict') {
       setResult({ kind: 'conflict', requestId });
       return;
@@ -249,7 +280,11 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
       setStage('forbidden');
       return;
     }
-    setFailure({ kind: kind === 'invalid' ? 'invalid' : 'unavailable', requestId });
+    setFailure({
+      kind: kind === 'invalid' ? 'invalid' : 'unavailable',
+      requestId,
+      status,
+    });
   };
 
   const copyId = (value: string) => {
@@ -456,6 +491,25 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
                   <LkIcon name="refresh" size={16} />
                   {t('agentConsole.v2.emp02.retry')}
                 </button>
+                {/* EMP-02 R3 ④: every failed submit names the request it made.
+                 * ReqId prints 「未提供」 honestly when the gateway gave no id. */}
+                <ReqId
+                  requestId={failure.requestId}
+                  testId="agent-v2-emp-c-save-error-reqid"
+                />
+                {/* EMP-02 R3 ② (E09): the service-failure banner carries the
+                 * same 「技术信息（报障时提供）」 folding the 403 screen has. */}
+                {failure.kind === 'unavailable' ? (
+                  <TechInfo
+                    t={t}
+                    rows={[
+                      failure.status
+                        ? t('agentConsole.v2.emp02.techStatusService', { status: failure.status })
+                        : t('agentConsole.v2.emp02.techStatusNoCode'),
+                      `${t('agentConsole.v2.emp02.techRequest')} ${failure.requestId || t('agentConsole.v2.emp02.techNotProvided')}`,
+                    ]}
+                  />
+                ) : null}
               </div>
             ) : null}
 
@@ -475,6 +529,11 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
                         ? values.title
                           ? t('agentConsole.v2.emp02.sumTitleBlank')
                           : t('agentConsole.v2.emp02.sumTitleEmpty')
+                        : '',
+                      errors.duty
+                        ? values.duty
+                          ? t('agentConsole.v2.emp02.sumDutyBlank')
+                          : t('agentConsole.v2.emp02.sumDutyEmpty')
                         : '',
                     ]
                       .filter(Boolean)
@@ -597,6 +656,38 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
                 />
                 <div className="fhint">{t('agentConsole.v2.emp02.noteHint')}</div>
               </div>
+
+              <div className="field">
+                <div className="flab">
+                  <label htmlFor="emp02-duty">{t('agentConsole.v2.emp02.dutyLabel')}</label>
+                  <span className="tagreq">{t('agentConsole.v2.emp02.required')}</span>
+                </div>
+                <textarea
+                  ref={dutyRef}
+                  id="emp02-duty"
+                  name="duty"
+                  className="inp"
+                  rows={3}
+                  maxLength={500}
+                  value={values.duty}
+                  placeholder={t('agentConsole.v2.emp02.dutyPlaceholder')}
+                  disabled={submitting}
+                  aria-invalid={errors.duty ? true : undefined}
+                  aria-describedby={errors.duty ? 'emp02-duty-err' : 'emp02-duty-hint'}
+                  data-testid="agent-v2-emp-c-duty"
+                  onChange={(e) => setField('duty', e.target.value)}
+                />
+                {errors.duty ? (
+                  <div className="ferr" id="emp02-duty-err" data-testid="agent-v2-emp-c-duty-error">
+                    <LkIcon name="alert" size={13} />
+                    <span>{errors.duty}</span>
+                  </div>
+                ) : (
+                  <div className="fhint" id="emp02-duty-hint">
+                    {t('agentConsole.v2.emp02.dutyHint')}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="facts">
@@ -684,6 +775,7 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
                     <div
                       className={`n${previewName ? '' : ' empty'}`}
                       data-testid="agent-v2-emp-c-preview-name"
+                      title={previewName || undefined}
                     >
                       {previewName || t('agentConsole.v2.emp02.previewNameEmpty')}
                     </div>

@@ -796,6 +796,22 @@
 }
 
 /* ---------- 响应式 ---------- */
+/* EMP-02 R3 ⑥ (E08/P8): at 1280x720 the form column runs past the fold, so the
+ * primary CTA sat at y773-811 and was unreachable without scrolling. Inside the
+ * 1181-1280 band the action bar sticks to the bottom edge of the viewport, so
+ * 「保存」 is on screen from the first paint. It stays inside the card (the form
+ * is the containing block) and keeps its own opaque background and hairline.
+ * Below 1180 the layout collapses to one column and the bar is back in flow. */
+@media (min-width: 1181px) and (max-width: 1280px) {
+  .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .facts {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    background: hsl(var(--card));
+    box-shadow: 0 -1px 0 var(--hairline);
+    padding: 10px 20px;
+  }
+}
 @media (max-width: 1180px) {
   .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .flayout {
     grid-template-columns: minmax(0, 1fr) 300px;
