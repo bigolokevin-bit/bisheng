@@ -47,3 +47,14 @@
 | 风险单元孤立 `—` | 单元加「风险」标签，缺数据不再无标签裸 `—` |
 | `?focus` 零反馈 | 已实现：命中行滚动居中 + 高亮描边，URL 不改写（`data-focus="true"`） |
 | GRID-03/05/06 纯文本冒充 | 三处均为真实 `NavLink`（员工详情 / 运行记录 / 审计记录） |
+## 2026-11-18 实现侧摘要（L4p4，基座 fda248d）
+
+代码已在基座祖先链上（`2168f78`），本轮复验并留证；本条只写实现侧事实，不改台账状态。
+
+- 岗位版本：`versionShort()` 取 `empv_` 后的前 8 位（如 `4FCDD6FD`），裸值仅进 `title`（`agent-v2-mtx-version`）。
+- 预算三键：`agent-v2-mtx-budget-monthly|daily|perrun` 逐键上屏，缺失该键显 `—`；对象存在但缺键时同格追加「未配置」（`agent-v2-mtx-budget-partial`），不写 USD 0.00。
+- 同名消歧：重名时在原姓名后追加 `agent-v2-mtx-disambig`（版本 8 位短码，退化用 employeeId 尾 8）。
+- 风险格：前缀「风险」标签，缺风险为「风险 —」，零信号为「无风险」，不留孤立 `—`。
+- `?focus`：已实现——命中行加 `data-focus="true"` 并 `scrollIntoView({block:'center'})`，URL 不改写；未知/畸形 id 无高亮。
+- 去向：姓名链 → `/agent/employees/:id`；新增 `agent-v2-mtx-jump-runs` → `/agent/runs?employee=:id`、`agent-v2-mtx-jump-audit` → `/agent/audit?employee=:id`，无纯文本冒充控件。
+- 测试：`__tests__/Matrix.test.tsx` 14 例（含 5 条 R3 用例）；全量 vitest 见回执。
