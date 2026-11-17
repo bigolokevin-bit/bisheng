@@ -78,6 +78,19 @@ function bodyFor(url: string): unknown {
     if (Number.isFinite(fromMs) && Date.now() - fromMs < 2 * 86400000) {
       return {
         buckets: [{ bucketStart: dayAgo(0), runs: 5, succeeded: 4, failed: 1, costUsd: 0.05 }],
+        totals: {
+          runs: 5,
+          succeeded: 4,
+          failed: 1,
+          cancelled: 0,
+          interrupted: 0,
+          running: 0,
+          pending: 0,
+          costUsd: 0.05,
+          unknownRuns: 0,
+          sampleCount: 0,
+          successRate: 0.8,
+        },
       };
     }
     // current window: 14 runs = 13 succeeded + 0 failed + 1 running/unknown
@@ -87,6 +100,19 @@ function bodyFor(url: string): unknown {
         { bucketStart: dayAgo(3), runs: 1, succeeded: 1, failed: 0, costUsd: 0.01 },
         { bucketStart: dayAgo(0), runs: 13, succeeded: 12, failed: 0, costUsd: 0.12 },
       ],
+      totals: {
+        runs: 14,
+        succeeded: 13,
+        failed: 0,
+        cancelled: 0,
+        interrupted: 0,
+        running: 1,
+        pending: 0,
+        costUsd: 0.13,
+        unknownRuns: 1,
+        sampleCount: 0,
+        successRate: 1,
+      },
     };
   }
   if (url.includes('/api/run-activity')) {

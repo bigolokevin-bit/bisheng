@@ -77,7 +77,22 @@ function bodyFor(url: string): unknown {
   if (url.includes('/api/approval-stats')) return { pending: 0, dueSoon: 0 };
   if (url.includes('/api/run-stats')) {
     const day = new Date().toISOString();
-    return { buckets: [{ bucketStart: day, runs: 3, succeeded: 2, failed: 1, costUsd: 0.03 }] };
+    return {
+      buckets: [{ bucketStart: day, runs: 3, succeeded: 2, failed: 1, costUsd: 0.03 }],
+      totals: {
+        runs: 3,
+        succeeded: 2,
+        failed: 1,
+        cancelled: 0,
+        interrupted: 0,
+        running: 0,
+        pending: 0,
+        costUsd: 0.03,
+        unknownRuns: 0,
+        sampleCount: 0,
+        successRate: 2 / 3,
+      },
+    };
   }
   if (url.includes('/api/run-activity')) return { cells: [], max: 0 };
   if (url.includes('/api/audit')) return { events: [] };

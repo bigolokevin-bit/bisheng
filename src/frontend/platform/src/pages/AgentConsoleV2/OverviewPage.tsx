@@ -25,7 +25,6 @@ import type { MatrixListBody } from './matrix';
 import './overview.css';
 
 import {
-  bucketSum,
   dayWindow,
   fetchActivity,
   fetchApprovalStats,
@@ -180,6 +179,7 @@ export function OverviewPage() {
   const [runs7, setRuns7] = useState<BlockState<RunStatsBody>>(pendingKpi);
   const [runsToday, setRunsToday] = useState<BlockState<RunStatsBody>>(pendingKpi);
   const [cost, setCost] = useState<BlockState<BudgetBody>>(pendingKpi);
+  const [costScopeComplete, setCostScopeComplete] = useState(true);
   const [queueApprovals, setQueueApprovals] = useState<BlockState<QueueBody>>(pendingKpi);
   const [queueTasks, setQueueTasks] = useState<BlockState<QueueBody>>(pendingKpi);
   const [queueRuns, setQueueRuns] = useState<BlockState<QueueBody>>(pendingKpi);
@@ -249,6 +249,7 @@ export function OverviewPage() {
     setRuns7(pendingKpi);
     setRunsToday(pendingKpi);
     setCost(pendingKpi);
+    setCostScopeComplete(true);
     setQueueApprovals(pendingKpi);
     setQueueTasks(pendingKpi);
     setQueueRuns(pendingKpi);
@@ -421,12 +422,27 @@ export function OverviewPage() {
       // from E11 first, then one batched DAY query. KPI-04 is today's spend;
       // a month row is not a substitute, so month-only responses show —.
       const empIds = (ids.data?.items ?? []).map((e) => e.employeeId);
+      const totalKnown = typeof s.data?.total === 'number' ? s.data.total : null;
+      setCostScopeComplete(
+        ids.ok &&
+          Array.isArray(ids.data?.items) &&
+          !ids.data?.nextCursor &&
+          (totalKnown == null || empIds.length >= totalKnown)
+      );
       if (!ids.ok) {
         setCost({
           loading: false,
           ok: false,
           status: ids.status,
           code: ids.code,
+          requestId: ids.requestId,
+        });
+      } else if (!Array.isArray(ids.data?.items)) {
+        setCost({
+          loading: false,
+          ok: false,
+          status: ids.status,
+          code: 'console.malformed',
           requestId: ids.requestId,
         });
       } else if (empIds.length === 0) {
@@ -492,31 +508,15 @@ export function OverviewPage() {
   const authExpired = [stats, approvals, runs, cost].some(
     (k) => k.status === 401 || k.code === 'console.unauthenticated'
   );
-  const runSums = bucketSum(runs.data?.buckets);
-  const run7Sums = bucketSum(runs7.data?.buckets);
-  const runTodaySums = bucketSum(runsToday.data?.buckets);
-  /* MUST 2: 14 = 13 succeeded + 0 failed + 1 running/unknown — the residual
-   * is always spelled out; buckets may also carry unknownRuns directly.
-   * KPI-3 / heat rollup / AL-5 read the FIXED 7-day window (C1 item 5). */
-  const unknownRuns = useMemo(() => {
-    if (!runs7.ok) return 0;
-    const direct = (runs7.data?.buckets ?? []).reduce(
-      (acc, b) => acc + (typeof b.unknownRuns === 'number' ? b.unknownRuns : 0),
-      0
-    );
-    const sums = bucketSum(runs7.data?.buckets);
-    const residual = Math.max(sums.runs - sums.succeeded - sums.failed, 0);
-    return Math.max(direct, residual);
-  }, [runs7]);
-  const unknownTrend = useMemo(() => {
-    if (!runs.ok) return 0;
-    const direct = (runs.data?.buckets ?? []).reduce(
-      (acc, b) => acc + (typeof b.unknownRuns === 'number' ? b.unknownRuns : 0),
-      0
-    );
-    const residual = Math.max(runSums.runs - runSums.succeeded - runSums.failed, 0);
-    return Math.max(direct, residual);
-  }, [runs, runSums]);
+  const runTotals = runs.data?.totals;
+  const run7Totals = runs7.data?.totals;
+  const runTodayTotals = runsToday.data?.totals;
+  /* R6 totals are computed by the service (09 §2.6 red line: the front end
+   * must not add buckets). Missing totals = unknown, never a fabricated 0. */
+  const unknownRuns =
+    runs7.ok && typeof run7Totals?.unknownRuns === 'number' ? run7Totals.unknownRuns : null;
+  const unknownTrend =
+    runs.ok && typeof runTotals?.unknownRuns === 'number' ? runTotals.unknownRuns : null;
   /* KPI-3 spark: REAL day buckets of the 7-day window (area, not flat). */
   const runsSpark = sparkPoints(runs7.data?.buckets, KPI_RUN_DAYS);
   const costDaily = useMemo(() => {
@@ -645,26 +645,39 @@ export function OverviewPage() {
     return { rows, total, max, peak: peak && peak.count > 0 ? peak : null, nightTotal };
   }, [heat]);
 
-  const terminalForRate = runSums.succeeded + runSums.failed;
-  const successRate = runs.ok && terminalForRate > 0 ? fmtPercent((runSums.succeeded / terminalForRate) * 100) : null;
+  /* R6's service-side rate is a 0..1 ratio; absence (denominator 0) = —. */
+  const successRate =
+    runs.ok && typeof runTotals?.successRate === 'number'
+      ? fmtPercent(runTotals.successRate * 100)
+      : null;
   const windowLabel = t(`agentConsole.v2.ov.range${rangeKey}`);
 
-  const budgetOverCount = useMemo(() => {
+  /* P9 returns only ledger rows and lists missing employees separately; a
+   * partial sum is not the tenant total, so it must render 「—」 with the
+   * missing count, never a smaller number that looks authoritative. */
+  const costItems = cost.data?.items;
+  const costMissing = cost.data?.missingEmployeeIds?.length ?? 0;
+  const costUnpriced = (costItems ?? []).filter(
+    (item) => typeof item.costUsd !== 'number' || !Number.isFinite(item.costUsd)
+  ).length;
+  const costPartial = cost.ok && (!costScopeComplete || costMissing + costUnpriced > 0);
+  const costUsed = cost.ok && !costPartial ? sumItems(costItems) : null;
+
+  const budgetOver = useMemo(() => {
     let over = 0;
-    let withDenom = 0;
+    let evaluated = 0;
     const costOf = new Map<string, number | null | undefined>();
     for (const item of cost.data?.items ?? []) costOf.set(item.employeeId, item.costUsd);
     for (const row of quotaRows) {
       const denom = row.enrichment?.effectiveBudget?.monthlyCostUsd;
       const value = costOf.get(row.employeeId);
       if (typeof denom === 'number' && denom > 0 && typeof value === 'number') {
-        withDenom += 1;
+        evaluated += 1;
         if (value / denom >= 0.85) over += 1;
       }
     }
-    return withDenom === 0 ? null : over;
+    return evaluated === 0 ? null : { over, evaluated };
   }, [cost, quotaRows]);
-  const budgetEmpCount = quotaRows.length;
 
   /* Every block on the page participates: the refresh button only unlocks
    * when no card is still fetching (loading is a state, not a decoration). */
@@ -772,7 +785,9 @@ export function OverviewPage() {
             <span className="ov-kn">
               <span className="ov-dtl flat">—</span>
               {t('agentConsole.v2.ov.kpiNoTrend')} ·{' '}
-              {t('agentConsole.v2.ov.kpiOnDutyFoot', { total: stats.data?.total ?? 0 })}
+              {typeof stats.data?.total === 'number'
+                ? t('agentConsole.v2.ov.noteTotal', { count: stats.data.total })
+                : '—'}
             </span>
           ) : stats.loading ? null : (
             <span className="ov-kn">
@@ -811,9 +826,11 @@ export function OverviewPage() {
             <span className="ov-kn">
               <span className="ov-dtl flat">—</span>
               {t('agentConsole.v2.ov.kpiNoTrend')} ·{' '}
-              {(approvals.data?.dueSoon ?? 0) > 0
-                ? t('agentConsole.v2.ov.noteDueSoon', { count: approvals.data?.dueSoon ?? 0 })
-                : t('agentConsole.v2.ov.kpiNoDueToday')}
+              {typeof approvals.data?.dueSoon !== 'number'
+                ? '—'
+                : approvals.data.dueSoon > 0
+                  ? t('agentConsole.v2.ov.noteDueSoon', { count: approvals.data.dueSoon })
+                  : t('agentConsole.v2.ov.kpiNoDueToday')}
             </span>
           ) : approvals.loading ? null : (
             <span className="ov-kn">
@@ -843,7 +860,9 @@ export function OverviewPage() {
               <span className="ov-v">…</span>
             ) : runsToday.ok ? (
               <>
-                <span className="ov-v" data-testid="agent-v2-ov-kpi-runs-value">{runTodaySums.runs}</span>
+                <span className="ov-v" data-testid="agent-v2-ov-kpi-runs-value">
+                  {typeof runTodayTotals?.runs === 'number' ? runTodayTotals.runs : '—'}
+                </span>
                 {runsSpark ? (
                   <KpiSpark points={runsSpark} testId="agent-v2-ov-kpi-runs-spark" />
                 ) : (
@@ -857,8 +876,10 @@ export function OverviewPage() {
               <span className="ov-dtl flat">—</span>
               {t('agentConsole.v2.ov.kpiNoTrend')}
               {' · '}
-              {t('agentConsole.v2.trendSucceeded')} {runTodaySums.succeeded} · {t('agentConsole.v2.trendFailed')}{' '}
-              {runTodaySums.failed}
+              {t('agentConsole.v2.trendSucceeded')}{' '}
+              {typeof runTodayTotals?.succeeded === 'number' ? runTodayTotals.succeeded : '—'} ·{' '}
+              {t('agentConsole.v2.trendFailed')}{' '}
+              {typeof runTodayTotals?.failed === 'number' ? runTodayTotals.failed : '—'}
             </span>
           ) : runsToday.loading ? null : (
             <span className="ov-kn">
@@ -883,7 +904,7 @@ export function OverviewPage() {
             ) : cost.ok ? (
               <>
                 <UsdValue
-                  value={sumItems(cost.data?.items)}
+                  value={costUsed}
                   big
                 />
                 {costSpark ? (
@@ -911,16 +932,23 @@ export function OverviewPage() {
                 {quotaLimit(quotaRows) != null
                   ? t('agentConsole.v2.ov.quotaPctFoot', {
                       pct:
-                        sumItems(cost.data?.items) != null
-                          ? fmtPercent((sumItems(cost.data?.items) as number) / (quotaLimit(quotaRows) as number) * 100)
+                        costUsed != null
+                          ? fmtPercent((costUsed / (quotaLimit(quotaRows) as number)) * 100)
                           : '—',
-                      used: fmtUsd(sumItems(cost.data?.items)),
+                      used: fmtUsd(costUsed),
                       // target wording: 「USD 0.13 / 20.00」— the limit carries
                       // no second USD prefix.
                       limit: (quotaLimit(quotaRows) as number).toFixed(2),
                     })
                   : t('agentConsole.v2.ov.noteLedger')}
               </span>
+              {costPartial ? (
+                <span className="a2-micro" data-testid="agent-v2-ov-kpi-cost-partial">
+                  {costMissing + costUnpriced > 0
+                    ? t('agentConsole.v2.ov.costMissing', { count: costMissing + costUnpriced })
+                    : t('agentConsole.v2.ov.costCaliber')}
+                </span>
+              ) : null}
             </>
           ) : cost.loading ? null : (
             <span className="ov-kn">
@@ -1009,7 +1037,15 @@ export function OverviewPage() {
             bars={trendBars}
             rangeDays={rangeDays}
             windowLabel={windowLabel}
-            sums={runSums}
+            sums={
+              runTotals
+                ? {
+                    runs: runTotals.runs,
+                    succeeded: runTotals.succeeded,
+                    failed: runTotals.failed,
+                  }
+                : null
+            }
             unknown={unknownTrend}
             successRate={successRate}
             p95HasSample={p95HasSample}
@@ -1030,7 +1066,15 @@ export function OverviewPage() {
         focusDow={bj.dow}
         focusHour={bj.hour}
         unknown={unknownRuns}
-        sums={run7Sums}
+        sums={
+          run7Totals
+            ? {
+                runs: run7Totals.runs,
+                succeeded: run7Totals.succeeded,
+                failed: run7Totals.failed,
+              }
+            : null
+        }
       />
 
       {/* ⑥ cost + ⑦ anomaly */}
@@ -1044,6 +1088,7 @@ export function OverviewPage() {
             monthDays={monthNow.days}
             todayDay={bj.day}
             unknownRuns={unknownRuns}
+            scopeComplete={costScopeComplete}
             onRetry={refresh}
           />
         </div>
@@ -1053,8 +1098,8 @@ export function OverviewPage() {
             approvals={approvals}
             windowLabel={windowLabel}
             unknownRuns={unknownRuns}
-            budgetOverCount={budgetOverCount}
-            budgetEmpCount={budgetEmpCount}
+            budgetOverCount={budgetOver?.over ?? null}
+            budgetEmpCount={budgetOver?.evaluated ?? 0}
             scannedAt={updatedAt}
             onRetry={refresh}
           />
@@ -1095,16 +1140,17 @@ function sumItems(items: BudgetBody['items'] | undefined): number | null {
 }
 
 function quotaLimit(rows: EmployeeRow[]): number | null {
+  if (rows.length === 0) return null;
   let acc = 0;
-  let seen = false;
   for (const row of rows) {
     const d = row.enrichment?.effectiveBudget?.monthlyCostUsd;
-    if (typeof d === 'number' && d > 0) {
-      acc += d;
-      seen = true;
-    }
+    /* Summing only the configured caps would present a partial number as
+     * the tenant's monthly budget. Unless every employee has a cap, the
+     * aggregate is unknown — the per-employee bars still show what exists. */
+    if (typeof d !== 'number' || !Number.isFinite(d) || d <= 0) return null;
+    acc += d;
   }
-  return seen ? acc : null;
+  return acc;
 }
 
 function costAt(cost: BlockState<BudgetBody>): string | null {
@@ -1189,8 +1235,8 @@ function TrendCard({
   bars: TrendDay[] | null;
   rangeDays: number;
   windowLabel: string;
-  sums: { runs: number; succeeded: number; failed: number };
-  unknown: number;
+  sums: { runs: number; succeeded: number; failed: number } | null;
+  unknown: number | null;
   successRate: string | null;
   p95HasSample: boolean;
   events: Map<string, string>;
@@ -1407,7 +1453,7 @@ function TrendCard({
             retryTestId="agent-v2-ov-retry-trend"
           />
         </div>
-      ) : bars === null || sums.runs === 0 ? (
+      ) : bars === null || sums?.runs === 0 ? (
         <div className="ov-buds">
           <p className="a2-meta" data-testid="agent-v2-ov-trend-empty">
             {t('agentConsole.v2.ov.trendEmptyWindow')}
@@ -1420,13 +1466,13 @@ function TrendCard({
       ) : (
         <>
           <div className="ov-tsum" data-testid="agent-v2-ov-trend-summary">
-            <b>{sums.runs}</b>
+            <b>{sums?.runs ?? '—'}</b>
             <i>{t('agentConsole.v2.ov.trendSumTimes')}</i>
-            <b>{sums.succeeded}</b>
+            <b>{sums?.succeeded ?? '—'}</b>
             <i>{t('agentConsole.v2.trendSucceeded')}</i>
-            <b>{sums.failed}</b>
+            <b>{sums?.failed ?? '—'}</b>
             <i>{t('agentConsole.v2.trendFailed')}</i>
-            {unknown > 0 ? (
+            {unknown != null && unknown > 0 ? (
               <b className="wr">{t('agentConsole.v2.ov.runsUnknown', { count: unknown })}</b>
             ) : null}
             <i>{t('agentConsole.v2.ov.trendSumUnknown')}</i>
@@ -1439,9 +1485,12 @@ function TrendCard({
           <div className="ov-rule" />
           <div className="ov-rfoot">
             <span className="lg" data-testid="agent-v2-ov-trend-foot">
-              {t('agentConsole.v2.ov.trendFoot', { succeeded: sums.succeeded, failed: sums.failed })}
-              {unknown > 0
-                ? ` · ${t('agentConsole.v2.ov.trendFootUnknown', { count: unknown, total: sums.runs })}`
+              {t('agentConsole.v2.ov.trendFoot', {
+                succeeded: sums?.succeeded ?? '—',
+                failed: sums?.failed ?? '—',
+              })}
+              {unknown != null && unknown > 0
+                ? ` · ${t('agentConsole.v2.ov.trendFootUnknown', { count: unknown, total: sums?.runs ?? '—' })}`
                 : ''}
             </span>
             <span className="sp" />
@@ -1479,8 +1528,8 @@ function HeatCard({
   onRetry: () => void;
   focusDow: number;
   focusHour: number;
-  unknown: number;
-  sums: { runs: number; succeeded: number; failed: number };
+  unknown: number | null;
+  sums: { runs: number; succeeded: number; failed: number } | null;
 }) {
   const { t } = useTranslation();
   /* C1 item 7: ABSOLUTE count → tier mapping (same curve as the target),
@@ -1629,8 +1678,10 @@ function HeatCard({
                     <b>{grid.total}</b>
                   </div>
                   <div className="d">
-                    {t('agentConsole.v2.trendSucceeded')} {sums.succeeded} · {t('agentConsole.v2.trendFailed')} {sums.failed}
-                    {unknown > 0 ? ` · ${t('agentConsole.v2.ov.runsUnknown', { count: unknown })}` : ''} ·{' '}
+                    {t('agentConsole.v2.trendSucceeded')} {sums?.succeeded ?? '—'} · {t('agentConsole.v2.trendFailed')} {sums?.failed ?? '—'}
+                    {unknown != null && unknown > 0
+                      ? ` · ${t('agentConsole.v2.ov.runsUnknown', { count: unknown })}`
+                      : ''} ·{' '}
                     {t('agentConsole.v2.ov.heatFocus', { day: t(HEAT_DAY_KEYS[focusDow - 1]) })}
                   </div>
                 </div>

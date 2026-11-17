@@ -1,7 +1,7 @@
 # SKILLS `/agent/skills` 技能治理 — 元素核销表
 
 - 设计源：`docs/product/console-v3/PRD-v0.3.md` §5.8（治理 main `c93cc3f`）
-- 实现代次：fork `lane/L4-page-skills` @ `5a0b092`（技能页实现 `54de876` 起，本表随本轮修单提交）
+- 实现代次：fork `lane/L4-page-skills` @ `7ed7fcc` + Q2 修单 commit（技能页实现 `54de876` 起，本表随修单提交）
 - 写域：`SkillsPage.tsx`、`skills.ts`、`skills.css`、own tests、`agentConsole.v2.skills` 自有命名空间
 - 口径：只读页；`sharedCount=0` → 「未被引用」；缺值 `—`；不造 0 行假数据
 
@@ -34,6 +34,13 @@
 1. 同代次、已登录会话中 `GET /api/skills` 返回 ≥1 条真实记录（含 `skillId/name/version/contentHash/ownerUserId/sharedWith`）。
 2. 四元素按真实值复跑：列表行、共享/独有徽标、版本/hash/owner、引用方链接；有值处不得落 `—`，引用方链接必须打开 `/agent/employees/:id`。
 3. 1440×900 与 375×812 截图 + `asOf` + 请求号同笔留档；死控件 0、裸键 0；所有者（owner）链接缺失作为已知偏差记录或先补稳定映射。
+
+## Q3 诚实性复核（真实 0 行）
+
+- `items=[]` 走独立空态：只显示「还没有技能版本」+「技能被员工版本引用后会出现在这里；当前控制台不提供新建入口。」，不渲染 KPI 计数、不显示「已加载 0 条」，也不声称已有数据。
+- 正常态的 `kpiTotal` 标注 `本次读取范围`，`nextCursor` 存在时加 `+`；`shared/exclusive` 只要有一行 `scope` 无法判定就落 `—`，不把未知计成 0。
+- `sharedWith` 缺省 → `—`；显式空数组 →「暂无引用」；两者不混用。
+- 结论：技能页无需改代码；真实 0 行文案不暗示数据存在（验收腿：`Skills.test.tsx` 空态 1 例 + Q3 静态复核）。
 
 ## 已知边界
 
