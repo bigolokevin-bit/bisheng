@@ -58,6 +58,8 @@ const ShellAuditPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").th
 const ShellAuditDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.AuditDetailScreen })));
 const ShellSettingsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.SettingsPage })));
 const ShellNotFoundPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.NotFoundPage })));
+// L4p2: console chat page — own lane file (shellPages.tsx is shared/read-only).
+const ShellChatPage = lazy(() => import("@/pages/AgentConsoleV2/ChatPage"));
 const AppChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/appChatDetail"));
 const DailyChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/dailyChatDetail"));
 const Doc = lazy(() => import("@/pages/ModelPage/doc"));
@@ -180,6 +182,7 @@ const privateRouter = [
             { path: "audit/:eventId", element: <ShellAuditDetailPage /> },
             { path: "settings", element: <Navigate to="/agent/settings/tenant" replace /> },
             { path: "settings/:section", element: <ShellSettingsPage /> },
+            { path: "chat", element: <ShellChatPage /> },
             { path: "*", element: <ShellNotFoundPage /> },
           ],
         },

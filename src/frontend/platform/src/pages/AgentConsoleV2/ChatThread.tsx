@@ -1,0 +1,150 @@
+/**
+ * Right pane of the console chat page: session header plus the message stream.
+ * Every bubble renders its text through React children only — no HTML sink.
+ * A conversation that loads, or a message with no text, says so in words
+ * instead of leaving an empty block.
+ */
+import { useTranslation } from 'react-i18next';
+
+import type { ChatFailure, ChatMessageRow, ChatSessionDetailBody } from './chat01';
+import { fmtChatTime, hasText, messageSide } from './chat01';
+import { ChatFailureNote } from './ChatFailureNote';
+import { ReqId } from './listkit/ReqId';
+import { fmtId } from './v2Data';
+
+export type ChatThreadState = 'idle' | 'loading' | 'ready' | 'error' | 'denied';
+
+interface ChatThreadProps {
+  state: ChatThreadState;
+  failure: ChatFailure | null;
+  detail: ChatSessionDetailBody | null;
+  messages: ChatMessageRow[];
+  sessionId: string | null;
+  emptyList: boolean;
+  onRetry: () => void;
+  onBack: () => void;
+}
+
+export function ChatThread({
+  state,
+  failure,
+  detail,
+  messages,
+  sessionId,
+  emptyList,
+  onRetry,
+  onBack,
+}: ChatThreadProps) {
+  const { t } = useTranslation();
+  const ns = 'agentConsole.v2.chat01';
+  const title = detail?.title?.trim() || (sessionId ? fmtId(sessionId) : '');
+  const showHeader = Boolean(sessionId) && state !== 'denied';
+
+  return (
+    <div className="cchat-thread-inner">
+      {showHeader ? (
+        <header className="cchat-thread-head">
+          <h2 className="a2-h2" data-testid="agent-v2-chat-thread-title">
+            {title || t(`${ns}.untitled`)}
+          </h2>
+          <div className="cchat-thread-meta">
+            {detail?.employeeId ? (
+              <span className="a2-meta">
+                {t(`${ns}.employeeLabel`)} <span className="a2-mono">{fmtId(detail.employeeId)}</span>
+              </span>
+            ) : null}
+            {detail?.updatedAt ? (
+              <span className="a2-meta">
+                {t(`${ns}.updatedLabel`)} <span className="a2-mono">{fmtChatTime(detail.updatedAt)}</span>
+              </span>
+            ) : null}
+          </div>
+        </header>
+      ) : null}
+
+      {state === 'idle' ? (
+        <div className="cchat-placeholder" data-testid="agent-v2-chat-idle">
+          <h3 className="a2-h2">
+            {emptyList ? t(`${ns}.listEmptyTitle`) : t(`${ns}.selectHint`)}
+          </h3>
+          <p className="a2-meta">
+            {emptyList ? t(`${ns}.noSessionsHint`) : t(`${ns}.threadHint`)}
+          </p>
+        </div>
+      ) : null}
+
+      {state === 'loading' ? (
+        <div className="a2s-skeleton cchat-msgs-skeleton" data-testid="agent-v2-chat-thread-loading">
+          <div className="a2s-sk-row" />
+          <div className="a2s-sk-row is-short" />
+          <div className="a2s-sk-row" />
+          <div className="a2s-sk-row is-short" />
+        </div>
+      ) : null}
+
+      {state === 'denied' ? (
+        <div className="cchat-placeholder" data-testid="agent-v2-chat-thread-denied">
+          <h3 className="a2-h2">{t(`${ns}.deniedThreadTitle`)}</h3>
+          <p className="a2-meta">{t(`${ns}.deniedBody`)}</p>
+          <div className="cchat-fail-meta">
+            <ReqId requestId={failure?.requestId} testId="agent-v2-chat-thread-denied-rid" />
+          </div>
+          <div>
+            <button
+              type="button"
+              className="a2-btn"
+              onClick={onBack}
+              data-testid="agent-v2-chat-thread-back"
+            >
+              {t(`${ns}.backToList`)}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {state === 'error' && failure ? (
+        <ChatFailureNote
+          failure={failure}
+          onRetry={onRetry}
+          testId="agent-v2-chat-thread-error"
+        />
+      ) : null}
+
+      {state === 'ready' ? (
+        messages.length === 0 ? (
+          <div className="cchat-placeholder" data-testid="agent-v2-chat-messages-empty">
+            <h3 className="a2-h2">{t(`${ns}.msgEmpty`)}</h3>
+            <p className="a2-meta">{t(`${ns}.msgEmptyHint`)}</p>
+          </div>
+        ) : (
+          <div
+            className="cchat-msgs"
+            role="log"
+            aria-label={t(`${ns}.threadAria`)}
+            data-testid="agent-v2-chat-messages"
+          >
+            {messages.map((msg, index) => {
+              const side = messageSide(msg.role);
+              return (
+                <div
+                  key={msg.seq ?? `${msg.at ?? 'msg'}-${index}`}
+                  className={`cchat-msg is-${side}`}
+                  data-testid="agent-v2-chat-msg"
+                >
+                  <div className="cchat-bubble">
+                    {hasText(msg.text) ? (
+                      msg.text
+                    ) : (
+                      <span className="cchat-note">{t(`${ns}.msgNoText`)}</span>
+                    )}
+                  </div>
+                  <span className="cchat-msg-time">{fmtChatTime(msg.at)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : null}
+    </div>
+  );
+}

@@ -1,0 +1,348 @@
+/* L4p2 console chat — console design tokens only (dark default, light swaps
+   tokens on .agent-app[data-theme='light']). No hard-coded colors, no blur. */
+
+.agent-app .cchat-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.agent-app .cchat-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agent-app .cchat-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-app .cchat-shell {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* ---------- session list ---------- */
+
+.agent-app .cchat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 10px;
+  min-width: 0;
+}
+
+.agent-app .cchat-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 6px 4px;
+}
+
+.agent-app .cchat-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100vh - 330px);
+  overflow-y: auto;
+}
+
+.agent-app .cchat-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  font: inherit;
+}
+
+.agent-app .cchat-row:hover {
+  background: var(--hover);
+}
+
+.agent-app .cchat-row:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.agent-app .cchat-row.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+}
+
+.agent-app .cchat-row-title {
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-app .cchat-row-time {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ---------- thread ---------- */
+
+.agent-app .cchat-thread {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px;
+  min-height: calc(100vh - 260px);
+}
+
+.agent-app .cchat-thread-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.agent-app .cchat-thread-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.agent-app .cchat-thread-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.agent-app .cchat-msgs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 12px;
+  max-height: calc(100vh - 420px);
+  min-height: 120px;
+  overflow-y: auto;
+}
+
+.agent-app .cchat-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 78%;
+  min-width: 0;
+}
+
+.agent-app .cchat-msg.is-me {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.agent-app .cchat-msg.is-other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.agent-app .cchat-bubble {
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.agent-app .cchat-msg.is-me .cchat-bubble {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  color: hsl(var(--foreground));
+}
+
+.agent-app .cchat-msg.is-other .cchat-bubble {
+  background: hsl(var(--surface-2));
+  border: 1px solid var(--hairline);
+  color: hsl(var(--foreground));
+}
+
+.agent-app .cchat-msg-time {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+}
+
+.agent-app .cchat-note {
+  color: hsl(var(--micro-foreground));
+}
+
+/* ---------- placeholders / failure blocks ---------- */
+
+.agent-app .cchat-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  padding: 28px 8px;
+  flex: 1 1 auto;
+}
+
+.agent-app .cchat-placeholder.is-list {
+  padding: 20px 8px;
+  flex: 0 0 auto;
+}
+
+.agent-app .cchat-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 28px 24px;
+}
+
+.agent-app .cchat-fail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.agent-app .cchat-fail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+/* ---------- composer ---------- */
+
+.agent-app .cchat-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 0 2px;
+  border-top: 1px solid var(--hairline);
+  background: hsl(var(--card));
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.agent-app .cchat-input {
+  width: 100%;
+  min-height: 64px;
+  max-height: 160px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.agent-app .cchat-input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.agent-app .cchat-input:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.agent-app .cchat-input[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.agent-app .cchat-composer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agent-app .cchat-send-fail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid hsl(var(--danger) / 0.35);
+  border-radius: 8px;
+  background: var(--danger-soft);
+}
+
+.agent-app .cchat-send-fail-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 1024px) {
+  .agent-app .cchat-shell {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+}
+
+/* At and below 900px the list and the message stream stack vertically. */
+@media (max-width: 900px) {
+  .agent-app .cchat-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agent-app .cchat-rows {
+    max-height: 200px;
+  }
+
+  .agent-app .cchat-thread {
+    min-height: 0;
+  }
+
+  .agent-app .cchat-msgs {
+    max-height: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .agent-app .cchat-thread {
+    padding: 12px;
+  }
+
+  .agent-app .cchat-msg {
+    max-width: 88%;
+  }
+
+  .agent-app .cchat-gate {
+    padding: 20px 16px;
+  }
+
+  /* Sticky input bar: it keeps its own space in the flow, so the last
+     message is never covered at rest; safe-area keeps it above the home bar. */
+  .agent-app .cchat-composer {
+    bottom: 0;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+}
