@@ -20,8 +20,8 @@
  * no gate is invented and no admin role is assumed (the BFF stays the 403
  * gate). Each row is POSTed sequentially; the first failure stops the run,
  * keeps the succeeded ids out of the selection, and reports the count + cause.
- * Error copy is localized with the HTTP status as the only interpolation
- * param — machine codes (request.missing_filter, …) never reach the screen.
+ * Error copy is fully localized — neither machine codes nor HTTP status
+ * numbers reach the screen; the request id stays copyable.
  * Row ids link to the approval detail (/agent/approvals/:id). */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useSearchParams } from 'react-router-dom';
@@ -69,8 +69,31 @@ const STATUS_KEYS: Record<string, string> = {
   superseded: 'superseded',
 };
 
-function statusKey(status: string): string {
-  return STATUS_KEYS[status] ?? status;
+/* Internal enums never reach the screen (Q2 honesty): known actions get a
+ * Chinese label, anything else degrades to 「其他变更」; the raw code survives
+ * only in the cell title. */
+const KIND_LABEL_KEYS: Record<string, string> = {
+  employee_version_create: 'agentConsole.v2.apd.kind.employee_version_create',
+  message_send: 'agentConsole.v2.apd.kind.message_send',
+  grant_escalation: 'agentConsole.v2.apd.kind.grant_escalation',
+  employee_owner_transfer: 'agentConsole.v2.apd.kind.employee_owner_transfer',
+};
+
+function kindLabel(t: (k: string) => string, raw: string | null | undefined): string {
+  if (!raw) return '—';
+  const key = KIND_LABEL_KEYS[raw];
+  return key ? t(key) : t('agentConsole.v2.apr.kindOther');
+}
+
+function riskLabel(t: (k: string) => string, raw: string | null | undefined): string {
+  if (raw !== 'low' && raw !== 'medium' && raw !== 'high') return '—';
+  return t(`agentConsole.approvals.risk.${raw}`);
+}
+
+function approvalStatusLabel(t: (k: string) => string, raw: string | null | undefined): string {
+  if (!raw) return '—';
+  const key = STATUS_KEYS[raw];
+  return key ? t(`agentConsole.approvals.status.${key}`) : '—';
 }
 
 // 'history' is a PAGE tab state, not an AP4 status (AP4 rejects it); the
@@ -107,7 +130,8 @@ function fetchApprovalStatsDue(
 function riskTone(riskLevel: string): string {
   if (riskLevel === 'high') return 'is-danger';
   if (riskLevel === 'medium') return 'is-warn';
-  return 'is-accent';
+  if (riskLevel === 'low') return 'is-accent';
+  return '';
 }
 
 /** Fallback derivation when a payload omits remainingSeconds (older rows):
@@ -133,7 +157,7 @@ function remainingSecondsOf(r: Approval, receivedAt: number, now: number): numbe
 
 /** P1-4: the queue countdown is a DURATION, so it reads hh:mm:ss instead of
  *  "剩余 3723 秒"; the authoritative server second count stays in the cell
- *  title (`remainingSeconds=…`) next to the absolute expiry. Hours are never
+ *  title (the absolute Beijing expiry), never a field name. Hours are never
  *  folded into days — a 24h SLA reads 24:00:00, not 1d. */
 function fmtHms(total: number): string {
   const s = Math.max(0, Math.floor(total));
@@ -407,11 +431,13 @@ export function ApprovalsListPage() {
   const noIdentity = !assignee;
   const isAuth =
     listRes && !listRes.ok && (listRes.code === 'console.unauthenticated' || listRes.status === 401);
-  const isForbidden =
-    listRes && !listRes.ok && (listRes.code === 'console.forbidden' || listRes.status === 403);
-  const isError = listRes && !listRes.ok && !isAuth && !isForbidden;
+  /* 403 and 404 share ONE body: neither confirms whether the queue exists. */
+  const isHidden =
+    listRes && !listRes.ok && (listRes.status === 403 || listRes.status === 404);
+  const isError = listRes && !listRes.ok && !isAuth && !isHidden;
   const countShown = statsRes?.ok ? statsRes.data?.pending ?? null : null;
-  const dueSoonShown = statsRes?.ok ? statsRes.data?.dueSoon ?? 0 : 0;
+  // AP8 failure or a missing dueSoon key hides the line — never a fake 0.
+  const dueSoonShown = statsRes?.ok ? statsRes.data?.dueSoon ?? null : null;
 
   return (
     <div className="a2s-page" data-testid="agent-v2-approvals-list">
@@ -480,19 +506,17 @@ export function ApprovalsListPage() {
         <div className="a2-card" data-testid="agent-v2-approvals-auth">
           <p className="a2-h2">{t('agentConsole.auth.expired')}</p>
         </div>
-      ) : isForbidden ? (
-        /* non-admin deep link → explicit 403 state, never a blank page */
-        <div className="a2-card" data-testid="agent-v2-approvals-403">
+      ) : isHidden ? (
+        /* 403 and 404 are the same body — no existence leak. */
+        <div className="a2-card" data-testid="agent-v2-approvals-hidden">
           <p className="a2-h2">{t('agentConsole.v2.apr.forbidden')}</p>
           <p className="a2-card-sub">{t('agentConsole.v2.apr.forbiddenHint')}</p>
+          <ReqId requestId={listRes?.requestId} testId="agent-v2-approvals-hidden-reqid" />
         </div>
       ) : isError ? (
         <div className="a2-card" data-testid="agent-v2-approvals-error">
           <p className="a2-meta" data-testid="agent-v2-approvals-queue-error">
-            {t('agentConsole.v2.ov.blockUnavailable', {
-              block: t('agentConsole.v2.apr.blockQueue'),
-              code: listRes?.status ?? 0,
-            })}
+            {t('agentConsole.v2.apr.listError')}
           </p>
           <button
             type="button"
@@ -516,7 +540,11 @@ export function ApprovalsListPage() {
       ) : rows.length === 0 ? (
         <div className="a2-card" data-testid="agent-v2-approvals-empty">
           <p className="a2-h2">{t('agentConsole.v2.emptyApprovals')}</p>
-          <p className="a2-card-sub">{t('agentConsole.approvals.emptyHint')}</p>
+          <p className="a2-card-sub">
+            {countShown != null && countShown > 0
+              ? t('agentConsole.v2.apr.emptyPartial', { count: countShown })
+              : t('agentConsole.approvals.emptyHint')}
+          </p>
         </div>
       ) : (
         <>
@@ -656,7 +684,7 @@ export function ApprovalsListPage() {
                             className="a2-check"
                             data-testid="agent-v2-approval-check"
                             checked={selected.has(r.approvalId)}
-                            aria-label={r.approvalId}
+                            aria-label={`${t('agentConsole.approvals.colId')} ${fmtId(r.approvalId)}`}
                             onChange={() => handleToggle(r.approvalId)}
                           />
                         </td>
@@ -672,12 +700,8 @@ export function ApprovalsListPage() {
                             {fmtId(r.approvalId)}
                           </NavLink>
                         </td>
-                        <td>
-                          {r.action}
-                          <span className="a2-micro">
-                            {' · '}
-                            {r.binding?.changeKind ?? '—'}
-                          </span>
+                        <td title={r.action}>
+                          {kindLabel(t, r.binding?.changeKind)}
                         </td>
                         <td className="a2-cell-nowrap r" title={employee?.id}>
                           {/* S2: readable identity — 用户 #N / 员工 · 短码; the
@@ -688,10 +712,10 @@ export function ApprovalsListPage() {
                               : identityText(employee.id, t)
                             : '—'}
                         </td>
-                        <td className="a2-cell-nowrap" data-testid="agent-v2-approval-risk">
+                        <td className="a2-cell-nowrap" data-testid="agent-v2-approval-risk" title={r.riskLevel}>
                           <span className={`a2-pill ${riskTone(r.riskLevel)}`}>
                             <span className="a2-pill-dot" aria-hidden />
-                            {t(`agentConsole.approvals.risk.${r.riskLevel}`, r.riskLevel)}
+                            {riskLabel(t, r.riskLevel)}
                           </span>
                         </td>
                         <td className="a2-mono a2-cell-nowrap r">{fmtTime(r.createdAt)}</td>
@@ -699,18 +723,13 @@ export function ApprovalsListPage() {
                           className="a2-mono a2-cell-nowrap r"
                           data-testid="agent-v2-approval-countdown"
                           title={
-                            [
-                              r.expiresAt ? fmtTime(r.expiresAt) : '',
-                              remaining === null ? '' : `remainingSeconds=${remaining}`,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ') || undefined
+                            r.expiresAt ? fmtTime(r.expiresAt) : undefined
                           }
                         >
                           {remaining === null ? '—' : fmtHms(remaining)}
                         </td>
-                        <td className="a2-cell-nowrap">
-                          {t(`agentConsole.approvals.status.${statusKey(r.status)}`, r.status)}
+                        <td className="a2-cell-nowrap" title={r.status}>
+                          {approvalStatusLabel(t, r.status)}
                         </td>
                       </tr>
                     );
@@ -732,7 +751,9 @@ export function ApprovalsListPage() {
                 {t('agentConsole.v2.apr.pageInfo', { page: pagesRef.current.length, count: rows.length })}
               </span>
               <span className="a2-micro" data-testid="agent-v2-approvals-due-soon">
-                {dueSoonShown > 0 ? t('agentConsole.v2.ov.noteDueSoon', { count: dueSoonShown }) : ''}
+                {dueSoonShown != null && dueSoonShown > 0
+                  ? t('agentConsole.v2.ov.noteDueSoon', { count: dueSoonShown })
+                  : null}
               </span>
               <button
                 type="button"
