@@ -953,3 +953,40 @@ describe('AUD-02 R1 — type+short ids, neutral placeholders, plain header', () 
     expect(page).not.toContain('A7');
   });
 });
+
+// ------------------------------------------- R2: 404 wording + no dash in 判定
+
+describe('AUD-02 R2 — 404 copy and the no-dash rule inside 判定', () => {
+  it('404 offers 「再读一次」, never the permission wording', async () => {
+    renderPage({ api: makeApi({ ok: false, status: 404, requestId: 'req-404b' }) });
+    await screen.findByTestId('aud02-forbidden');
+    const retry = screen.getByTestId('aud02-forbidden-retry').textContent ?? '';
+    expect(retry).toContain('再读一次');
+    expect(retry).not.toContain('已开通');
+    expect(screen.getByTestId('aud02-forbidden').textContent).not.toContain('查看权限');
+  });
+
+  it('403 keeps the permission wording and its own retry label', async () => {
+    renderPage({ api: makeApi({ ok: false, status: 403, requestId: 'req-403b' }) });
+    await screen.findByTestId('aud02-forbidden');
+    expect(screen.getByTestId('aud02-forbidden-retry').textContent).toContain('已开通');
+  });
+
+  it('an unreadable time inside 判定 says 「未记录」, and the card prints no dash', async () => {
+    renderPage({
+      api: makeApi({
+        ok: true,
+        event: event({ occurredAt: 'not-a-date', recordedAt: '' }),
+      }),
+    });
+    await waitReady();
+    expect(screen.getByTestId('aud02-occurred-missing').textContent).toBe('未记录');
+    expect(screen.getByTestId('aud02-recorded-missing').textContent).toBe('未记录');
+    // The value blocks carry the word, not a dash, and no arrival gap is
+    // claimed when one of the two times is unreadable.
+    for (const id of ['aud02-f-occurred', 'aud02-f-recorded', 'aud02-f-decision']) {
+      expect(screen.getByTestId(id).querySelector('.v')?.textContent ?? '').not.toContain('—');
+    }
+    expect(screen.getByTestId('aud02-gap').textContent).not.toContain('相差');
+  });
+});
