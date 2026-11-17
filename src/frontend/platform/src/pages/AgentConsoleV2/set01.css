@@ -1,0 +1,365 @@
+/*
+ * SET-01 `/agent/settings` layout + the four pieces this page adds to the v2
+ * vocabulary (SPEC §2): the 180px secondary nav with its status dots, the
+ * 「来源=契约」 chip, the in-card error bar, and the group skeleton.
+ *
+ * Everything is scoped under `.agent-app .a2s1` and resolves through the
+ * existing agentConsoleV2.css token block, so dark/light remain one DOM with
+ * only tokens swapped (zero hex value outside the theme block). Cards, pills,
+ * buttons, links, stages, HFieldRows and the A7 chain panel are reused from
+ * `.lk` / `.a2r` / `.aud01` — this file deliberately defines no second set.
+ */
+
+/* ---------- page head ---------- */
+.agent-app .a2s1 .phead .h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.agent-app .a2s1 .a2r-cht {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.agent-app .a2s1 .s1-sub {
+  font-size: 13px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+  max-width: 640px;
+  margin: 6px 0 0;
+}
+
+/* ---------- 页级只读边界 banner (banner above the head, visible in every state) ---------- */
+.agent-app .a2s1 .s1roband {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: hsl(var(--neutral-pill-bg));
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .a2s1 .s1roband > .lk-i {
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .a2s1 .s1roband b {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s1 .s1roband .sp {
+  flex: 1;
+}
+.agent-app .a2s1 .s1roband .mono {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+/* ---------- 180 + 1fr layout ---------- */
+.agent-app .a2s1 .s1-layout {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+.agent-app .a2s1 .s1-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ---------- secondary nav ---------- */
+.agent-app .a2s1 .s1-secnav {
+  position: sticky;
+  top: 72px; /* shell topbar 56 + 16 breathing room */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  border: 1px solid var(--hairline);
+  min-width: 0;
+}
+.agent-app .a2s1 .s1-cap {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--micro-foreground));
+  padding: 6px 10px;
+}
+.agent-app .a2s1 .s1nav {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  position: relative;
+  text-align: left;
+  width: 100%;
+  text-decoration: none;
+  min-width: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.agent-app .a2s1 .s1nav:hover {
+  background: var(--hover);
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s1 .s1nav.on {
+  background: hsl(var(--surface));
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+.agent-app .a2s1 .s1nav .lk-i {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s1 .s1nav.on .lk-i {
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .a2s1 .s1nav .tx {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-app .a2s1 .s1-div {
+  height: 1px;
+  background: var(--hairline);
+  margin: 6px 8px;
+}
+
+/* status dot: colour + aria-label + a card that repeats it in words */
+.agent-app .a2s1 .s1dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  flex: none;
+  background: hsl(var(--micro-foreground));
+}
+.agent-app .a2s1 .s1dot.ok {
+  background: hsl(var(--success));
+}
+.agent-app .a2s1 .s1dot.wr {
+  background: hsl(var(--warning));
+}
+.agent-app .a2s1 .s1dot.dg {
+  background: hsl(var(--danger));
+}
+.agent-app .a2s1 .s1dot.nt {
+  background: hsl(var(--micro-foreground));
+}
+
+/* ---------- 来源 chip (rules vs readings, E04) ---------- */
+.agent-app .a2s1 .s1src {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  white-space: nowrap;
+}
+.agent-app .a2s1 .s1src-tag {
+  font: 600 10px/14px var(--lk-mono, ui-monospace, monospace);
+  letter-spacing: 0.04em;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+/* ---------- in-card error bar (S-10: never a blank page) ---------- */
+.agent-app .a2s1 .s1err {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--danger-soft);
+  color: hsl(var(--danger));
+  font-size: 12.5px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2s1 .s1err .tx {
+  flex: 1;
+  min-width: 0;
+  color: hsl(var(--foreground));
+  line-height: 17px;
+}
+.agent-app .a2s1 .s1err .rid {
+  font: 11px/1 var(--lk-mono, ui-monospace, monospace);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- group skeleton (same row height as a real row) ---------- */
+.agent-app .a2s1 .s1skel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.agent-app .a2s1 .s1sk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 20px;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2s1 .s1sk-row .bar {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: hsl(var(--surface-2));
+}
+.agent-app .a2s1 .s1sk-note {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 11.5px;
+  line-height: 17px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s1 .s1stage-note {
+  font-size: 11.5px;
+  line-height: 17px;
+  color: hsl(var(--micro-foreground));
+  max-width: 460px;
+  position: relative;
+}
+
+/* ---------- rows (rules / access / danger公示) ---------- */
+.agent-app .a2s1 .s1rows {
+  padding: 4px 0 8px;
+}
+.agent-app .a2s1 .s1row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+.agent-app .a2s1 .s1row + .s1row {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .a2s1 .s1row .ic {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: hsl(var(--surface));
+  color: hsl(var(--micro-foreground));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.agent-app .a2s1 .s1row .bd {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.agent-app .a2s1 .s1row .hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .a2s1 .s1row .nm {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+.agent-app .a2s1 .s1row .why {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+  line-height: 17px;
+  overflow-wrap: anywhere;
+}
+.agent-app .a2s1 .s1row .go {
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.agent-app .a2s1 .s1row .end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-app .a2s1 .lnk.acc {
+  color: hsl(var(--accent));
+}
+.agent-app .a2s1 .pill .dash {
+  font-family: var(--lk-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* ---------- responsive: <1024 the nav becomes top-scroll chips ---------- */
+@media (max-width: 1023px) {
+  .agent-app .a2s1 .s1-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agent-app .a2s1 .s1-secnav {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 8px;
+    border-radius: 10px;
+  }
+  .agent-app .a2s1 .s1-secnav::-webkit-scrollbar {
+    display: none;
+  }
+  .agent-app .a2s1 .s1-cap {
+    display: none;
+  }
+  .agent-app .a2s1 .s1-div {
+    width: 1px;
+    height: 24px;
+    margin: 0 4px;
+    flex: none;
+  }
+  .agent-app .a2s1 .s1nav {
+    flex: none;
+    width: auto;
+  }
+  .agent-app .a2s1 .s1nav .tx {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 767px) {
+  .agent-app .a2s1 .s1row {
+    padding: 12px 14px;
+  }
+  .agent-app .a2s1 .s1err {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .agent-app .a2s1 .s1sk-row {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}

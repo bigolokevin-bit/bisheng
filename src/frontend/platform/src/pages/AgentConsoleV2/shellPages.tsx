@@ -17,6 +17,7 @@ import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
 import { TaskDetailPage } from './TaskDetailPage';
 import { TasksListPage } from './TasksListPage';
+import { SettingsPage as SettingsScreen } from './SettingsPage';
 
 export function OverviewPage() {
   /* OV-01 slice 1: header + 4 real-BFF KPIs; remaining blocks are honest
@@ -89,19 +90,10 @@ export function MetricsPage() {
   return <MetricsScreen />;
 }
 
+/* SET-01: read-only system settings at /agent/settings/:section
+ * (set01-target.html). Six groups, zero write entry, sanitized readings. */
 export function SettingsPage() {
-  const { t } = useTranslation();
-  return (
-    <div className="a2s-page" data-testid="agent-v2-page-settings">
-      <h1 className="a2-h1">{t('agentConsole.v2.navSettings')}</h1>
-      <p className="a2-meta">{t('agentConsole.v2.shell.settingsDesc')}</p>
-      <div className="a2-card">
-        <p className="a2-card-sub">{t('agentConsole.v2.shell.themeNote')}</p>
-        <p className="a2-card-sub">{t('agentConsole.v2.shell.envNote')}</p>
-        <p className="a2-card-sub">{t('agentConsole.v2.shell.readonlyNote')}</p>
-      </div>
-    </div>
-  );
+  return <SettingsScreen />;
 }
 
 export function NotFoundPage() {

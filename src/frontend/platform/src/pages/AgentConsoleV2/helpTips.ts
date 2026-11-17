@@ -55,6 +55,8 @@ export const HELP_TERMS = [
   'taskVersionRef',
   /** TSK-02: audit requires a filter; `taskId` is the one this page passes. */
   'taskAuditFilter',
+  /** SET-01: a write switch that cannot be read is unknown, not "off". */
+  'settingsWriteUnknown',
 ] as const;
 
 export type HelpTerm = (typeof HELP_TERMS)[number];

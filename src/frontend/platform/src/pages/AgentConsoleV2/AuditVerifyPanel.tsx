@@ -44,9 +44,21 @@ const WINDOW_LABEL_KEYS: Record<VerifyWindow, string> = {
 
 export interface AuditVerifyPanelProps {
   api: AuditApi;
+  /**
+   * SET-01 only: reports the panel's own read state upward so a host page can
+   * replace the whole group on 403/404 (SPEC §1.10) without issuing a second
+   * request. Omitted by AUD-01, where the panel owns its state entirely.
+   */
+  onStatus?: (status: AuditVerifyStatus) => void;
 }
 
-export function AuditVerifyPanel({ api }: AuditVerifyPanelProps) {
+export interface AuditVerifyStatus {
+  phase: 'idle' | 'loading' | 'ok' | 'error';
+  httpStatus: number;
+  requestId: string | null;
+}
+
+export function AuditVerifyPanel({ api, onStatus }: AuditVerifyPanelProps) {
   const { t, i18n } = useTranslation();
   const [window, setWindow] = useState<VerifyWindow>(DEFAULT_VERIFY_WINDOW);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
@@ -89,6 +101,13 @@ export function AuditVerifyPanel({ api }: AuditVerifyPanelProps) {
   useEffect(() => {
     run(DEFAULT_VERIFY_WINDOW);
   }, [run]);
+
+  /* SET-01: publish the read state so the host group can gate on 403/404.
+   * The panel keeps rendering its own S0–S4 body — this is a notification,
+   * never a second source of truth. */
+  useEffect(() => {
+    onStatus?.({ phase, httpStatus, requestId });
+  }, [onStatus, phase, httpStatus, requestId]);
 
   const range = sent ?? verifyRange(window);
   const state = phase === 'ok' ? classifyVerify(result) : null;
