@@ -250,6 +250,7 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false,
           t={t}
           httpStatus={httpStatus}
           requestId={requestId}
+          hideCode={hideCode}
           onRetry={() => run(window)}
         />
       ) : null}
@@ -529,11 +530,13 @@ function VerifyFailed({
   t,
   httpStatus,
   requestId,
+  hideCode = false,
   onRetry,
 }: {
   t: TFunction;
   httpStatus: number;
   requestId: string | null;
+  hideCode?: boolean;
   onRetry: () => void;
 }) {
   const code = httpStatus > 0 ? `HTTP ${httpStatus}` : t('agentConsole.v2.aud01.networkError');
@@ -545,11 +548,13 @@ function VerifyFailed({
         </span>
         <div>
           <div className="h">{t('agentConsole.v2.aud01.verifyS4Title')}</div>
-          <div className="s">
-            {t('agentConsole.v2.aud01.verifyS4DescPre')}
-            <span className="mono">{code}</span>
-            {t('agentConsole.v2.aud01.verifyS4DescPost')}
-          </div>
+          {hideCode ? null : (
+            <div className="s">
+              {t('agentConsole.v2.aud01.verifyS4DescPre')}
+              <span className="mono">{code}</span>
+              {t('agentConsole.v2.aud01.verifyS4DescPost')}
+            </div>
+          )}
         </div>
       </div>
       <div className="tail">
