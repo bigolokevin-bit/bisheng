@@ -7253,7 +7253,35 @@
           "axisNote": "Task status and delegation stage are not one axis: after accepting, the task is still open, and a handover only changes who owns it. Only a rejection cancels the task, and only completion closes both with a progress note."
         },
         "write": {
-          "closed": "Writes are not open in this environment yet (backend wiring in progress)"
+          "closed": "Writes are not open in this environment yet (backend wiring in progress)",
+          "terminal": "This step is over and cannot be changed; rescheduling is a new delegation.",
+          "turn": { "accept": "The receiver answers next", "handoff": "The receiver hands it back next", "complete": "The requester closes it out next" },
+          "action": { "accept": "Accept", "reject": "Reject", "handoff": "Hand back", "complete": "Complete" },
+          "confirmTitle": { "accept": "Accept this work?", "reject": "Decline this work?", "handoff": "Hand it back?", "complete": "Mark it done?" },
+          "consequence": {
+            "accept": "Accepting moves the task owner to the receiver and leaves the task open; the budget stays on the requester's ledger.",
+            "reject": "Rejecting also cancels the task and keeps the reason you write; it cannot be undone.",
+            "handoff": "Handing back only moves the owner to the requester; the task status does not change.",
+            "complete": "Completing closes the task, records the progress note and books one entry on the requester's ledger."
+          },
+          "reasonLabel": "Say why you cannot take it",
+          "reasonPlaceholder": "Kept on the handover chain for the requester",
+          "progressLabel": "Say what got done",
+          "progressPlaceholder": "Goes into the task's progress record",
+          "cancel": "Cancel",
+          "confirm": "Confirm",
+          "busy": "Submitting",
+          "error": {
+            "session": "Your session expired; sign in again and retry.",
+            "timeout": "No answer within ten seconds; you can retry.",
+            "network": "No connection; nothing was submitted, you can retry.",
+            "unauthorized": "Your session expired; sign in again and retry.",
+            "denied": "You do not have permission for this action.",
+            "notFound": "This delegation does not exist or is outside your tenant.",
+            "conflict": "This delegation has moved on; refresh and retry.",
+            "invalid": "The submission is incomplete; check it and retry.",
+            "server": "The service is busy; nothing was submitted, you can retry."
+          }
         },
         "chain": {
           "title": "Handover chain",

@@ -108,10 +108,12 @@ function fail<T>(status: number, requestId?: string, code?: string): CollabApiRe
 function makeApi(options: {
   list?: CollabApiResult<DelegationListShape>;
   chains?: Record<string, CollabApiResult<{ items: ChainItem[] }>>;
+  write?: CollabApiResult<unknown>;
 }): CollabApi {
   return {
     listDelegations: vi.fn(async () => options.list ?? ok({ items: [row()] })),
     getChain: vi.fn(async (id: string) => options.chains?.[id] ?? ok({ items: chain() })),
+    submitDelegationAction: vi.fn(async () => options.write ?? ok({})),
   };
 }
 
@@ -241,22 +243,17 @@ describe('COL-01 collaboration view', () => {
     expect(screen.getByText(/本次未能读取/)).toBeTruthy();
   });
 
-  it('renders zero write controls — the four actions are one static sentence', async () => {
+  it('offers exactly the stage action, never a dead button', async () => {
     const api = makeApi({});
-    const { container } = renderPage(api);
+    renderPage(api);
     await settled();
     await waitFor(() => expect(screen.getByText(TITLE)).toBeTruthy());
 
-    expect(screen.getByTestId('collab-write-note').textContent).toContain(
-      '本环境暂未开放写操作（后端接线中）',
-    );
-
-    const controls = Array.from(
-      container.querySelectorAll('button, a, [role="button"], input[type="submit"]'),
-    ).map((el) => (el.textContent ?? '').trim() + ' ' + (el.getAttribute('aria-label') ?? ''));
-    const writeWords = ['接受', '拒绝', '交接', '完成'];
-    const offenders = controls.filter((name) => writeWords.some((word) => name.includes(word)));
-    expect(offenders).toEqual([]);
+    // Fixture status is `accepted`, so handoff is the only action on offer.
+    expect(screen.getByTestId('collab-action-handoff')).toBeTruthy();
+    expect(screen.queryByTestId('collab-action-accept')).toBeNull();
+    expect(screen.queryByTestId('collab-action-reject')).toBeNull();
+    expect(screen.queryByTestId('collab-action-complete')).toBeNull();
   });
 
   it('collapses two charged ledger rows into one chain line without any amount', async () => {
@@ -372,5 +369,85 @@ describe('COL-01 §FILT — filters narrow what was loaded', () => {
     const link = within(container).getAllByRole('link').find((node) => node.getAttribute('href') === `/agent/tasks/${TK}`);
     expect(link).toBeTruthy();
     expect(container.textContent).not.toContain(TK);
+  });
+});
+
+describe('COL-01 write actions wired to the BFF proxies', () => {
+  function calls(api: CollabApi): unknown[][] {
+    return (api.submitDelegationAction as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+  }
+
+  it('asks for a reason first, posts once with it, then re-reads the list', async () => {
+    const api = makeApi({ list: ok({ items: [row({ status: 'requested' })] }) });
+    renderPage(api);
+    await settled();
+    await waitFor(() => expect(screen.getByTestId('collab-action-reject')).toBeTruthy());
+
+    fireEvent.click(screen.getByTestId('collab-action-reject'));
+    const confirm = screen.getByTestId('collab-write-confirm') as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+
+    fireEvent.change(screen.getByTestId('collab-write-reason'), {
+      target: { value: '手上排满了，这周接不了' },
+    });
+    expect(confirm.disabled).toBe(false);
+    fireEvent.click(confirm);
+
+    await waitFor(() => expect(api.listDelegations).toHaveBeenCalledTimes(2));
+    expect(calls(api)).toHaveLength(1);
+    const [action, id, body, requestId] = calls(api)[0];
+    expect(action).toBe('reject');
+    expect(id).toBe(DL);
+    expect(body).toEqual({ reason: '手上排满了，这周接不了' });
+    expect(typeof requestId).toBe('string');
+  });
+
+  it('posts handoff for an accepted stage', async () => {
+    const api = makeApi({});
+    renderPage(api);
+    await settled();
+    fireEvent.click(await screen.findByTestId('collab-action-handoff'));
+    fireEvent.click(screen.getByTestId('collab-write-confirm'));
+
+    await waitFor(() => expect(calls(api)).toHaveLength(1));
+    expect(calls(api)[0][0]).toBe('handoff');
+    expect(calls(api)[0][2]).toEqual({});
+  });
+
+  it('explains a moved-on stage in words, with the request id and no raw code', async () => {
+    const api = makeApi({
+      list: ok({ items: [row({ status: 'accepted' })] }),
+      write: {
+        ok: false,
+        status: 409,
+        data: null,
+        code: 'delegation.illegal_transition',
+        requestId: 'console-req-moved',
+      },
+    });
+    const { container } = renderPage(api);
+    await settled();
+    fireEvent.click(await screen.findByTestId('collab-action-handoff'));
+    fireEvent.click(screen.getByTestId('collab-write-confirm'));
+
+    await waitFor(() => expect(screen.getByTestId('collab-write-error')).toBeTruthy());
+    const error = screen.getByTestId('collab-write-error');
+    expect(error.textContent).toContain('该委托状态已变化，请刷新后重试。');
+    expect(error.textContent).toContain('console-req-moved');
+    expect(container.textContent).not.toContain('illegal_transition');
+    expect(error.textContent).not.toContain('409');
+  });
+
+  it('lifts a 401 into the session banner', async () => {
+    const api = makeApi({
+      list: ok({ items: [row({ status: 'accepted' })] }),
+      write: { ok: false, status: 401, data: null, code: 'delegation.unauthorized' },
+    });
+    renderPage(api);
+    await settled();
+    fireEvent.click(await screen.findByTestId('collab-action-handoff'));
+    fireEvent.click(screen.getByTestId('collab-write-confirm'));
+
+    await waitFor(() => expect(screen.getByTestId('collab-auth-banner')).toBeTruthy());
   });
 });
