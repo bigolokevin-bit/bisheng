@@ -4332,6 +4332,32 @@
   },
   "agentConsole": {
     "v2": {
+"sk": {
+    "title": "Skill governance",
+    "desc": "Read-only view of the skill ledger: audience, version, fingerprint, owner and references.",
+    "legend": "Shared with many = reusable across the tenant; employee only = that employee alone; not referenced = no employee or position uses it today.",
+    "loaded": "{{count}} skills loaded",
+    "loading": "Loading the skill ledger…",
+    "emptyTitle": "No skills yet",
+    "emptyHint": "The skill ledger is empty or the read-only endpoint is not live. This view recovers on its own.",
+    "errTimeout": "Reading the skill ledger timed out.",
+    "errHttp": "The skill ledger is unavailable (service did not respond, code {{code}}).",
+    "errKeep": "The page stayed read-only; nothing was changed.",
+    "retry": "Retry",
+    "unnamed": "Unnamed skill",
+    "scopeShared": "Shared with {{count}}",
+    "scopeSharedUnknown": "Shared (audience size not provided)",
+    "scopeExclusive": "Employee only",
+    "scopeUnused": "Not referenced",
+    "version": "Version",
+    "hash": "Fingerprint",
+    "hashCopy": "Copy",
+    "hashCopied": "Copied",
+    "owner": "Owner",
+    "sharedWith": "Shared with",
+    "referencedBy": "Referenced by",
+    "noReferents": "No references"
+},
 "mtx": {
     "title": "Employee matrix",
     "desc": "Every real employee at a glance: lifecycle, budget, today and risk.",

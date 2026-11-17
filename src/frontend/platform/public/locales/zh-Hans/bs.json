@@ -4277,6 +4277,32 @@
   },
   "agentConsole": {
     "v2": {
+"sk": {
+    "title": "技能治理",
+    "desc": "只读查看技能台账：共享范围、版本、内容指纹、维护人与引用情况。",
+    "legend": "共享给多人＝租户内可复用；员工独有＝只在该员工名下；未被引用＝当前没有员工或岗位在使用。",
+    "loaded": "已加载 {{count}} 个技能",
+    "loading": "正在读取技能台账…",
+    "emptyTitle": "暂无技能",
+    "emptyHint": "技能台账为空，或只读口尚未开通。数据恢复后此处会自动显示。",
+    "errTimeout": "读取技能台账超时了。",
+    "errHttp": "暂时读不到技能台账（服务未响应，代码 {{code}}）。",
+    "errKeep": "页面保持只读，未做任何改动。",
+    "retry": "重试",
+    "unnamed": "未命名技能",
+    "scopeShared": "共享给 {{count}} 人",
+    "scopeSharedUnknown": "已共享（人数未提供）",
+    "scopeExclusive": "员工独有",
+    "scopeUnused": "未被引用",
+    "version": "版本",
+    "hash": "内容指纹",
+    "hashCopy": "复制",
+    "hashCopied": "已复制",
+    "owner": "维护人",
+    "sharedWith": "共享成员",
+    "referencedBy": "被谁引用",
+    "noReferents": "暂无引用"
+},
 "mtx": {
     "title": "员工矩阵",
     "desc": "一屏查看全部真实员工的在岗情况与风险。",

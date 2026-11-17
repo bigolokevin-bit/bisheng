@@ -21,6 +21,7 @@ import { TaskDetailPage } from './TaskDetailPage';
 import { TaskCreatePage } from './TaskCreatePage';
 import { TasksListPage } from './TasksListPage';
 import MatrixScreen from './MatrixPage';
+import SkillsScreen from './SkillsPage';
 import { SettingsPage as SettingsScreen } from './SettingsPage';
 
 export function OverviewPage() {
@@ -135,6 +136,18 @@ export function MatrixPage() {
   return (
     <div className="a2s-page" data-testid="agent-v2-page-matrix">
       <MatrixScreen />
+    </div>
+  );
+}
+
+/**
+ * SKILL-01 shell: read-only skill governance. The screen brings its own data
+ * leg (makeFetcher), so no ShellApis are needed here.
+ */
+export function SkillsPage() {
+  return (
+    <div className="a2s-page" data-testid="agent-v2-page-skills">
+      <SkillsScreen />
     </div>
   );
 }
