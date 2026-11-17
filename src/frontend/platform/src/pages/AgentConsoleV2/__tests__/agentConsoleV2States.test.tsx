@@ -2,7 +2,7 @@
 /**
  * A2/A3 guardrail with the real zh-Hans resources resolved through a mocked
  * react-i18next: lifecycle states render localized labels (在岗, not raw
- * `active`/raw keys) and the trend KPI keeps exactly one 待接入 occurrence.
+ * `active`/raw keys) and the trend KPI keeps exactly one 暂不可用 occurrence.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -92,7 +92,7 @@ describe('console v2 localized states and trend KPI', () => {
     await screen.findByText('Koi Claw');
     expect(screen.getAllByText('趋势')).toHaveLength(1);
     expect(screen.getByTestId('agent-v2-trend-pending').textContent).toBe(
-      '趋势数据待接入',
+      '趋势数据暂不可用',
     );
     await waitFor(() =>
       expect(

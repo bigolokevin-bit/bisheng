@@ -26,6 +26,7 @@ import {
   DEFAULT_VERIFY_WINDOW,
   VERIFY_WINDOWS,
   classifyVerify,
+  formatShanghaiMinute,
   formatUtcMinute,
   groupNumber,
   isVerifyGreen,
@@ -178,8 +179,14 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run' }: AuditVerifyPane
             </button>
           ))}
         </div>
-        <span className="mono win-range" data-testid="aud01-verify-range">
-          {formatUtcMinute(range.from)} → {formatUtcMinute(range.to)}
+        {/* S1: the window reads in Beijing time; the raw UTC bounds stay in
+            the title (报障口径), per 本地时间显示 + title 留 UTC 原值. */}
+        <span
+          className="mono win-range"
+          data-testid="aud01-verify-range"
+          title={`${formatUtcMinute(range.from)} → ${formatUtcMinute(range.to)} UTC`}
+        >
+          {formatShanghaiMinute(range.from)} → {formatShanghaiMinute(range.to)}
         </span>
         <div className="sp" />
         {cta === 'link' ? (
@@ -279,9 +286,9 @@ function VerifyNoAnchor({ t, result }: { t: TFunction; result: AuditVerifyResult
       <div className="tail">
         <div className="kv">
           <span className="k">{t('agentConsole.v2.aud01.verifyGateLabel')}</span>
-          <span className="mono">
-            ok / complete = {String(result?.ok ?? true)} / {String(result?.complete ?? true)}
-          </span>
+          {/* S1: the raw ok/complete pair never prints; the neutral state is
+              simply 无结论, explained by the note. */}
+          <span className="faint">—</span>
           <span className="hd-note">
             {t('agentConsole.v2.aud01.verifyS0Note')}
             <HelpTip term="greenGate" testId="aud01-help-green" />

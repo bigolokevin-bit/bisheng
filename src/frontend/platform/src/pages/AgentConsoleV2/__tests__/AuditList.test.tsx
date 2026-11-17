@@ -460,7 +460,7 @@ describe('AUD-01 safety + links (§3, §1.7)', () => {
     const jump = within(row).getByText('查看任务');
     expect(jump.getAttribute('aria-disabled')).toBe('true');
     expect(jump.getAttribute('href')).toBeNull();
-    expect(jump.getAttribute('title')).toContain('TSK-02');
+    expect(jump.getAttribute('title')).toContain('尚未开放');
     // the copy control is independent of the dead link
     expect(within(row).getAllByRole('button', { name: '复制任务 ID' })).toHaveLength(1);
   });
@@ -495,10 +495,11 @@ describe('AUD-01 expansion (§1.8)', () => {
 
     fireEvent.click(screen.getByTestId('aud01-expand-ev_GRANT_1'));
     const exp = screen.getByTestId('aud01-exp-ev_GRANT_1');
-    expect(exp.textContent).toContain('变更（before → after）');
+    expect(exp.textContent).toContain('变更（修改前 → 修改后）');
     expect(exp.textContent).toContain('scopeType');
     expect(exp.textContent).toContain('+');
-    expect(exp.textContent).toContain('schemaVersion');
+    expect(exp.textContent).toContain('契约版本');
+    expect(exp.textContent).not.toContain('schemaVersion');
     expect(exp.textContent).toContain('没有「验证此条」入口');
     expect(exp.textContent).toContain('idem_gr_3…8_01');
     expect(exp.querySelector('.cp[title="idem_gr_3A38_01"]')).not.toBeNull();
@@ -524,8 +525,9 @@ describe('AUD-01 cursor foot (§1.9)', () => {
 
     const next = screen.getByTestId('lk-next') as HTMLButtonElement;
     expect(next.disabled).toBe(true);
-    expect(next.getAttribute('title')).toContain('nextCursor');
-    expect(screen.getByTestId('lk-lastpage-note').textContent).toContain('已是末页');
+    expect(next.getAttribute('title')).toContain('最后一页');
+    expect(next.getAttribute('title')).not.toContain('nextCursor');
+    expect(screen.getByTestId('lk-lastpage-note').textContent).toContain('后面没有了');
   });
 
   it('consumes the cursor explicitly and stops on replay', async () => {
@@ -621,5 +623,43 @@ describe('AUD-01 S2 — readable identities in list rows', () => {
     const behalf = (base.querySelector('.behalf') as HTMLElement).textContent ?? '';
     expect(behalf).toContain('用户 #u_10001');
     expect(behalf).not.toContain('human:');
+  });
+});
+
+// ---------------------------------------------------------------- S1 language
+
+describe('AUD-01 S1 — engineering language stays off screen', () => {
+  it('the verify panel never prints ok/complete/scanned field names', async () => {
+    const h = harness({
+      pages: [okList([event()])],
+      verify: [
+        {
+          ok: true,
+          status: 200,
+          data: {
+            ok: true,
+            complete: true,
+            scanned: 42,
+            anchorCheckpointId: 'ck_01M7',
+          },
+        },
+      ],
+    });
+    renderPage(h);
+    await waitFor(() => expect(screen.getByTestId('aud01-verify-s1')).toBeInTheDocument());
+    const panel = screen.getByTestId('aud01-verify').textContent ?? '';
+    expect(panel).not.toContain('ok=true');
+    expect(panel).not.toContain('complete');
+    expect(panel).not.toContain('scanned');
+    expect(screen.getByTestId('aud01-verify-s1').textContent).toContain('链完整');
+  });
+
+  it('the verify window reads in Beijing time, the raw UTC bounds live in title', async () => {
+    const h = harness({ pages: [okList([event()])] });
+    renderPage(h);
+    await waitFor(() => expect(screen.getByTestId('aud01-verify-range')).toBeInTheDocument());
+    const range = screen.getByTestId('aud01-verify-range');
+    expect(range.textContent).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} → \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+    expect(range.getAttribute('title')).toMatch(/UTC$/);
   });
 });

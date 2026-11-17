@@ -558,6 +558,13 @@ export function formatUtcMinute(iso: string): string {
   return `${new Date(ms).toISOString().slice(0, 16)}Z`;
 }
 
+/** S1: the same readout in Shanghai wall clock `2026-11-16 17:20`. */
+export function formatShanghaiMinute(iso: string): string {
+  const p = shParts(iso);
+  if (!p) return '—';
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+}
+
 /** recordedAt − occurredAt, `+0.8s` style; null when either is unparsable. */
 export function formatLatency(occurredAt: string, recordedAt: string): string | null {
   const a = Date.parse(occurredAt);

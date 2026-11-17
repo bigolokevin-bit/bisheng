@@ -307,7 +307,7 @@ describe('SET-01 rules vs readings', () => {
     expect(card.textContent).toContain('不可删除');
     // no build-time aggregate, no fake runtime reading
     expect(card.textContent).not.toMatch(/共\s*\d+\s*条|总计/);
-    expect(card.textContent).toContain('未接入');
+    expect(card.textContent).toContain('暂无数据');
   });
 
   it('keeps a degraded usage reading as — and never rewrites it to 0', async () => {

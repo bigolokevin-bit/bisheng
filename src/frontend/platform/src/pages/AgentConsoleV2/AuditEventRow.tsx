@@ -531,7 +531,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
         <div className="hd micro">{t('agentConsole.v2.aud01.integrityTitle')}</div>
         <div className="integ">
           <div className="kv">
-            <span className="k">hash</span>
+            <span className="k">{t('agentConsole.v2.aud01.integHashLabel')}</span>
             {event.hash ? (
               <CopyId
                 value={event.hash}
@@ -544,7 +544,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
             )}
           </div>
           <div className="kv">
-            <span className="k">prevHash</span>
+            <span className="k">{t('agentConsole.v2.aud01.integPrevLabel')}</span>
             {event.prevHash ? (
               <CopyId
                 value={event.prevHash}
@@ -561,7 +561,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
             <div className="integ exp">{t('agentConsole.v2.aud01.noHashNote')}</div>
           ) : null}
           <div className="kv">
-            <span className="k">schemaVersion</span>
+            <span className="k">{t('agentConsole.v2.aud01.integSchemaLabel')}</span>
             <span className="mono">{event.schemaVersion || '—'}</span>
           </div>
           {event.error ? (

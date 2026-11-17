@@ -237,7 +237,7 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(screen.getByTestId('agent-v2-rd-f-cost').textContent).toContain('0.009875');
     expect(screen.getByTestId('agent-v2-rd-f-cost').textContent).toContain('上游实测');
     expect(screen.getByTestId('agent-v2-rd-f-cap').textContent).toContain('0.5');
-    expect(screen.getByTestId('agent-v2-rd-f-cap').textContent).toContain('2.0%');
+    expect(screen.getByTestId('agent-v2-rd-f-cap').textContent).toContain('2%');
     expect(screen.getByTestId('agent-v2-rd-f-start').textContent).toContain('11-16 08:52');
     expect(screen.getByTestId('agent-v2-rd-f-end').textContent).toContain('11-16 08:56');
 
@@ -356,8 +356,8 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(cal.textContent).toContain('估算');
     expect(cal.textContent).toContain('unknown');
     expect(cal.textContent).toContain('尚无账目，成本未知；不显示 0');
-    expect(cal.textContent).toContain('比值 2.0% 是派生值');
-    expect(cal.textContent).toContain('步骤级成本无读取通路');
+    expect(cal.textContent).toContain('占上限 2% 由两者计算得出');
+    expect(cal.textContent).toContain('步骤级成本没有读取通路');
   });
 });
 
@@ -369,7 +369,7 @@ describe('RUN-02 — trace derivation (runTrace.ts)', () => {
     await waitReady();
 
     const trace = screen.getByTestId('agent-v2-rd-trace');
-    expect(trace.textContent).toContain('已加载 12 条事件 · 派生步骤 4 个');
+    expect(trace.textContent).toContain('已加载 12 条事件 · 步骤 4 个');
 
     const rows = screen.getAllByTestId('agent-v2-rd-row');
     expect(rows).toHaveLength(10);
@@ -383,7 +383,7 @@ describe('RUN-02 — trace derivation (runTrace.ts)', () => {
     expect(text.some((r) => r.includes('终态后事件'))).toBe(true);
     expect(text.some((r) => r.includes('流内事件'))).toBe(true);
     expect(text.some((r) => r.includes('终态'))).toBe(true);
-    expect(text.some((r) => r.includes('seq 12'))).toBe(true);
+    expect(text.some((r) => r.includes('序号 12'))).toBe(true);
   });
 
   it('E12 negative: seq > terminalSeq keeps the fact and settles nothing (step 8 stays pending)', async () => {
@@ -400,7 +400,7 @@ describe('RUN-02 — trace derivation (runTrace.ts)', () => {
     expect(step?.getAttribute('data-state')).toBe('pending');
     expect(step?.textContent).toContain('待结果');
     expect(step?.textContent).not.toContain('已配对');
-    expect(step?.textContent).toContain('调用 seq 8 · 结果 seq —');
+    expect(step?.textContent).toContain('调用序号 8 · 结果序号 —');
     expect(after?.textContent).toContain('终态后事件');
     expect(after?.textContent).toContain('拉取滞后 +62.0s');
   });
@@ -426,7 +426,7 @@ describe('RUN-02 — trace derivation (runTrace.ts)', () => {
     await waitReady();
     const trace = screen.getByTestId('agent-v2-rd-trace');
     expect(trace.textContent).toContain('不显示（无单 run 成本明细通路）');
-    expect(trace.textContent).toContain('本页只解释 stepSeq / toolName 两个键');
+    expect(trace.textContent).toContain('只有「步骤序号」与「工具名」会被解释');
     expect(trace.textContent).not.toContain('意图识别');
     expect(trace.textContent).not.toContain('知识检索');
   });
@@ -460,7 +460,7 @@ describe('RUN-02 — trace derivation (runTrace.ts)', () => {
     await waitReady();
 
     const trace = screen.getByTestId('agent-v2-rd-trace');
-    expect(trace.textContent).toContain('已加载 2 条事件 · 派生步骤 0 个');
+    expect(trace.textContent).toContain('已加载 2 条事件 · 步骤 0 个');
     expect(trace.textContent).toContain('缺工具名');
     expect(trace.textContent).toContain('未知事件');
     expect(trace.textContent).toContain('mystery.event');
@@ -484,14 +484,14 @@ describe('RUN-02 — trace derivation (runTrace.ts)', () => {
       expect(screen.getByTestId('agent-v2-rd-trace').textContent).toContain('已加载 12 条事件'),
     );
     const seqs = screen.getAllByTestId('agent-v2-rd-row').map((r) => r.textContent ?? '');
-    expect(seqs.filter((r) => r.includes('seq 12'))).toHaveLength(1);
+    expect(seqs.filter((r) => r.includes('序号 12'))).toHaveLength(1);
     expect(screen.queryByTestId('agent-v2-rd-more')).toBeNull();
   });
 
   it('E17: count has no denominator and the page has no total/pager copy', async () => {
     renderPage(makeApi());
     await waitReady();
-    expect(screen.getByTestId('agent-v2-rd-trace').textContent).toContain('已加载 12 条事件 · 派生步骤 4 个');
+    expect(screen.getByTestId('agent-v2-rd-trace').textContent).toContain('已加载 12 条事件 · 步骤 4 个');
     expect(document.body.textContent).not.toMatch(/共\s*\d+\s*条|页码|第\s*\d+\s*页/);
   });
 });
@@ -519,7 +519,7 @@ describe('RUN-02 — no-event and failure states', () => {
     expect(empty.textContent).toContain('这次运行没有事件');
     expect(empty.textContent).toContain('本页不会补出假步骤、也不会把它判成失败');
     expect(screen.getByTestId('agent-v2-rd-empty-retry').textContent).toContain('重新拉取');
-    expect(screen.getByTestId('agent-v2-rd-fresh').textContent).toContain('事件流未发起请求（seq 为 0）');
+    expect(screen.getByTestId('agent-v2-rd-fresh').textContent).toContain('事件流未发起请求（暂无事件）');
     const duration = screen.getByTestId('agent-v2-rd-f-duration');
     expect(duration.textContent).toContain('未开始，不编数字');
     expect(duration.textContent).toContain('—');

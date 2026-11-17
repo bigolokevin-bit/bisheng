@@ -460,9 +460,22 @@ export function fmtUsd(v: number | null | undefined): string {
   return `USD ${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/**
+ * S1 human percent: whole numbers only — 99.6% never rounds up to a fake
+ * 「100%」 and a non-zero sliver never collapses to 「0%」.
+ */
+export function fmtPct(v: number): string {
+  if (v >= 1) return '100%';
+  if (v <= 0) return '0%';
+  const r = Math.round(v * 100);
+  if (r >= 100) return '99%';
+  if (r === 0) return '<1%';
+  return `${r}%`;
+}
+
 export function fmtRatio(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—';
-  return `${(v * 100).toFixed(1)}%`;
+  return fmtPct(v);
 }
 
 /** Asia/Shanghai 'MM-DD HH:mm' (cross-year adds the year, per SPEC §2.2). */

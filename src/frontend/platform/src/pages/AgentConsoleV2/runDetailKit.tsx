@@ -14,6 +14,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RunStatus } from '@/controllers/API/agentConsoleRuns';
+import { fmtPct } from './v2Data';
 
 /* ---------- contract vocabulary ---------- */
 
@@ -209,7 +210,7 @@ export function fmtCap(cap: number | null | undefined): string {
   return typeof cap === 'number' && Number.isFinite(cap) ? String(cap) : '—';
 }
 
-/** Ratio only when both sides exist and the cap is non-zero (派生值). */
+/** Ratio only when both sides exist and the cap is non-zero (S1: whole %). */
 export function fmtRatio(
   costUsd: number | null | undefined,
   budgetCapUsd: number | null | undefined,
@@ -218,7 +219,7 @@ export function fmtRatio(
   if (typeof budgetCapUsd !== 'number' || !Number.isFinite(budgetCapUsd) || budgetCapUsd <= 0) {
     return null;
   }
-  return `${((costUsd / budgetCapUsd) * 100).toFixed(1)}%`;
+  return fmtPct(costUsd / budgetCapUsd);
 }
 
 /** Pull lag of one event (pulledAt − occurredAt); null when unparsable. */
