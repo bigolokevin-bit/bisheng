@@ -4299,6 +4299,7 @@
     "riskFailed": "今日失败 {{n}}",
     "riskOverBudget": "预算超限",
     "noRisk": "无风险",
+    "runsNone": "今日未运行",
     "stActive": "在岗",
     "stOnboarding": "入职中",
     "stPaused": "暂停",
