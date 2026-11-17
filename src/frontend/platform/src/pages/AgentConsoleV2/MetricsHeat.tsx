@@ -185,8 +185,12 @@ export function HeatGrid({ model, t, now, hrefFor, ariaLabel, testid }: HeatGrid
                 // S5: integer share; count > 0 ⇒ never prints 0%
                 pct:
                   model.total > 0
-                    ? String(Math.max(1, Math.round((tip.count / model.total) * 100)))
-                    : '0',
+                    ? tip.count >= model.total
+                      ? '100'
+                      : String(
+                          Math.min(99, Math.max(1, Math.floor((tip.count / model.total) * 100))),
+                        )
+                    : '—',
               })}
             </span>
           ) : (
@@ -203,7 +207,7 @@ export function HeatSideStats({ model, t, now }: { model: HeatModel; t: TFunctio
   const { hour: focusHour } = beijingNow(now);
   const peak = model.peak;
   const nightHigh = peak !== null && model.nightAvg !== null && model.nightAvg >= peak.count * 0.5;
-  const nightSum = model.nightAvg !== null ? Math.round(model.nightAvg * 56) : 0;
+  const nightSum = model.nightAvg !== null ? fmtInt(Math.round(model.nightAvg * 56)) : '—';
   return (
     <div className="met-heat-side">
       <div className="met-hs" data-testid="agent-v2-met-heat-peak">
@@ -227,8 +231,8 @@ export function HeatSideStats({ model, t, now }: { model: HeatModel; t: TFunctio
               // S5: integer share of the peak hour
               pct:
                 model.peakHourShare !== null
-                  ? String(Math.max(1, Math.round(model.peakHourShare * 100)))
-                  : '0',
+                  ? String(Math.min(99, Math.max(1, Math.floor(model.peakHourShare * 100))))
+                  : '—',
             })}
           </div>
         ) : null}
@@ -243,12 +247,14 @@ export function HeatSideStats({ model, t, now }: { model: HeatModel; t: TFunctio
           </b>
         </div>
         <div className="d">
-          {t('agentConsole.v2.met.heatNightSub', {
-            sum: fmtInt(nightSum),
-            status: nightHigh
-              ? t('agentConsole.v2.met.heatNightHigh')
-              : t('agentConsole.v2.met.heatNightOk'),
-          })}
+          {model.nightAvg === null
+            ? '—'
+            : t('agentConsole.v2.met.heatNightSub', {
+                sum: nightSum,
+                status: nightHigh
+                  ? t('agentConsole.v2.met.heatNightHigh')
+                  : t('agentConsole.v2.met.heatNightOk'),
+              })}
         </div>
       </div>
       <div className="met-hs" data-testid="agent-v2-met-heat-total">
