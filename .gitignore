@@ -330,3 +330,7 @@ config-106120.yaml
 values-106120.yaml
 
 src/frontend/platform/build.bak-s10b6/
+
+# lane build outputs (page lanes use build-<slug>; keep trees clean)
+src/frontend/platform/build-*/
+.opencode/
