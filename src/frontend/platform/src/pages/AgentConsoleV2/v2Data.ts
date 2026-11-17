@@ -75,11 +75,29 @@ export interface RunBucket {
   p95DurationMs?: number | null;
 }
 
+/** Window aggregates computed by R6 itself. `successRate`/`p95` are absent
+ *  when their denominator/sample floor is not met — absence is 「—」, never 0. */
+export interface RunStatsTotals {
+  runs: number;
+  succeeded: number;
+  failed: number;
+  cancelled: number;
+  interrupted: number;
+  running: number;
+  pending: number;
+  costUsd: number;
+  unknownRuns: number;
+  sampleCount: number;
+  successRate?: number;
+  p95?: number;
+}
+
 export interface RunStatsBody {
   from?: string;
   to?: string;
   bucket?: string;
   buckets: RunBucket[];
+  totals?: RunStatsTotals;
 }
 
 export interface ActivityCell {

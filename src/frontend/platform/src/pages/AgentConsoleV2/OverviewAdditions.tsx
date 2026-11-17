@@ -49,7 +49,9 @@ export function RecentRunsBlock({
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const runs = sortRecent(state.data?.items ?? []);
+  const raw = state.data?.items;
+  const malformed = state.ok && !Array.isArray(raw);
+  const runs = sortRecent(Array.isArray(raw) ? raw : []);
   return (
     <section className="ov-card" data-testid="agent-v2-ov-recent-runs">
       <div className="ov-card-hd">
@@ -64,11 +66,11 @@ export function RecentRunsBlock({
         <div className="ov-scan" data-testid="agent-v2-ov-recent-runs-loading">
           …
         </div>
-      ) : !state.ok ? (
+      ) : !state.ok || malformed ? (
         <div className="ov-buds">
           <BlockError
             message={t('agentConsole.v2.runsError')}
-            state={state}
+            state={malformed ? { ...state, ok: false } : state}
             onRetry={onRetry}
             testId="agent-v2-ov-recent-runs-error"
             retryTestId="agent-v2-ov-retry-recent-runs"
@@ -145,13 +147,18 @@ export function MatrixEntryCard({
 }) {
   const { t } = useTranslation();
   if (!state.ok && state.status === 404) return null;
-  const items = state.data?.items ?? [];
-  const risky = items.filter(
-    (row) =>
-      (row.risk?.failedRuns ?? 0) > 0 ||
-      (row.risk?.blockedApprovals ?? 0) > 0 ||
-      row.risk?.budgetOver === true
-  ).length;
+  const raw = state.data?.items;
+  const malformed = state.ok && !Array.isArray(raw);
+  const items = Array.isArray(raw) ? raw : [];
+  const riskKnown = items.every((row) => row.risk != null);
+  const risky = riskKnown
+    ? items.filter(
+        (row) =>
+          (row.risk?.failedRuns ?? 0) > 0 ||
+          (row.risk?.blockedApprovals ?? 0) > 0 ||
+          row.risk?.budgetOver === true
+      ).length
+    : 0;
   return (
     <section className="ov-card ov-entry" data-testid="agent-v2-ov-matrix-card">
       <div className="ov-card-hd">
@@ -165,10 +172,10 @@ export function MatrixEntryCard({
       <div className="ov-entry-bd">
         {state.loading ? (
           <p className="a2-meta">{t('agentConsole.v2.mtx.loading')}</p>
-        ) : !state.ok ? (
+        ) : !state.ok || malformed ? (
           <BlockError
             message={t('agentConsole.v2.errorQuery')}
-            state={state}
+            state={malformed ? { ...state, ok: false } : state}
             onRetry={onRetry}
             testId="agent-v2-ov-matrix-error"
             retryTestId="agent-v2-ov-retry-matrix"
@@ -207,7 +214,9 @@ export function CollabEntryCard({
 }) {
   const { t } = useTranslation();
   if (!state.ok && state.status === 404) return null;
-  const items = state.data?.items ?? [];
+  const raw = state.data?.items;
+  const malformed = state.ok && !Array.isArray(raw);
+  const items = Array.isArray(raw) ? raw : [];
   return (
     <section className="ov-card ov-entry" data-testid="agent-v2-ov-collab-card">
       <div className="ov-card-hd">
@@ -221,10 +230,10 @@ export function CollabEntryCard({
       <div className="ov-entry-bd">
         {state.loading ? (
           <p className="a2-meta">{t('agentConsole.v2.collab.state.loading.title')}</p>
-        ) : !state.ok ? (
+        ) : !state.ok || malformed ? (
           <BlockError
             message={t('agentConsole.v2.errorQuery')}
-            state={state}
+            state={malformed ? { ...state, ok: false } : state}
             onRetry={onRetry}
             testId="agent-v2-ov-collab-error"
             retryTestId="agent-v2-ov-retry-collab"

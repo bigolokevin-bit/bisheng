@@ -536,6 +536,7 @@ export function CostBudgetBlock({
   monthDays,
   todayDay,
   unknownRuns,
+  scopeComplete = true,
   onRetry,
 }: {
   cost: BlockState<BudgetBody>;
@@ -544,23 +545,28 @@ export function CostBudgetBlock({
   monthLabel: string;
   monthDays: number;
   todayDay: number;
-  unknownRuns: number;
+  unknownRuns: number | null;
+  scopeComplete?: boolean;
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const used = cost.ok ? sumCost(cost.data?.items) : null;
   const missing = cost.data?.missingEmployeeIds?.length ?? 0;
+  const unpriced = (cost.data?.items ?? []).filter(
+    (item) => typeof item.costUsd !== 'number' || !Number.isFinite(item.costUsd)
+  ).length;
+  const partial = cost.ok && (!scopeComplete || missing + unpriced > 0);
+  const used = cost.ok && !partial ? sumCost(cost.data?.items) : null;
   const limit = useMemo(() => {
+    if (rows.length === 0) return null;
     let acc = 0;
-    let seen = false;
     for (const row of rows) {
       const d = row.enrichment?.effectiveBudget?.monthlyCostUsd;
-      if (typeof d === 'number' && d > 0) {
-        acc += d;
-        seen = true;
-      }
+      /* Same G-4 rule as the KPI: only every employee having a cap makes the
+       * sum a tenant budget; a partial sum must not be shown as one. */
+      if (typeof d !== 'number' || !Number.isFinite(d) || d <= 0) return null;
+      acc += d;
     }
-    return seen ? acc : null;
+    return acc;
   }, [rows]);
   const bars = useMemo(() => {
     const costOf = new Map<string, number | null | undefined>();
@@ -622,17 +628,28 @@ export function CostBudgetBlock({
                 ) : (
                   <>
                     <b className="a2-mono">—</b>
-                    <span>{t('agentConsole.v2.ov.quotaNoLimit')}</span>
+                    <span>{limit != null ? t('agentConsole.v2.id.unknown') : t('agentConsole.v2.ov.quotaNoLimit')}</span>
                   </>
                 )}
               </div>
             </div>
+            {partial ? (
+              <p className="a2-meta" data-testid="agent-v2-ov-cost-partial">
+                {missing + unpriced > 0
+                  ? t('agentConsole.v2.ov.costMissing', { count: missing + unpriced })
+                  : t('agentConsole.v2.ov.costCaliber')}
+              </p>
+            ) : null}
             {limit != null ? (
               <div className="ov-bud">
                 <div className="l">
                   <span className="a2-micro">{t('agentConsole.v2.ov.quotaMicro')}</span>
                   <b className="a2-mono">
-                    {fmtUsd(used)} / {limit.toFixed(2)} · {t('agentConsole.v2.ov.quotaRemain', { v: fmtUsd(Math.max(limit - (used ?? 0), 0)) })}
+                    {used != null
+                      ? `${fmtUsd(used)} / ${limit.toFixed(2)} · ${t('agentConsole.v2.ov.quotaRemain', {
+                          v: fmtUsd(Math.max(limit - used, 0)),
+                        })}`
+                      : `— / ${limit.toFixed(2)} · ${t('agentConsole.v2.id.unknown')}`}
                   </b>
                 </div>
                 <QuotaSegments
@@ -655,8 +672,8 @@ export function CostBudgetBlock({
                 {projection != null ? (
                   <p className="ov-h">
                     {t('agentConsole.v2.ov.projection', { v: fmtUsd(projection), days: todayDay })}
-                    {missing + unknownRuns > 0
-                      ? t('agentConsole.v2.ov.projectionUnknown', { count: missing + unknownRuns })
+                    {missing + (unknownRuns ?? 0) > 0
+                      ? t('agentConsole.v2.ov.projectionUnknown', { count: missing + (unknownRuns ?? 0) })
                       : null}
                   </p>
                 ) : null}
@@ -736,7 +753,7 @@ export function AnomalyBlock({
   runs: BlockState<RunStatsBody>;
   approvals: BlockState<ApprovalStats>;
   windowLabel: string;
-  unknownRuns: number;
+  unknownRuns: number | null;
   budgetOverCount: number | null;
   budgetEmpCount: number;
   scannedAt: string | null;
@@ -753,7 +770,7 @@ export function AnomalyBlock({
   const hits =
     (failed != null && failed > 0 ? 1 : 0) +
     (dueSoon != null && dueSoon > 0 ? 1 : 0) +
-    (unknownRuns > 0 ? 1 : 0);
+    (unknownRuns != null && unknownRuns > 0 ? 1 : 0);
   const scan = (
     <div className="ov-scan" data-testid="agent-v2-ov-anomaly-scan">
       <b>
@@ -844,7 +861,7 @@ export function AnomalyBlock({
               </div>
             </div>
           ) : null}
-          {unknownRuns > 0 ? (
+          {unknownRuns != null && unknownRuns > 0 ? (
             <div className="ov-arow" data-testid="agent-v2-ov-anomaly-noledger">
               <span className="ai ac"><Icon name="alert" size={14} /></span>
               <div className="at">
@@ -866,10 +883,8 @@ export function AnomalyBlock({
 }
 
 function sumField(body: RunStatsBody | undefined, key: 'failed' | 'succeeded'): number | null {
-  if (!body) return null;
-  let acc = 0;
-  for (const b of body.buckets ?? []) acc += typeof b[key] === 'number' ? b[key] : 0;
-  return acc;
+  const v = body?.totals?.[key];
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
 /* ---------- recent activity (OV-A0…A3): table, localized + mono raw ---------- */
