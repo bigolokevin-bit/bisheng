@@ -193,7 +193,19 @@ function RailIcon({ name, size = 20 }: { name: string; size?: number }) {
 
 /** Rail entries in target §1 order. `path` is relative to /agent. The
  *  settings entry is pinned at the rail bottom (spacer above it), never in
- *  the scrollable middle. */
+ *  the scrollable middle.
+ *
+ *  2026-11-17 integration: the three pages that shipped without a rail entry
+ *  — /agent/collab, /agent/chat, /agent/skills — are wired in here, slotted
+ *  next to their nearest sibling, so they are reachable from the rail and the
+ *  breadcrumb below stops falling back to 「总览」 for them. `icon` stays a
+ *  key of RAIL_ICONS: the C1 audit forbids Unicode/emoji glyphs in the rail,
+ *  and no new geometry was authored — collab reuses `users` (employee to
+ *  employee delegation is a people surface), chat reuses `user` (one-to-one
+ *  conversation with a single employee; that key was otherwise only the
+ *  avatar fallback), skills reuses `list` (a ledger table, same list language
+ *  as 任务). Each entry carries its own visible rail label + aria-label, which
+ *  is what disambiguates the reused glyphs. */
 export const L1_ENTRIES: ReadonlyArray<{
   path: string;
   key: string;
@@ -204,9 +216,12 @@ export const L1_ENTRIES: ReadonlyArray<{
   { path: 'employees', key: 'navEmployees', icon: 'users' },
   { path: 'approvals', key: 'navApprovals', icon: 'clip' },
   { path: 'tasks', key: 'navTasks', icon: 'list' },
+  { path: 'collab', key: 'navCollab', icon: 'users' },
   { path: 'runs', key: 'navRuns', icon: 'act' },
+  { path: 'chat', key: 'navChat', icon: 'user' },
   { path: 'metrics', key: 'navMetrics', icon: 'trend' },
   { path: 'audit', key: 'navAudit', icon: 'hist' },
+  { path: 'skills', key: 'navSkills', icon: 'list' },
   { path: 'settings', key: 'navSettings', icon: 'cfg', bottom: true },
 ];
 
