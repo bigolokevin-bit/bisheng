@@ -220,11 +220,15 @@ function BlockError({
           {t('agentConsole.v2.retry')}
         </button>
       </div>
-      {res?.requestId ? (
-        <div className="req">
-          {t('agentConsole.v2.met.requestId')} <span className="a2-mono">{res.requestId}</span>
-        </div>
-      ) : null}
+      {/* S4: the request line is always present — id or 「未提供」. */}
+      <div className="req">
+        {t('agentConsole.v2.met.requestId')}{' '}
+        {res?.requestId ? (
+          <span className="a2-mono">{res.requestId}</span>
+        ) : (
+          t('agentConsole.v2.id.requestIdAbsent')
+        )}
+      </div>
     </div>
   );
 }
@@ -941,11 +945,14 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
               <div className="t plain">{t('agentConsole.v2.met.errNotFoundTitle')}</div>
               <div className="s">{t('agentConsole.v2.met.errNotFoundBody')}</div>
               <div className="tech">
+                {t('agentConsole.v2.met.requestId')}{' '}
                 {heat.res.requestId ? (
-                  <>
-                    {t('agentConsole.v2.met.requestId')} <span className="a2-mono">{heat.res.requestId}</span> ·{' '}
-                  </>
-                ) : null}
+                  <span className="a2-mono">{heat.res.requestId}</span>
+                ) : (
+                  /* S4: explicit 「未提供」, never a silent omission */
+                  t('agentConsole.v2.id.requestIdAbsent')
+                )}
+                {' · '}
                 {t('agentConsole.v2.met.heat404Tech')}
               </div>
             </div>

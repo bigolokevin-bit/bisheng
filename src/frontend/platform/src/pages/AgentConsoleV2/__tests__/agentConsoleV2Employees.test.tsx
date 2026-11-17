@@ -14,6 +14,9 @@ import { resolve } from 'node:path';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
+import { userContext } from '@/contexts/userContext';
+
+import { EmployeeDetailPage } from '../EmployeeDetailPage';
 import { EmployeesListPage } from '../EmployeesListPage';
 
 const EMP1 = 'emp_86A81CE8FF6F42E187BCF2B540';
@@ -192,12 +195,17 @@ function isoWeekAgoBoundary() {
 
 function renderPage(entry = '/agent/employees') {
   return render(
-    <MemoryRouter initialEntries={[entry]}>
-      <Routes>
-        <Route path="/agent/employees" element={<EmployeesListPage />} />
-      </Routes>
-      <RouteSearchProbe />
-    </MemoryRouter>
+    // S4: the 「待我审批」 KPI keys off the SESSION identity (the old code
+    // hardcoded human:1); the harness therefore signs in as user 1 — the
+    // same subject the approval-stats stub answers for.
+    <userContext.Provider value={{ user: { user_id: 1, user_name: 'opsadmin' } } as never}>
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/agent/employees" element={<EmployeesListPage />} />
+        </Routes>
+        <RouteSearchProbe />
+      </MemoryRouter>
+    </userContext.Provider>
   );
 }
 
@@ -252,6 +260,49 @@ describe('EmployeesListPage (W2 / EMP-01)', () => {
     const container = await screen.findByTestId('agent-v2-employees-page');
     expect(container.textContent).not.toContain('0.00');
     expect(container.textContent).not.toContain('undefined');
+  });
+
+  it('S4: a network failure reads 「未能读取」+retry and never masquerades as notFound', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('offline');
+      })
+    );
+    render(
+      <userContext.Provider value={{ user: { user_id: 1 } } as never}>
+        <MemoryRouter initialEntries={['/agent/employees/emp_1']}>
+          <Routes>
+            <Route path="/agent/employees/:id" element={<EmployeeDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </userContext.Provider>
+    );
+    const card = await screen.findByTestId('agent-v2-ed-readFailed');
+    expect(card.textContent).toContain('agentConsole.v2.ed.readFailedTitle');
+    expect(screen.queryByTestId('agent-v2-ed-notFound')).toBeNull();
+    // no gateway id on a dead network — the line says 未提供 (key form here)
+    expect(await screen.findByTestId('agent-v2-ed-reqid')).toHaveTextContent(
+      'agentConsole.v2.id.requestIdAbsent'
+    );
+  });
+
+  it('S4: without a session identity the 「待我审批」 KPI sends no approval-stats request and says why', async () => {
+    // Deliberately NO userContext.Provider here — the anonymous case.
+    render(
+      <MemoryRouter initialEntries={['/agent/employees']}>
+        <Routes>
+          <Route path="/agent/employees" element={<EmployeesListPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const pending = await screen.findByTestId('agent-v2-kpi-pending');
+    expect(pending.textContent).toBe('—');
+    const reason = await screen.findByTestId('agent-v2-kpi-pending-error');
+    expect(reason.textContent).toBe('agentConsole.v2.emp.kpiPendingNoIdentity');
+    // and no approval-stats call carried a guessed identity (S4: no uid ⇒
+    // the KPI never fires AP8 at all)
+    expect(urls.some((u) => u.includes('/api/approval-stats'))).toBe(false);
   });
 
   it('shows the ten spec columns in fixed order', async () => {

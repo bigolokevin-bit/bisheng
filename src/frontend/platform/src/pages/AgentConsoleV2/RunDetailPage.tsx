@@ -51,7 +51,8 @@ import {
   type RunStatus,
 } from '@/controllers/API/agentConsoleRuns';
 
-import { CopyId, LkIcon, StageCard } from './listkit';
+import { CopyId, LkIcon, ReqId, StageCard } from './listkit';
+import { FETCH_TIMEOUT_MS as HEAD_TIMEOUT_MS } from './v2Data';
 import { avatarChar, employeeLabelById } from './identity';
 import { useConsoleCrumbTail } from './Shell';
 import { buildRunTrace, TERMINAL_TRACE_EVENT_TYPES, type RunStep, type TraceEvent } from './runTrace';
@@ -191,9 +192,15 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
     setFailures(0);
     setMoreError(false);
     setHead({ kind: 'loading' });
+    /* S4: 10s cap on the R2 head — the error stage (with retry) replaces the
+     * skeleton on expiry; a late answer still lands and wins. */
+    const watchdog = window.setTimeout(() => {
+      if (live && epoch === headEpoch.current) setHead({ kind: 'error', status: 0 });
+    }, HEAD_TIMEOUT_MS);
     runs
       .getRunDetail({ id: runId })
       .then((res) => {
+        window.clearTimeout(watchdog);
         if (!live || epoch !== headEpoch.current) return;
         if (res.ok && res.data) {
           setHead({ kind: 'ready', run: res.data, pulledAt: Date.now() });
@@ -204,6 +211,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
         }
       })
       .catch((err: unknown) => {
+        window.clearTimeout(watchdog);
         if (!live || epoch !== headEpoch.current) return;
         if (err instanceof AuthError) {
           onAuth();
@@ -213,6 +221,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
       });
     return () => {
       live = false;
+      window.clearTimeout(watchdog);
     };
   }, [runs, runId, reloadToken, onAuth]);
 
@@ -245,6 +254,16 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
         setMoreBusy(true);
         setMoreError(false);
       }
+      /* S4: same 10s cap as the head — an expired initial flips to the
+       * honest events error strip; a late page still wins (dedup by seq). */
+      const slow = window.setTimeout(() => {
+        if (epoch !== eventsEpoch.current) return;
+        if (mode === 'initial') setEvents({ kind: 'error', status: 0 });
+        else if (mode === 'more') {
+          setMoreError(true);
+          setMoreBusy(false);
+        }
+      }, HEAD_TIMEOUT_MS);
       try {
         const res = await runs.listEvents({
           runId,
@@ -271,6 +290,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
         else if (mode === 'more') setMoreError(true);
         return false;
       } finally {
+        window.clearTimeout(slow);
         if (mode === 'more') setMoreBusy(false);
       }
     },
@@ -467,6 +487,8 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
             <Link className="lnk" to="/agent/runs" data-testid="agent-v2-rd-forbidden-back">
               {t('agentConsole.v2.run02.backToList')}
             </Link>
+            {/* S4: this route exposes no request id — an explicit 「未提供」. */}
+            <ReqId requestId={null} testId="agent-v2-rd-forbidden-reqid" />
           </StageCard>
         </div>
       </div>
@@ -519,6 +541,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                 </Link>
               </>
             )}
+            <ReqId requestId={null} testId="agent-v2-rd-error-reqid" />
           </StageCard>
         </div>
       </div>

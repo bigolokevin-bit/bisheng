@@ -5016,6 +5016,7 @@
       "emp": {
         "kpiOnDuty": "在岗",
         "kpiPending": "待审批",
+        "kpiPendingNoIdentity": "未登录会话，无法按「我」统计",
         "kpiCost": "本月成本",
         "kpiAnomaly": "异常",
         "kpiNoteTotal": "共 {{count}} 名在册",
@@ -5655,6 +5656,8 @@
         "forbidden": "无权限查看该员工",
         "notFound": "员工不存在或无权访问",
         "bannerOwner": "负责人",
+        "readFailedTitle": "本次未能读取",
+        "readFailedDesc": "无法连接员工服务（超时或网络不可达）。这不表示员工不存在，也不代表权限判定；请重试。",
         "bannerCreated": "创建于",
         "bannerUpdated": "最后更新",
         "bannerRevision": "配置修订 {{count}}",
@@ -6021,6 +6024,10 @@
         "footCaliber": "口径：时间为北京时间 · 成本 USD 原值 · unknown 不顶 0 · 游标分页无总数"
       },
       "id": {
+        "requestId": "请求编号",
+        "requestIdAbsent": "未提供",
+        "copyRequestId": "复制请求编号",
+        "copiedShort": "已复制",
         "unknown": "未知",
         "none": "—",
         "unnamed": "未命名",

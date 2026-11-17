@@ -189,6 +189,12 @@ export interface EffectiveConfigBody {
 
 // ---------- fetcher factory ----------
 
+/* S4: no skeleton may spin forever. Every v2Data fetch carries a 10s hard
+   cap (same caliber as the AUD-01 adapter and the APR-02 soft timeout): on
+   expiry the request is aborted and the caller receives an honest
+   status-0 `console.timeout` result, which renders as 「本次未能读取」. */
+export const FETCH_TIMEOUT_MS = 10_000;
+
 export function makeFetcher(base = '/agent-api', getToken?: () => string | null): Fetcher {
   const readToken =
     getToken ??
@@ -212,19 +218,32 @@ export function makeFetcher(base = '/agent-api', getToken?: () => string | null)
     const headers: Record<string, string> = { Accept: 'application/json' };
     const token = readToken();
     if (token) headers.Authorization = `Bearer ${token}`;
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS) : null;
     let res: Response;
     try {
-      res = await fetch(url, { headers });
+      res = await fetch(url, { headers, signal: controller?.signal });
     } catch {
-      return { ok: false, status: 0, data: null, code: 'console.network' };
+      if (timer) window.clearTimeout(timer);
+      return {
+        ok: false,
+        status: 0,
+        data: null,
+        code: controller?.signal.aborted ? 'console.timeout' : 'console.network',
+      };
     }
     const requestId = res.headers.get('X-Console-Request-Id') ?? undefined;
     let body: unknown = null;
     try {
       body = await res.json();
     } catch {
+      if (controller?.signal.aborted) {
+        if (timer) window.clearTimeout(timer);
+        return { ok: false, status: 0, data: null, code: 'console.timeout', requestId };
+      }
       body = null;
     }
+    if (timer) window.clearTimeout(timer);
     if (!res.ok) {
       const env = body as { code?: string; message?: string } | null;
       return {

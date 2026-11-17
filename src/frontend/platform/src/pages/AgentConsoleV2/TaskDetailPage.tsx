@@ -49,7 +49,8 @@ import {
 } from '@/controllers/API/agentConsoleTaskDetail';
 
 import { HelpTip } from './HelpTip';
-import { CopyId, LkIcon, StageCard } from './listkit';
+import { CopyId, LkIcon, ReqId, StageCard } from './listkit';
+import { FETCH_TIMEOUT_MS as HEAD_TIMEOUT_MS } from './v2Data';
 import { avatarChar, employeeLabelById, humanLabel } from './identity';
 import { useConsoleCrumbTail } from './Shell';
 import { CopyText, Field, Panel, RUN_STATUS_KEYS, fmtClock, fmtMoment, fullIso, statusTone } from './runDetailKit';
@@ -144,9 +145,15 @@ export function TaskDetailPage({
     let live = true;
     setHead({ kind: 'loading' });
     setRunStatus(null);
+    /* S4: 10s cap on the head load — a hung request flips the skeleton to
+     * the honest error stage (retry lives there); a late answer still lands. */
+    const watchdog = window.setTimeout(() => {
+      if (live) setHead({ kind: 'error', status: 0 });
+    }, HEAD_TIMEOUT_MS);
     tasks
       .getTaskDetail({ id: taskId })
       .then((res) => {
+        window.clearTimeout(watchdog);
         if (!live) return;
         if (res.ok && res.data) {
           setHead({ kind: 'ready', task: res.data, pulledAt: Date.now() });
@@ -157,6 +164,7 @@ export function TaskDetailPage({
         }
       })
       .catch((err: unknown) => {
+        window.clearTimeout(watchdog);
         if (!live) return;
         if (err instanceof AuthError) {
           onAuth();
@@ -166,6 +174,7 @@ export function TaskDetailPage({
       });
     return () => {
       live = false;
+      window.clearTimeout(watchdog);
     };
   }, [tasks, taskId, reloadToken, onAuth]);
 
@@ -234,6 +243,7 @@ export function TaskDetailPage({
             <Link className="lnk" to="/agent/tasks" data-testid="agent-v2-task-forbidden-back">
               {t('agentConsole.v2.tsk02.backToList')}
             </Link>
+            <ReqId requestId={null} testId="agent-v2-task-forbidden-reqid" />
           </StageCard>
         </div>
       </div>
@@ -293,6 +303,8 @@ export function TaskDetailPage({
                 </Link>
               </>
             )}
+            {/* S4: the gateway exposes no request id on this route — say so. */}
+            <ReqId requestId={null} testId="agent-v2-task-error-reqid" />
           </StageCard>
         </div>
       </div>

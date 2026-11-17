@@ -107,10 +107,26 @@ function isoShift(baseIso: string, days: number): string {
 
 // G15: copies ONLY the request id (safe diagnostic handle). Never the token,
 // never the response body, never the internal machine code.
-function DiagCopyButton({ requestId, testId }: { requestId?: string; testId: string }) {
+function DiagCopyButton({
+  requestId,
+  testId,
+  showAbsent,
+}: {
+  requestId?: string;
+  testId: string;
+  /** S4: page-level error screens show 「未提供」 when the id is missing;
+   *  KPI micro-blocks stay minimal (the value line is already 「—」). */
+  showAbsent?: boolean;
+}) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  if (!requestId) return null;
+  if (!requestId) {
+    return showAbsent ? (
+      <span className="a2-meta" data-testid={`${testId}-absent`}>
+        {t('agentConsole.v2.id.requestId')}：{t('agentConsole.v2.id.requestIdAbsent')}
+      </span>
+    ) : null;
+  }
   const handleCopy = () => {
     if (!navigator.clipboard?.writeText) return;
     void navigator.clipboard.writeText(requestId).then(() => {
@@ -289,35 +305,10 @@ export function EmployeesListPage() {
     };
   }, [fetchApi, keyword, lifecycleState, cursor, pageLimit, reloadToken]);
 
-  // ---- KPI aggregates: E14 + AP8 + R6 two rolling windows + P9 months ----
-  useEffect(() => {
-    let alive = true;
-    const win = dayWindow(7);
-    const prevWin = { from: isoShift(win.from, 7), to: win.from };
-    Promise.all([
-      fetchEmployeeStats(fetchApi),
-      fetchApprovalStats(fetchApi, 'human:1'),
-      fetchRunStats(fetchApi, { from: win.from, to: win.to }),
-      fetchRunStats(fetchApi, { from: prevWin.from, to: prevWin.to }),
-    ]).then(([stats, approvals, anomalyNow, anomalyPrev]) => {
-      if (alive) setKpi((k) => ({ ...k, stats, approvals, anomalyNow, anomalyPrev }));
-    });
-    return () => {
-      alive = false;
-    };
-  }, [fetchApi, reloadToken]);
-
-  // Keep `rows` referentially stable per listRes so downstream memos are sound.
-  const rows = useMemo(
-    () => (listRes?.ok ? listRes.data?.items ?? [] : []),
-    [listRes],
-  );
-  /* S2: same-name distinguishers + the operator's own identity (session only,
-     no new endpoint) for the readable owner cell. */
-  const dups = useMemo(
-    () => duplicateNames(rows.map((r) => ({ id: r.employeeId, name: r.name }))),
-    [rows],
-  );
+  /* S2/S4: the operator's own identity (session only, no new endpoint) feeds
+     both the readable owner cell (S2) and the 「待我审批」 KPI (S4). The KPI
+     used to fetch `human:1` unconditionally — a seed identity: every operator
+     saw user #1's queue. Now: current session uid, or NO request at all. */
   const ctx = useContext(userContext) as
     | { user?: { user_id?: number | string; user_name?: string; name?: string; username?: string } }
     | null;
@@ -326,6 +317,42 @@ export function EmployeesListPage() {
       ? ''
       : String(ctx.user.user_id);
   const currentName = String(ctx?.user?.user_name || ctx?.user?.name || ctx?.user?.username || '');
+
+  // ---- KPI aggregates: E14 + AP8 + R6 two rolling windows + P9 months ----
+  useEffect(() => {
+    let alive = true;
+    const win = dayWindow(7);
+    const prevWin = { from: isoShift(win.from, 7), to: win.from };
+    Promise.all([
+      fetchEmployeeStats(fetchApi),
+      currentUid
+        ? fetchApprovalStats(fetchApi, `human:${currentUid}`)
+        : Promise.resolve<ApiRes<ApprovalStats>>({
+            ok: false,
+            status: 0,
+            data: null,
+            code: 'console.no-identity',
+          }),
+      fetchRunStats(fetchApi, { from: win.from, to: win.to }),
+      fetchRunStats(fetchApi, { from: prevWin.from, to: prevWin.to }),
+    ]).then(([stats, approvals, anomalyNow, anomalyPrev]) => {
+      if (alive) setKpi((k) => ({ ...k, stats, approvals, anomalyNow, anomalyPrev }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [fetchApi, currentUid, reloadToken]);
+
+  // Keep `rows` referentially stable per listRes so downstream memos are sound.
+  const rows = useMemo(
+    () => (listRes?.ok ? listRes.data?.items ?? [] : []),
+    [listRes],
+  );
+  /* S2: same-name distinguishers for the readable name cell. */
+  const dups = useMemo(
+    () => duplicateNames(rows.map((r) => ({ id: r.employeeId, name: r.name }))),
+    [rows],
+  );
   const rowIds = useMemo(() => rows.map((r) => r.employeeId), [rows]);
   const rowIdsKey = rowIds.join(',');
 
@@ -544,7 +571,11 @@ export function EmployeesListPage() {
           {kpi.approvals && !kpi.approvals.ok ? (
             <KpiBlockError
               res={kpi.approvals}
-              reason={t('agentConsole.overview.pendingUnavailable')}
+              reason={
+                kpi.approvals.code === 'console.no-identity'
+                  ? t('agentConsole.v2.emp.kpiPendingNoIdentity')
+                  : t('agentConsole.overview.pendingUnavailable')
+              }
               testIdBase="agent-v2-kpi-pending"
             />
           ) : (
@@ -697,7 +728,7 @@ export function EmployeesListPage() {
             >
               {t('agentConsole.v2.retry')}
             </button>
-            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" />
+            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" showAbsent />
           </div>
         </div>
       ) : isForbidden ? (
@@ -713,7 +744,7 @@ export function EmployeesListPage() {
             >
               {t('agentConsole.v2.retry')}
             </button>
-            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" />
+            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" showAbsent />
           </div>
         </div>
       ) : isError ? (
@@ -736,7 +767,7 @@ export function EmployeesListPage() {
             >
               {t('agentConsole.v2.retry')}
             </button>
-            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" />
+            <DiagCopyButton requestId={listRes?.requestId} testId="agent-v2-employees-diag" showAbsent />
           </div>
         </div>
       ) : listLoading && !listRes ? (

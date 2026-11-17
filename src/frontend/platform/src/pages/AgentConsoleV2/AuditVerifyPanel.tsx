@@ -535,13 +535,18 @@ function VerifyFailed({
         </div>
       </div>
       <div className="tail">
-        {requestId ? (
-          <div className="kv">
-            <span className="k">{t('agentConsole.v2.aud01.verifyRequestIdLabel')}</span>
-            <span className="mono">{requestId}</span>
-            <span className="hd-note">{t('agentConsole.v2.aud01.verifyRequestIdNote')}</span>
-          </div>
-        ) : null}
+        {/* S4: always present — copyable id or an explicit 「未提供」. */}
+        <div className="kv">
+          <span className="k">{t('agentConsole.v2.aud01.verifyRequestIdLabel')}</span>
+          {requestId ? (
+            <>
+              <span className="mono">{requestId}</span>
+              <span className="hd-note">{t('agentConsole.v2.aud01.verifyRequestIdNote')}</span>
+            </>
+          ) : (
+            <span className="hd-note">{t('agentConsole.v2.id.requestIdAbsent')}</span>
+          )}
+        </div>
         <div className="kv">
           <span className="k">{t('agentConsole.v2.aud01.verifyOtherCodesLabel')}</span>
           <span className="hd-note">{t('agentConsole.v2.aud01.verifyS4OtherCodes')}</span>

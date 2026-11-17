@@ -5071,6 +5071,7 @@
       "emp": {
         "kpiOnDuty": "On duty",
         "kpiPending": "Pending approvals",
+        "kpiPendingNoIdentity": "No signed-in session — the \"mine\" count cannot be attributed",
         "kpiCost": "Month cost",
         "kpiAnomaly": "Anomalies",
         "kpiNoteTotal": "{{count}} employees on record",
@@ -5710,6 +5711,8 @@
         "forbidden": "You do not have access to this employee",
         "notFound": "Employee not found or not accessible",
         "bannerOwner": "Owner",
+        "readFailedTitle": "Could not be read this time",
+        "readFailedDesc": "The employee service could not be reached (timeout or network). This says nothing about the employee existing or your permission; please retry.",
         "bannerCreated": "Created",
         "bannerUpdated": "Last updated",
         "bannerRevision": "Config revision {{count}}",
@@ -6076,6 +6079,10 @@
         "footCaliber": "Caliber: Beijing time · raw USD cost · unknown never becomes 0 · cursor pagination without total"
       },
       "id": {
+        "requestId": "Request no.",
+        "requestIdAbsent": "not provided",
+        "copyRequestId": "Copy request no.",
+        "copiedShort": "Copied",
         "unknown": "Unknown",
         "none": "—",
         "unnamed": "Unnamed",

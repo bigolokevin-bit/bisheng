@@ -44,6 +44,7 @@ import {
 } from './v2Data';
 
 import { ApprovalDecisionDialog } from './ApprovalDecisionDialog';
+import { ReqId } from './listkit/ReqId';
 import { bareId, humanLabel, identityText } from './identity';
 
 // AP4 list body — keyset page; nextCursor only when more rows exist
@@ -501,6 +502,10 @@ export function ApprovalsListPage() {
           >
             {t('agentConsole.v2.ov.retry')}
           </button>
+          {/* S4: request line — copyable id or 「未提供」. */}
+          <span style={{ display: 'block' }}>
+            <ReqId requestId={listRes?.requestId} testId="agent-v2-approvals-error-reqid" />
+          </span>
         </div>
       ) : listLoading && !listRes ? (
         <div className="a2s-skeleton" data-testid="agent-v2-approvals-loading" aria-hidden>

@@ -28,6 +28,7 @@ import { userContext } from '@/contexts/userContext';
 
 import { HelpTip } from './HelpTip';
 import { LkIcon } from './listkit/icons';
+import { ReqId } from './listkit/ReqId';
 import { avatarChar, humanLabel } from './identity';
 
 import {
@@ -739,21 +740,10 @@ export function TasksListPage() {
               : t('agentConsole.v2.tsk.errHttp', { code })}
         </p>
         <p className="a2-card-sub">{t('agentConsole.v2.tsk.errKeepNote')}</p>
-        {listRes?.requestId && (
-          <span className="a2-mono a2-micro" data-testid="agent-v2-tsk-error-reqid">
-            <button
-              type="button"
-              className="a2-btn"
-              aria-label={t('agentConsole.v2.tsk.reqIdAria')}
-              onClick={() => copyValue('req', listRes.requestId as string)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-            >
-              <Icon name="copy" size={12} />
-              {fmtId(listRes.requestId)}
-            </button>
-            {copiedKey === 'req' ? ` ${t('agentConsole.v2.tsk.copied')}` : ''}
-          </span>
-        )}
+        {/* S4: copyable request id, or an explicit 「未提供」. */}
+        <span style={{ display: 'block' }}>
+          <ReqId requestId={listRes?.requestId} testId="agent-v2-tsk-error-reqid" />
+        </span>
         <button type="button" className="a2-btn" data-testid="agent-v2-tsk-retry" onClick={handleRetry}>
           {t('agentConsole.v2.retry')}
         </button>
@@ -813,6 +803,9 @@ export function TasksListPage() {
                 : t('agentConsole.v2.tsk.errHttp', { code: listRes?.status ?? 0 })}
             {' · '}
             {t('agentConsole.v2.tsk.errKeepNote')}
+            {' · '}
+            {/* S4: the stale-table banner carries the same request line. */}
+            <ReqId requestId={listRes?.requestId} testId="agent-v2-tsk-banner-reqid" />
           </p>
         )}
         {cursorStale && (

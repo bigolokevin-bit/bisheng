@@ -15,6 +15,7 @@ import { NavLink, useParams, useSearchParams } from 'react-router-dom';
 
 import { userContext } from '@/contexts/userContext';
 import { LkIcon } from './listkit/icons';
+import { ReqId } from './listkit/ReqId';
 import { avatarChar, ownerDisplayLabel } from './identity';
 
 import {
@@ -53,6 +54,8 @@ interface Box<T> {
   ok: boolean;
   status: number;
   code?: string;
+  /** S4: the gateway request id when one came back — the error line needs it. */
+  rid?: string;
   data?: T;
 }
 
@@ -68,6 +71,7 @@ function box<T>(res: ApiRes<T>): Box<T> {
     ok: res.ok,
     status: res.status,
     code: res.code,
+    rid: res.requestId,
     data: res.ok ? res.data : undefined,
   };
 }
@@ -217,6 +221,29 @@ export function EmployeeDetailPage() {
     return (
       <div className="a2s-page" data-testid="agent-v2-employee-detail">
         <p className="a2-meta">{t('agentConsole.v2.loading')}</p>
+      </div>
+    );
+  }
+
+  /* S4: a network/timeout failure (status 0) is NOT a statement about the
+   * resource — it gets its own 「未能读取」 card with retry. Only genuine
+   * 401/403/404 answers reach the access states below. */
+  if (!detail.ok && !detail.loading && detail.status === 0) {
+    return (
+      <div className="a2s-page" data-testid="agent-v2-employee-detail">
+        <div className="a2-card" data-testid="agent-v2-ed-readFailed">
+          <h1 className="a2-h1">{t('agentConsole.v2.ed.readFailedTitle')}</h1>
+          <p className="a2-meta">{t('agentConsole.v2.ed.readFailedDesc')}</p>
+          <p style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="button" className="a2-btn" data-testid="agent-v2-ed-retry" onClick={refresh}>
+              {t('agentConsole.v2.retry')}
+            </button>
+            <NavLink className="a2-btn" to="/agent/employees">
+              {t('agentConsole.v2.ed.back')}
+            </NavLink>
+            <ReqId requestId={detail.rid} testId="agent-v2-ed-reqid" />
+          </p>
+        </div>
       </div>
     );
   }

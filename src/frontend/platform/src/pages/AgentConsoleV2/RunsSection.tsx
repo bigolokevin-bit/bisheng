@@ -45,6 +45,7 @@ import {
   FilterBar,
   LkIcon,
   ListSkeleton,
+  ReqId,
   StageCard,
   TableCard,
   useCursorList,
@@ -438,6 +439,8 @@ export function RunsSection({ api, consoleApi, initialEmployeeId }: RunsSectionP
               {t('agentConsole.v2.runs01.backOverview')}
             </a>
           ) : null}
+          {/* S4: request line always present — copyable id or 未提供. */}
+          <ReqId requestId={list.requestId} testId="agent-v2-runs-error-reqid" />
         </StageCard>
       </div>
     );
@@ -465,6 +468,7 @@ export function RunsSection({ api, consoleApi, initialEmployeeId }: RunsSectionP
             <LkIcon name="refresh" size={16} />
             {t('agentConsole.v2.runs01.forbiddenRetry')}
           </button>
+          <ReqId requestId={list.requestId} testId="agent-v2-runs-forbidden-reqid" />
         </StageCard>
       </div>
     );

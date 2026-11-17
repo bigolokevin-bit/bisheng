@@ -425,11 +425,15 @@ export function GroupGate({
             <span className="mono">{code}</span>
             {t('agentConsole.v2.set01.errBodyPost')}
           </span>
-          {requestId ? (
-            <span className="rid">
-              {t('agentConsole.v2.set01.errReqLabel')} <span className="mono">{requestId}</span>
-            </span>
-          ) : null}
+          {/* S4: the request line is always present — id or 「未提供」. */}
+          <span className="rid">
+            {t('agentConsole.v2.set01.errReqLabel')}{' '}
+            {requestId ? (
+              <span className="mono">{requestId}</span>
+            ) : (
+              t('agentConsole.v2.id.requestIdAbsent')
+            )}
+          </span>
           {onRetry ? (
             <button
               type="button"

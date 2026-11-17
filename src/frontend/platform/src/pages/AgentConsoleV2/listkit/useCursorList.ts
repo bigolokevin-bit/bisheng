@@ -26,15 +26,29 @@ export interface CursorPage<T> {
   nextCursor?: string | null;
 }
 
-export type CursorFetch<T> = (cursor: string | null) => Promise<ApiResult<CursorPage<T>>>;
+/**
+ * S4 additions on top of `ApiResult`: an optional `requestId` (shown on the
+ * error screens — absent reads 「未提供」, never silence) and the 10s loading
+ * watchdog (`LOADING_LIMIT_MS`): a first page still loading after that long
+ * flips the screen to the honest 「本次未能读取」 error state + retry, so no
+ * skeleton can spin forever on a hung request. A late success still lands
+ * and replaces the error screen.
+ */
+export type CursorFetchResult<T> = ApiResult<CursorPage<T>> & { requestId?: string };
+
+export type CursorFetch<T> = (cursor: string | null) => Promise<CursorFetchResult<T>>;
 
 export type ListPhase = 'loading' | 'ok' | 'error' | 'forbidden';
+
+export const LOADING_LIMIT_MS = 10_000;
 
 export interface CursorListState<T> {
   phase: ListPhase;
   items: T[];
   /** HTTP status of the failed first-page request (0 = network failure). */
   httpStatus: number;
+  /** S4: the failed/served request's id when the gateway supplied one. */
+  requestId: string | null;
   nextCursor: string | null;
   /** Replay guard tripped: a fetched page overlapped a seen page. */
   stale: boolean;
@@ -67,6 +81,7 @@ export function useCursorList<T>({
   const [phase, setPhase] = useState<ListPhase>('loading');
   const [items, setItems] = useState<T[]>([]);
   const [httpStatus, setHttpStatus] = useState(0);
+  const [requestId, setRequestId] = useState<string | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [stale, setStale] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -100,22 +115,34 @@ export function useCursorList<T>({
   // seen-page memory and the cursor (spec §7.5).
   useEffect(() => {
     let live = true;
+    let settled = false;
     seenRef.current = [];
     busyRef.current = true;
     setPhase('loading');
     setItems([]);
     setHttpStatus(0);
+    setRequestId(null);
     setNextCursor(null);
     setStale(false);
     setNextError(null);
     setLoadingMore(false);
     const cursor = skipInitialCursorRef.current ? null : (initialCursorRef.current ?? null);
     skipInitialCursorRef.current = false;
+    /* S4 loading watchdog: still pending after LOADING_LIMIT_MS ⇒ honest
+       「本次未能读取」 error screen with retry. No second request is fired. */
+    const watchdog = window.setTimeout(() => {
+      if (!live || settled) return;
+      setHttpStatus(0);
+      setPhase('error');
+    }, LOADING_LIMIT_MS);
     fetchRef
       .current(cursor)
       .then((res) => {
+        window.clearTimeout(watchdog);
         if (!live) return;
+        settled = true;
         busyRef.current = false;
+        setRequestId(res.requestId ?? null);
         if (res.ok && res.data && Array.isArray(res.data.items)) {
           seenRef.current = [new Set(res.data.items.map((it) => keyRef.current(it)))];
           setItems(res.data.items);
@@ -132,8 +159,11 @@ export function useCursorList<T>({
         }
       })
       .catch((e: unknown) => {
+        window.clearTimeout(watchdog);
         if (!live) return;
+        settled = true;
         busyRef.current = false;
+        setRequestId(null);
         if (e instanceof AuthError) {
           authRef.current?.();
           return;
@@ -143,6 +173,7 @@ export function useCursorList<T>({
       });
     return () => {
       live = false;
+      window.clearTimeout(watchdog);
     };
   }, [resetKey, nonce]);
 
@@ -151,14 +182,26 @@ export function useCursorList<T>({
     const cursor = nextCursor;
     if (!cursor) return;
     busyRef.current = true;
+    let settled = false;
     setLoadingMore(true);
     setNextError(null);
+    /* S4: same 10s cap on the next page — the button becomes the retry. */
+    const watchdog = window.setTimeout(() => {
+      if (!liveRef.current || settled) return;
+      settled = true;
+      busyRef.current = false;
+      setLoadingMore(false);
+      setNextError(0);
+    }, LOADING_LIMIT_MS);
     fetchRef
       .current(cursor)
       .then((res) => {
+        window.clearTimeout(watchdog);
         if (!liveRef.current) return;
+        settled = true;
         busyRef.current = false;
         setLoadingMore(false);
+        setRequestId(res.requestId ?? null);
         if (res.ok && res.data && Array.isArray(res.data.items)) {
           const keys = res.data.items.map((it) => keyRef.current(it));
           const overlaps = seenRef.current.some((seen) => keys.some((k) => seen.has(k)));
@@ -180,9 +223,12 @@ export function useCursorList<T>({
         }
       })
       .catch((e: unknown) => {
+        window.clearTimeout(watchdog);
         if (!liveRef.current) return;
+        settled = true;
         busyRef.current = false;
         setLoadingMore(false);
+        setRequestId(null);
         if (e instanceof AuthError) {
           authRef.current?.();
           return;
@@ -200,6 +246,7 @@ export function useCursorList<T>({
     phase,
     items,
     httpStatus,
+    requestId,
     nextCursor,
     stale,
     loadingMore,

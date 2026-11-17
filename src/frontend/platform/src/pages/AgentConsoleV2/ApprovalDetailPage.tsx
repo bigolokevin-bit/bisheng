@@ -40,6 +40,7 @@ import {
 
 import { HelpTip } from './HelpTip';
 import { LkIcon } from './listkit/icons';
+import { ReqId } from './listkit/ReqId';
 import { actorTypeLabel, avatarChar, bareId, employeeLabelById, humanLabel, identityText } from './identity';
 import { useConsoleCrumbTail } from './Shell';
 import { ApprovalDecisionDialog } from './ApprovalDecisionDialog';
@@ -49,9 +50,9 @@ import './approvalDetail.css';
 type View =
   | { kind: 'loading' }
   | { kind: 'ready'; data: ApprovalDetailBody; receivedAt: number }
-  | { kind: 'empty' }
-  | { kind: 'hidden'; code: 404 | 403 }
-  | { kind: 'error'; status: number; timeout?: boolean };
+  | { kind: 'empty'; rid?: string }
+  | { kind: 'hidden'; code: 404 | 403; rid?: string }
+  | { kind: 'error'; status: number; timeout?: boolean; rid?: string };
 
 const TERMINAL = ['approved', 'rejected', 'expired', 'cancelled', 'consumed', 'superseded'];
 
@@ -173,16 +174,16 @@ export function ApprovalDetailPage() {
       alive = false;
       window.clearTimeout(timer);
       if (res.ok) {
-        if (!res.data || !res.data.approvalId) setView({ kind: 'empty' });
+        if (!res.data || !res.data.approvalId) setView({ kind: 'empty', rid: res.requestId });
         else setView({ kind: 'ready', data: res.data, receivedAt: Date.now() });
       } else if (res.status === 401) {
         window.location.assign('/login');
       } else if (res.status === 404) {
-        setView({ kind: 'hidden', code: 404 });
+        setView({ kind: 'hidden', code: 404, rid: res.requestId });
       } else if (res.status === 403) {
-        setView({ kind: 'hidden', code: 403 });
+        setView({ kind: 'hidden', code: 403, rid: res.requestId });
       } else {
-        setView({ kind: 'error', status: res.status });
+        setView({ kind: 'error', status: res.status, rid: res.requestId });
       }
     });
     return () => {
@@ -213,7 +214,14 @@ export function ApprovalDetailPage() {
     return <DetailSkeleton note={apd('loadingNote')} aria={apd('loadingAria')} />;
   }
 
-  const stage = (icon: ReactNode, title: string, desc: ReactNode, retryLabel: string, testid: string) => (
+  const stage = (
+    icon: ReactNode,
+    title: string,
+    desc: ReactNode,
+    retryLabel: string,
+    testid: string,
+    reqLine?: ReactNode,
+  ) => (
     <div className="a2s-page" data-testid="agent-v2-approval-detail">
       <div className="a2d-backrow">{backBtn}</div>
       <div className="a2d-card a2d-stage" data-testid={testid}>
@@ -230,18 +238,41 @@ export function ApprovalDetailPage() {
             {apd('back')}
           </button>
         </div>
+        {/* S4: error/hidden/empty stages carry the request line — id or 「未提供」. */}
+        {reqLine}
       </div>
     </div>
   );
 
   if (view.kind === 'hidden') {
-    return stage(ILock, apd('hiddenTitle'), apd('hiddenDesc', { code: view.code }), apd('refreshTry'), view.code === 404 ? 'agent-v2-apd-notfound' : 'agent-v2-apd-forbidden');
+    return stage(
+      ILock,
+      apd('hiddenTitle'),
+      apd('hiddenDesc', { code: view.code }),
+      apd('refreshTry'),
+      view.code === 404 ? 'agent-v2-apd-notfound' : 'agent-v2-apd-forbidden',
+      <ReqId requestId={view.rid} testId="agent-v2-apd-hidden-reqid" />,
+    );
   }
   if (view.kind === 'empty') {
-    return stage(IInbox, apd('emptyTitle'), apd('emptyDesc'), apd('reload'), 'agent-v2-apd-emptybody');
+    return stage(
+      IInbox,
+      apd('emptyTitle'),
+      apd('emptyDesc'),
+      apd('reload'),
+      'agent-v2-apd-emptybody',
+      <ReqId requestId={(view as { rid?: string }).rid} testId="agent-v2-apd-empty-reqid" />,
+    );
   }
   if (view.kind === 'error') {
-    return stage(IInbox, apd('errorTitle'), view.timeout ? apd('errorTimeoutDesc') : apd('errorDesc', { code: view.status }), apd('reload'), 'agent-v2-apd-error');
+    return stage(
+      IInbox,
+      apd('errorTitle'),
+      view.timeout ? apd('errorTimeoutDesc') : apd('errorDesc', { code: view.status }),
+      apd('reload'),
+      'agent-v2-apd-error',
+      <ReqId requestId={view.rid} testId="agent-v2-apd-error-reqid" />,
+    );
   }
 
   /* ---------- ready ---------- */

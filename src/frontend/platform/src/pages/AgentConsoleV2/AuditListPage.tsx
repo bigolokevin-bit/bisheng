@@ -36,6 +36,7 @@ import {
   ListSkeleton,
   LkIcon,
   LkSelect,
+  ReqId,
   StageCard,
   TableCard,
   useCursorList,
@@ -649,6 +650,8 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
           <a className="lnk" href="/agent" style={{ alignSelf: 'center' }}>
             {t('agentConsole.v2.aud01.backOverview')}
           </a>
+          {/* S4: the request line is always present — copyable id or 未提供. */}
+          <ReqId requestId={list.requestId} testId="aud01-error-reqid" />
         </StageCard>
         <PageFoot t={t} />
       </div>
@@ -682,6 +685,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
             <LkIcon name="refresh" size={16} />
             {t('agentConsole.v2.aud01.forbiddenRetry')}
           </button>
+          <ReqId requestId={list.requestId} testId="aud01-forbidden-reqid" />
         </StageCard>
         <PageFoot t={t} />
       </div>

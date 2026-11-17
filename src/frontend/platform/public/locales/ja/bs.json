@@ -4897,6 +4897,7 @@
       "emp": {
         "kpiOnDuty": "稼働中",
         "kpiPending": "承認待ち",
+        "kpiPendingNoIdentity": "サインインしていないため「自分」基準で集計できません",
         "kpiCost": "当月コスト",
         "kpiAnomaly": "異常",
         "kpiNoteTotal": "登録 {{count}} 名",
@@ -5538,6 +5539,8 @@
         "forbidden": "この従業員を閲覧する権限がありません",
         "notFound": "従業員が存在しないか閲覧権限がありません",
         "bannerOwner": "責任者",
+        "readFailedTitle": "今回は読み取れませんでした",
+        "readFailedDesc": "従業員サービスに接続できませんでした（タイムアウトまたはネットワーク到達不可）。従業員の不在や権限判定を意味するものではありません。再試行してください。",
         "bannerCreated": "作成日",
         "bannerUpdated": "最終更新",
         "bannerRevision": "設定リビジョン {{count}}",
@@ -5904,6 +5907,10 @@
         "footCaliber": "口径：北京時間 · USD コスト原値 · unknown を 0 にしない · 総数なしカーソルページング"
       },
       "id": {
+        "requestId": "リクエスト番号",
+        "requestIdAbsent": "未提供",
+        "copyRequestId": "リクエスト番号をコピー",
+        "copiedShort": "コピー済み",
         "unknown": "不明",
         "none": "—",
         "unnamed": "名称未設定",

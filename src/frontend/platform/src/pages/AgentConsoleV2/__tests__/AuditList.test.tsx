@@ -15,7 +15,7 @@
  * - cursor foot: explicit next page, last page on key omission, stale guard.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('@/components/bs-ui/message', () => ({
   default: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
@@ -661,5 +661,29 @@ describe('AUD-01 S1 — engineering language stays off screen', () => {
     const range = screen.getByTestId('aud01-verify-range');
     expect(range.textContent).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2} → \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
     expect(range.getAttribute('title')).toMatch(/UTC$/);
+  });
+});
+
+// ---------------------------------------------------------------- S4 states
+
+describe('AUD-01 S4 — state honesty', () => {
+  it('a first page still pending after 10s flips the skeleton to the honest error screen', () => {
+    vi.useFakeTimers();
+    try {
+      const hang: AuditApi = {
+        listAudit: () => new Promise(() => undefined),
+        verifyAudit: () => new Promise(() => undefined),
+      };
+      render(<AuditListPage api={hang} initialSearch="?action=message.send" />);
+      expect(screen.queryByTestId('aud01-error')).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(10_001);
+      });
+      expect(screen.getByTestId('aud01-error')).toBeInTheDocument();
+      // no gateway id on a timed-out request — the line says 「未提供」
+      expect(screen.getByTestId('aud01-error-reqid').textContent).toContain('未提供');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
