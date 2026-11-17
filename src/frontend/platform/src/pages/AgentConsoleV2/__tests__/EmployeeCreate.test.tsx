@@ -132,9 +132,15 @@ function renderPage(entry = '/agent/employees/new', uid: number | string | null 
   );
 }
 
-function fill(name: string, title: string, note?: string) {
+function fill(name: string, title: string, note?: string, duty?: string) {
   fireEvent.change(screen.getByTestId('agent-v2-emp-c-name'), { target: { value: name } });
   fireEvent.change(screen.getByTestId('agent-v2-emp-c-title'), { target: { value: title } });
+  /* EMP-02 R3: duty is a required fourth field. Existing cases that never
+   * mention it still get a value, so they keep exercising the submit path
+   * instead of tripping the new client-side guard. */
+  fireEvent.change(screen.getByTestId('agent-v2-emp-c-duty'), {
+    target: { value: duty ?? '接售后工单，处理退换货与催派' },
+  });
   if (note !== undefined) {
     fireEvent.change(screen.getByTestId('agent-v2-emp-c-note'), { target: { value: note } });
   }
@@ -404,8 +410,155 @@ describe('EMP-02 employee create', () => {
     expect(screen.getByTestId('agent-v2-emp-c-save').textContent).toContain('保存');
     expect(screen.getByTestId('agent-v2-emp-c-back').getAttribute('href')).toBe('/agent/employees');
     expect(screen.getByTestId('agent-v2-emp-c-owner').querySelector('select')).toBeNull();
-    // exactly four fields, two of them required
-    expect(screen.getByTestId('agent-v2-emp-c-form').querySelectorAll('input, textarea').length).toBe(3);
-    expect(screen.getAllByText('必填').length).toBe(2);
+    /* E02 recount (declared in the receipt): the locked SPEC said "four fields"
+     * while the shipped form had three inputs + one read-only owner row. R3 adds
+     * the required job description, so the four typed fields are now
+     * 姓名 / 岗位 / 职责说明 / 备注 with three required, and the owner row stays
+     * read-only. Still no permission / workstation / budget control anywhere. */
+    expect(screen.getByTestId('agent-v2-emp-c-form').querySelectorAll('input, textarea').length).toBe(4);
+    expect(screen.getAllByText('必填').length).toBe(3);
+    expect(screen.getByTestId('agent-v2-emp-c-form').querySelectorAll('select').length).toBe(0);
   });
+  /* ---- EMP-02 R3 (QA 60106d0): initialVersion construction + error/copy states ---- */
+
+  it('builds initialVersion from what the operator typed, fabricates nothing, and never sends budget', async () => {
+    renderPage();
+    fill('小柯', '订单售后专员', '先接售后工单', '接售后工单，处理退换货');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+    await screen.findByTestId('agent-v2-emp-c-result');
+
+    expect(posts).toHaveLength(1);
+    const body = posts[0].body;
+    expect(Object.keys(body)).not.toContain('budget');
+    expect(Object.keys(body)).not.toContain('responsePolicy');
+    expect(Object.keys(body)).not.toContain('memoryScope');
+    const iv = body.initialVersion as Record<string, unknown>;
+    expect(iv).toBeTruthy();
+    expect(iv.jobDescription).toBe('接售后工单，处理退换货');
+    /* scope / skills / grants stay empty arrays: the page has no controls for
+     * them, so an invented value would be a lie the domain would act on. */
+    expect(iv.knowledgeScopes).toEqual([]);
+    expect(iv.skillRefs).toEqual([]);
+    expect(iv.grantIds).toEqual([]);
+    expect(typeof iv.effectiveFrom).toBe('string');
+    expect(Number.isNaN(Date.parse(String(iv.effectiveFrom)))).toBe(false);
+  });
+
+  it('guards the required job description before any request', async () => {
+    renderPage();
+    fireEvent.change(screen.getByTestId('agent-v2-emp-c-name'), { target: { value: '小柯' } });
+    fireEvent.change(screen.getByTestId('agent-v2-emp-c-title'), { target: { value: '订单售后专员' } });
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+
+    expect(await screen.findByTestId('agent-v2-emp-c-duty-error')).toHaveTextContent(
+      '还没填职责说明。'
+    );
+    expect(screen.getByTestId('agent-v2-emp-c-error-summary').textContent).toContain('职责说明是空的');
+    expect(posts).toHaveLength(0);
+    expect(document.activeElement).toBe(screen.getByTestId('agent-v2-emp-c-duty'));
+  });
+
+  it('names a spaces-only job description honestly and focuses it last', async () => {
+    renderPage();
+    fill('小柯', '订单售后专员', undefined, '   ');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+
+    expect(await screen.findByTestId('agent-v2-emp-c-duty-error')).toHaveTextContent(
+      '只有空格不算填了，请写清楚它负责哪一段活。'
+    );
+    expect(screen.getByTestId('agent-v2-emp-c-error-summary').textContent).toContain('职责说明只有空格');
+    expect(posts).toHaveLength(0);
+  });
+
+  it('puts the request id on the 400 banner without naming filled fields', async () => {
+    writeMode = 'status';
+    writeStatus = 400;
+    renderPage();
+    fill('小柯', '订单售后专员', '按话术回');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+
+    const bar = await screen.findByTestId('agent-v2-emp-c-save-error');
+    expect(bar.textContent).toContain('这次没有保存');
+    /* E08: the banner used to say 「检查一下姓名和岗位」 while both were filled.
+     * Field-level edges and the summary list carry that now. */
+    expect(bar.textContent).not.toContain('检查一下姓名和岗位');
+    expect(screen.queryByTestId('agent-v2-emp-c-name-error')).toBeNull();
+    expect(screen.queryByTestId('agent-v2-emp-c-title-error')).toBeNull();
+    expect(screen.getByTestId('agent-v2-emp-c-save-error-reqid').textContent).toContain('req_emp02');
+    expect(bar.querySelector('details')).toBeNull();
+  });
+
+  it('folds the technical information (status + request id) into the service-failure banner', async () => {
+    writeMode = 'status';
+    writeStatus = 500;
+    renderPage();
+    fill('小柯', '订单售后专员', '按话术回');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+
+    const bar = await screen.findByTestId('agent-v2-emp-c-save-error');
+    /* E09: the 500 screen had no 「技术信息（报障时提供）」 while 403 did. */
+    const tech = bar.querySelector('details.tech');
+    expect(tech).not.toBeNull();
+    expect(tech?.textContent).toContain('技术信息（报障时提供）');
+    expect(tech?.textContent).toContain('状态 500');
+    expect(tech?.textContent).toContain('req_emp02');
+    /* the raw status stays inside the fold, never in the body copy */
+    expect(visibleTextWithoutTech()).not.toContain('状态 500');
+    expect(screen.getByTestId('agent-v2-emp-c-save-error-reqid').textContent).toContain('req_emp02');
+    /* typed values survive a 500 */
+    expect((screen.getByTestId('agent-v2-emp-c-name') as HTMLInputElement).value).toBe('小柯');
+    expect((screen.getByTestId('agent-v2-emp-c-duty') as HTMLTextAreaElement).value).toBe(
+      '接售后工单，处理退换货与催派'
+    );
+  });
+
+  it('keeps the 403 screen in user words with no implementation self-description', async () => {
+    writeMode = 'status';
+    writeStatus = 403;
+    renderPage();
+    fill('小柯', '订单售后专员', '按话术回');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+
+    const screen403 = await screen.findByTestId('agent-v2-emp-c-forbidden');
+    expect(screen403.textContent).toContain('你暂时不能在这里新建员工');
+    expect(screen403.textContent).not.toContain('整页替换');
+    expect(screen403.textContent).not.toContain('渲染表单骨架');
+    expect(screen403.textContent).not.toContain('按了才报错');
+    /* the technical fold is still there for reporting */
+    expect(screen403.querySelector('details.tech')?.textContent).toContain('技术信息（报障时提供）');
+  });
+
+  it('keeps the full preview name reachable when the label truncates', () => {
+    renderPage();
+    const long = '需要很长很长才能够看出截断效果的员工名称';
+    fireEvent.change(screen.getByTestId('agent-v2-emp-c-name'), { target: { value: long } });
+    const pv = screen.getByTestId('agent-v2-emp-c-preview-name');
+    expect(pv.getAttribute('title')).toBe(long);
+  });
+
+  it('renders the same markup in dark and light theme (E15 honesty leg)', async () => {
+    renderPage();
+    fill('小柯', '订单售后专员', '按话术回');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+    await screen.findByTestId('agent-v2-emp-c-result');
+    const light = screen.getByTestId('agent-v2-emp-create').innerHTML;
+    /* Only unmount: the fetch stub and clipboard live in beforeEach and are
+     * released by afterEach, so the second render still exercises the write leg. */
+    cleanup();
+    /* Shell reads agentConsole.v2.theme once at mount, so the storage has to be
+     * set before the render, not after it. */
+    localStorage.setItem('agentConsole.v2.theme', 'dark');
+    renderPage();
+    await screen.findByTestId('agent-v2-emp-c-form');
+    /* Scope note: this harness mounts the page without the Shell, and the Shell
+     * is what puts data-theme on `.agent-app`. So this leg pins the *page-level*
+     * invariant (the form markup must not branch on theme); the byte-identical
+     * full-shell comparison stays with the L6 screenshot leg. */
+    expect(localStorage.getItem('agentConsole.v2.theme')).toBe('dark');
+    fill('小柯', '订单售后专员', '按话术回');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+    await screen.findByTestId('agent-v2-emp-c-result');
+    expect(screen.getByTestId('agent-v2-emp-create').innerHTML).toBe(light);
+  });
+
 });
