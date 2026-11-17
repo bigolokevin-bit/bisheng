@@ -4850,7 +4850,7 @@
         "queueTasks": "タスク",
         "queueRuns": "実行",
         "viewAll": "すべて表示",
-        "queueEmpty": "データなし",
+        "queueEmpty": "現在、待機中のタスクはありません",
         "queueNoUid": "現在のユーザーを特定できないためキューを利用できません",
         "queueUnavailable": "キューを利用できません",
         "noRuns": "実行なし",

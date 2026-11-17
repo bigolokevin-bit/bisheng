@@ -28,6 +28,7 @@ import {
   heartbeatStale,
   heatLevel,
   MET_THRESHOLDS,
+  fmtPercent,
   percentTone,
   p95Tone,
   reasonKey,
@@ -287,5 +288,17 @@ describe('MET-01 CSV export — fixed schema, empty never 0 (SPEC §7.1)', () =>
 
   it('exportFileName: metrics-YYYYMMDD-HHmm.csv in Beijing time', () => {
     expect(exportFileName(new Date('2026-11-16T01:40:00Z'))).toBe('metrics-20261116-0940.csv');
+  });
+});
+
+describe('S5 — integer percent rendering', () => {
+  it('rounds to whole percents without fake precision or zero lies', () => {
+    expect(fmtPercent(42.5)).toBe('43%');
+    expect(fmtPercent(100)).toBe('100%');
+    expect(fmtPercent(99.6)).toBe('99%');
+    expect(fmtPercent(0.4)).toBe('<1%');
+    expect(fmtPercent(0)).toBe('0%');
+    expect(fmtPercent(null)).toBe('—');
+    expect(fmtPercent(Number.NaN)).toBe('—');
   });
 });

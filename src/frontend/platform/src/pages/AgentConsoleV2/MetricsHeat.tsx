@@ -182,7 +182,11 @@ export function HeatGrid({ model, t, now, hrefFor, ariaLabel, testid }: HeatGrid
             <span>
               <span className="n a2-mono">{tip.count}</span>
               {t('agentConsole.v2.met.heatTipCount', {
-                pct: model.total > 0 ? ((tip.count / model.total) * 100).toFixed(1) : '0.0',
+                // S5: integer share; count > 0 ⇒ never prints 0%
+                pct:
+                  model.total > 0
+                    ? String(Math.max(1, Math.round((tip.count / model.total) * 100)))
+                    : '0',
               })}
             </span>
           ) : (
@@ -220,7 +224,11 @@ export function HeatSideStats({ model, t, now }: { model: HeatModel; t: TFunctio
             {t('agentConsole.v2.met.heatPeakSub', {
               day: t(HEAT_DAY_KEYS[peak.dow - 1]),
               hour: pad2(peak.hour),
-              pct: model.peakHourShare !== null ? (model.peakHourShare * 100).toFixed(1) : '0.0',
+              // S5: integer share of the peak hour
+              pct:
+                model.peakHourShare !== null
+                  ? String(Math.max(1, Math.round(model.peakHourShare * 100)))
+                  : '0',
             })}
           </div>
         ) : null}

@@ -85,9 +85,19 @@ export function fmtP95(ms: number | null | undefined): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-export function fmtPercent1(v: number | null | undefined): string {
+/**
+ * S5 integer percent: 42.5 shows as 43%, 99.6 never rounds up to a fake
+ * 「100%」, and a non-zero sliver never collapses to 「0%」. Null stays 「—」
+ * (the 未计价/样本不足 caliber from S1/S4).
+ */
+export function fmtPercent(v: number | null | undefined): string {
   if (v === null || v === undefined || !Number.isFinite(v)) return '—';
-  return `${v.toFixed(1)}%`;
+  if (v >= 100) return '100%';
+  if (v <= 0) return '0%';
+  const r = Math.round(v);
+  if (r >= 100) return '99%';
+  if (r === 0) return '<1%';
+  return `${r}%`;
 }
 
 export function fmtLoad(v: number | null | undefined): string {

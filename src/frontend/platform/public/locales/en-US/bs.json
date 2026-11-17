@@ -4905,7 +4905,7 @@
         "queueTasks": "Tasks",
         "queueRuns": "Runs",
         "viewAll": "View all",
-        "queueEmpty": "No data",
+        "queueEmpty": "Nothing is queued right now",
         "queueNoUid": "Current user unavailable",
         "queueUnavailable": "Queue unavailable",
         "noRuns": "No runs",

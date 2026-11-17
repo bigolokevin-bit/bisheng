@@ -57,7 +57,7 @@ import {
   fmtInt,
   fmtLoad,
   fmtP95,
-  fmtPercent1,
+  fmtPercent,
   fmtUptime,
   fmtUsd2,
   heartbeatStale,
@@ -1390,7 +1390,7 @@ function SystemCard({ s, t, updatedAt }: CardProps) {
             <div className="met-mrow">
               <div className="t">
                 <span className="k">{t('agentConsole.v2.met.a3Cpu')}</span>
-                <span className={`v ${percentTone(cpu, MET_THRESHOLDS.cpuMem)}`}>{fmtPercent1(cpu)}</span>
+                <span className={`v ${percentTone(cpu, MET_THRESHOLDS.cpuMem)}`}>{fmtPercent(cpu)}</span>
               </div>
               <div className="met-meter">
                 <i className={percentTone(cpu, MET_THRESHOLDS.cpuMem)} style={{ width: `${Math.min(100, Math.max(0, cpu ?? 0))}%` }} />
@@ -1410,7 +1410,7 @@ function SystemCard({ s, t, updatedAt }: CardProps) {
             <div className="met-mrow">
               <div className="t">
                 <span className="k">{t('agentConsole.v2.met.a3Memory')}</span>
-                <span className={`v ${percentTone(mem, MET_THRESHOLDS.cpuMem)}`}>{fmtPercent1(mem)}</span>
+                <span className={`v ${percentTone(mem, MET_THRESHOLDS.cpuMem)}`}>{fmtPercent(mem)}</span>
               </div>
               <div className="met-meter">
                 <i className={percentTone(mem, MET_THRESHOLDS.cpuMem)} style={{ width: `${Math.min(100, Math.max(0, mem ?? 0))}%` }} />
@@ -1432,7 +1432,7 @@ function SystemCard({ s, t, updatedAt }: CardProps) {
               <div className="t">
                 <span className="k">{t('agentConsole.v2.met.a3Disk')}</span>
                 <span className={`v ${percentTone(disk, MET_THRESHOLDS.disk)}`} data-testid="agent-v2-met-a3-disk">
-                  {fmtPercent1(disk)}
+                  {fmtPercent(disk)}
                 </span>
               </div>
               <div className="met-meter">
@@ -1495,7 +1495,9 @@ function SessionsCard({
     rest.length > 0
       ? [...top.map(([name, n]) => ({ name, n })), { name: t('agentConsole.v2.met.a4Other'), n: restSum }]
       : top.map(([name, n]) => ({ name, n }));
-  const pct = (n: number) => (total > 0 ? ((n / total) * 100).toFixed(1) : '0.0');
+  // S5: integer shares; a non-zero slice never prints 0%.
+  const pct = (n: number) =>
+    total > 0 && n > 0 ? String(Math.max(1, Math.round((n / total) * 100))) : '0';
   return (
     <div className="ov-card" data-testid="agent-v2-met-a4">
       <CardHead
@@ -1804,7 +1806,7 @@ function UsageBlock({
                       <td className="num">{fmtInt(r.output)}</td>
                       <td className="num">
                         <span className="met-share">
-                          <span className="p">{r.share === null ? '—' : `${r.share.toFixed(1)}%`}</span>
+                          <span className="p">{fmtPercent(r.share)}</span>
                           <span className="bar">
                             <i style={{ width: `${r.share ?? 0}%` }} />
                           </span>

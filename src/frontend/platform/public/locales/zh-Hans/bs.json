@@ -4850,7 +4850,7 @@
         "queueTasks": "任务",
         "queueRuns": "运行",
         "viewAll": "查看全部",
-        "queueEmpty": "暂无数据",
+        "queueEmpty": "当前没有排队中的待办",
         "queueNoUid": "无法识别当前用户，队列不可用",
         "queueUnavailable": "队列暂不可用",
         "noRuns": "无运行",

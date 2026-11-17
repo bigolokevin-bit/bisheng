@@ -212,6 +212,8 @@
   color: hsl(var(--foreground));
   font-size: 13px;
   cursor: pointer;
+  /* S5: 操作按钮（查看/详情/复制）不得单字换行 */
+  white-space: nowrap;
 }
 .agent-app .a2-btn.is-primary {
   background: hsl(var(--primary));
