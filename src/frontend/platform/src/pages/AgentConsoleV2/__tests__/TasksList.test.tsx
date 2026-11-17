@@ -191,10 +191,12 @@ describe('TSK-01 read-only task board (reconciled)', () => {
     expect(first).not.toContain('cursor=');
   });
 
-  it('has no create entry anywhere (L0 ruling: read-only page)', async () => {
+  it('exposes the create entry as a real link to TSK-03 (write page)', async () => {
     renderPage();
     await screen.findAllByTestId('agent-v2-task-row');
-    expect(screen.queryByText('新建任务')).toBeNull();
+    const create = screen.getByTestId('agent-v2-tsk-create');
+    expect(create.getAttribute('href')).toBe('/agent/tasks/new');
+    expect(create.textContent).toContain('新建任务');
   });
 
   it('renders contract columns honestly: id+title, zh status pill, assignee role, updated, progress null → —', async () => {

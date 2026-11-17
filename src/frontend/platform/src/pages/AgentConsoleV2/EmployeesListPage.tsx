@@ -11,7 +11,7 @@
 // requestId is offered through an explicit "copy diagnostics" control and is
 // never inlined in body text.
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { userContext } from '@/contexts/userContext';
 import { EmployeesHeatPanel } from './EmployeesHeatPanel';
@@ -530,20 +530,15 @@ export function EmployeesListPage() {
           <p className="a2-meta">{t('agentConsole.v2.shell.employeesDesc')}</p>
         </div>
         <div className="a2-card-actions">
-          <button
-            type="button"
+          <Link
             className="a2-btn"
+            to="/agent/employees/new"
             data-testid="agent-v2-employees-create"
-            disabled
-            title={t('agentConsole.v2.emp.createDisabledNote')}
           >
             {t('agentConsole.v2.emp.createEntry')}
-          </button>
+          </Link>
         </div>
       </div>
-      <p className="a2-meta" data-testid="agent-v2-employees-create-note">
-        {t('agentConsole.v2.emp.createDisabledNote')}
-      </p>
 
       {/* ---------- four KPI cards, service aggregates ---------- */}
       <div className="a2-kpis" data-testid="agent-v2-employees-kpis">

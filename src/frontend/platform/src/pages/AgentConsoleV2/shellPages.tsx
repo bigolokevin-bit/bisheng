@@ -10,6 +10,7 @@ import { AuditDetailPage } from './AuditDetailPage';
 import { AuditListPage } from './AuditListPage';
 import { ApprovalsListPage } from './ApprovalsListPage';
 import { EmployeeDetailPage } from './EmployeeDetailPage';
+import { EmployeeCreatePage } from './EmployeeCreatePage';
 import { EmployeesListPage } from './EmployeesListPage';
 import { MetricsPage as MetricsScreen } from './MetricsPage';
 import { OverviewPage as OverviewScreen } from './OverviewPage';
@@ -17,6 +18,7 @@ import { RunDetailPage } from './RunDetailPage';
 import { RunsSection } from './RunsSection';
 import { useShellApis } from './Shell';
 import { TaskDetailPage } from './TaskDetailPage';
+import { TaskCreatePage } from './TaskCreatePage';
 import { TasksListPage } from './TasksListPage';
 import MatrixScreen from './MatrixPage';
 import { SettingsPage as SettingsScreen } from './SettingsPage';
@@ -30,6 +32,12 @@ export function OverviewPage() {
 /* W2: the real employee list screen (parity spec §4 / EMP-01). */
 export function EmployeesPage() {
   return <EmployeesListPage />;
+}
+
+/* EMP-02: real employee creation at /agent/employees/new (emp02-target.html).
+ * The only page besides TSK-03 that writes; it posts through the BFF. */
+export function EmployeeCreateScreen() {
+  return <EmployeeCreatePage />;
 }
 
 /* EMP-03: employee detail screen at /agent/employees/:id. */
@@ -50,6 +58,12 @@ export function ApprovalDetailScreen() {
 /* TSK-01: real read-only task board (was an honest empty shell). */
 export function TasksPage() {
   return <TasksListPage />;
+}
+
+/* TSK-03: manual task creation at /agent/tasks/new (tsk03-target.html).
+ * Real write through the BFF; the source is fixed to manual. */
+export function TaskCreateScreen() {
+  return <TaskCreatePage />;
 }
 
 /* TSK-02: read-only task detail at /agent/tasks/:taskId (tsk02-target.html).
