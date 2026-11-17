@@ -37,6 +37,9 @@ export default function MatrixPage() {
   const [res, setRes] = useState<ApiRes<MatrixListBody> | null>(null);
   const [loading, setLoading] = useState(true);
   const [nonce, setNonce] = useState(0);
+  const [q, setQ] = useState('');
+  const [lcFilter, setLcFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'default' | 'name' | 'lifecycle'>('default');
 
   /* Deep link ?focus=<employeeId>: mark and bring the matching card into view.
    * The URL is never rewritten and an unknown/malformed value just matches
@@ -173,8 +176,72 @@ export default function MatrixPage() {
       <p className="a2-meta" data-testid="agent-v2-mtx-count">
         {t('agentConsole.v2.mtx.loaded', { count: rows.length })}
       </p>
+      <div className="a2-fbar" data-testid="agent-v2-mtx-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <input
+          className="a2-input"
+          type="search"
+          data-testid="agent-v2-mtx-q"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t('agentConsole.v2.mtx.searchPh')}
+          aria-label={t('agentConsole.v2.mtx.searchPh')}
+        />
+        <select
+          className="a2-input"
+          data-testid="agent-v2-mtx-lc"
+          value={lcFilter}
+          onChange={(e) => setLcFilter(e.target.value)}
+          aria-label={t('agentConsole.v2.mtx.lcAll')}
+        >
+          <option value="">{t('agentConsole.v2.mtx.lcAll')}</option>
+          {Object.entries(LIFECYCLE_KEY).map(([value, key]) => (
+            <option value={value} key={value}>
+              {t(key)}
+            </option>
+          ))}
+        </select>
+        <select
+          className="a2-input"
+          data-testid="agent-v2-mtx-sort"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as 'default' | 'name' | 'lifecycle')}
+          aria-label={t('agentConsole.v2.mtx.sortBy')}
+        >
+          <option value="default">{t('agentConsole.v2.mtx.sortDefault')}</option>
+          <option value="name">{t('agentConsole.v2.mtx.sortName')}</option>
+          <option value="lifecycle">{t('agentConsole.v2.mtx.sortLifecycle')}</option>
+        </select>
+      </div>
+      <p className="a2-meta" data-testid="agent-v2-mtx-summary">
+        {t('agentConsole.v2.mtx.sumTotal', { n: rows.length })} ·{' '}
+        {t('agentConsole.v2.mtx.sumActive', {
+          n: rows.filter((r) => (r.lifecycle ?? '').toLowerCase() === 'active').length,
+        })}{' '}
+        · {t('agentConsole.v2.mtx.sumRisk', { n: rows.filter((r) => riskSignalCount(r.risk) > 0).length })} ·{' '}
+        {t('agentConsole.v2.mtx.sumUnset', { n: rows.filter((r) => r.budget == null).length })}
+      </p>
+      {res.data?.nextCursor ? (
+        <p className="a2-meta" data-testid="agent-v2-mtx-truncated">
+          {t('agentConsole.v2.mtx.truncated', { n: rows.length })}
+        </p>
+      ) : null}
       <div className="a2-grid2" data-testid="agent-v2-mtx-rows">
-        {rows.map((r) => {
+        {rows
+          .filter((r) => !lcFilter || (r.lifecycle ?? '').toLowerCase() === lcFilter)
+          .filter((r) => {
+            const needle = q.trim().toLowerCase();
+            if (!needle) return true;
+            return [r.name ?? '', r.employeeId, r.versionRef ?? ''].some((v) =>
+              v.toLowerCase().includes(needle),
+            );
+          })
+          .slice()
+          .sort((a, b) => {
+            if (sortBy === 'name') return (a.name ?? '').localeCompare(b.name ?? '');
+            if (sortBy === 'lifecycle') return (a.lifecycle ?? '').localeCompare(b.lifecycle ?? '');
+            return 0;
+          })
+          .map((r) => {
           const lc = r.lifecycle ?? '';
           const lcKey = LIFECYCLE_KEY[lc];
           const tone = LIFECYCLE_TONE[lc] ?? 'neutral';
@@ -332,6 +399,9 @@ export default function MatrixPage() {
           );
         })}
       </div>
+      <p className="a2-meta" data-testid="agent-v2-mtx-foot">
+        {t('agentConsole.v2.mtx.foot')}
+      </p>
     </div>
   );
 }
