@@ -32,7 +32,16 @@ import {
   sortDelegations,
   taskLabel,
   tailOf,
+  correlationCode,
+  EMPTY_FILTER,
+  filterDelegations,
+  fmtUsd,
+  isFilterActive,
+  statusLabelKey,
   type ChainRow,
+  type DelegationFilter,
+  type StatusFilter,
+  type WindowFilter,
   type CollabApi,
   type DelegationRow,
   type EmployeeDirectory,
@@ -95,6 +104,7 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
   const [reloadToken, setReloadToken] = useState(0);
   const [more, setMore] = useState<MoreState>('idle');
   const [chainToken, setChainToken] = useState(0);
+  const [filters, setFilters] = useState<DelegationFilter>(EMPTY_FILTER);
 
   // Directory names: degraded silently — 「员工 · 末4位」 is the honest fallback.
   useEffect(() => {
@@ -195,6 +205,28 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
     () => rows.find((row) => row.delegationId === selectedId),
     [rows, selectedId],
   );
+
+  // §FILT: narrowing happens on what was loaded; no re-query, no total.
+  const visible = useMemo(() => filterDelegations(rows, filters), [rows, filters]);
+  const participants = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const row of rows) {
+      for (const id of [row.fromEmployeeId, row.toEmployeeId]) {
+        if (id && !seen.has(id)) seen.set(id, personName(id, names, t));
+      }
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  }, [rows, names, t]);
+  const filterActive = isFilterActive(filters);
+  const clearFilters = useCallback(() => setFilters(EMPTY_FILTER), []);
+
+  // A filtered-out selection would leave the detail card describing a row
+  // the reader can no longer see; move the selection to the first visible row.
+  useEffect(() => {
+    if (list.kind !== 'ready') return;
+    if (selectedId && visible.some((row) => row.delegationId === selectedId)) return;
+    setSelectedId(visible[0]?.delegationId);
+  }, [list.kind, visible, selectedId]);
 
   const retryList = useCallback(() => setReloadToken((n) => n + 1), []);
   const retryChain = useCallback(() => setChainToken((n) => n + 1), []);
@@ -309,8 +341,24 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
 
       {list.kind === 'ready' ? (
         <>
+          <FilterBar
+            filters={filters}
+            onChange={(patch) => setFilters((current) => ({ ...current, ...patch }))}
+            participants={participants}
+            active={filterActive}
+            onClear={clearFilters}
+            t={t}
+          />
+          {visible.length === 0 ? (
+            <EmptyPanel
+              title={t(`${NS}.state.empty.title`)}
+              desc={t('agentConsole.v2.tsk.emptyCond', { conditions: filterSummary(filters, t) })}
+              actionLabel={t('agentConsole.v2.tsk.clear')}
+              onAction={clearFilters}
+            />
+          ) : (
           <DelegationTable
-            rows={rows}
+            rows={visible}
             directory={directory}
             names={names}
             selectedId={selectedId}
@@ -320,6 +368,7 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
             onLoadMore={loadMore}
             t={t}
           />
+          )}
           {selected ? (
             <DelegationPanel
               row={selected}
@@ -336,6 +385,104 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
 
         <CollabFoot t={t} />
       </div>
+    </div>
+  );
+}
+
+const STATUS_FILTERS: Array<{ value: StatusFilter }> = [
+  { value: 'all' },
+  { value: 'requested' },
+  { value: 'accepted' },
+  { value: 'handed_off' },
+  { value: 'completed' },
+  { value: 'rejected' },
+];
+
+const WINDOW_FILTERS: Array<{ value: WindowFilter; key: string }> = [
+  { value: 'all', key: 'agentConsole.v2.runsFilterAll' },
+  { value: '24h', key: 'agentConsole.v2.runs01.window24h' },
+  { value: '7d', key: 'agentConsole.v2.runs01.window7d' },
+  { value: '30d', key: 'agentConsole.v2.runs01.window30d' },
+];
+
+function filterSummary(filters: DelegationFilter, t: TFunction): string {
+  const parts: string[] = [];
+  if (filters.status !== 'all') parts.push(t(statusLabelKey(filters.status)));
+  if (filters.window !== 'all') {
+    const hit = WINDOW_FILTERS.find((item) => item.value === filters.window);
+    if (hit) parts.push(t(hit.key));
+  }
+  if (filters.participant) parts.push(filters.participant);
+  return parts.join(' · ');
+}
+
+/** §FILT-01..04 — segmented status, segmented window, participant select, clear.
+ *  Every control has an action; no filter hides the row it would act on. */
+function FilterBar({
+  filters,
+  onChange,
+  participants,
+  active,
+  onClear,
+  t,
+}: {
+  filters: DelegationFilter;
+  onChange: (patch: Partial<DelegationFilter>) => void;
+  participants: Array<{ id: string; name: string }>;
+  active: boolean;
+  onClear: () => void;
+  t: TFunction;
+}) {
+  return (
+    <div className="fbar cfilt" data-testid="collab-filters">
+      <label className="fsel">
+        <span className="micro">{t('tenant.statusFilter')}</span>
+        <select
+          value={filters.status}
+          onChange={(event) => onChange({ status: event.target.value as StatusFilter })}
+          data-testid="collab-filter-status"
+        >
+          {STATUS_FILTERS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.value === 'all' ? t('agentConsole.v2.tsk.statusAny') : t(statusLabelKey(item.value))}
+            </option>
+          ))}
+        </select>
+      </label>
+      <span className="micro">{t('agentConsole.v2.runs01.filterSince')}</span>
+      <div className="seg" role="group" aria-label={t('agentConsole.v2.runs01.filterSince')}>
+        {WINDOW_FILTERS.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            aria-pressed={filters.window === item.value}
+            onClick={() => onChange({ window: item.value })}
+            data-testid={`collab-filter-window-${item.value}`}
+          >
+            {t(item.key)}
+          </button>
+        ))}
+      </div>
+      <label className="fsel">
+        <span className="micro">{t('agentConsole.v2.aud01.filterEmployee')}</span>
+        <select
+          value={filters.participant}
+          onChange={(event) => onChange({ participant: event.target.value })}
+          data-testid="collab-filter-participant"
+        >
+          <option value="">{t('agentConsole.v2.emp.filterAll')}</option>
+          {participants.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {active ? (
+        <button type="button" className="b gh sm" onClick={onClear} data-testid="collab-clear-filters">
+          {t('agentConsole.v2.tsk.clear')}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -402,7 +549,12 @@ function DelegationTable({
                       <span className="ttl">{taskLabel(row, t)}</span>
                       <span className="micro" title={row.taskId}>
                         {t(`${NS}.list.taskTail`, { tail: tailOf(row.taskId) })}
+                        {' · '}
+                        <span className="mono">{correlationCode(row)}</span>
                       </span>
+                      <Link className="lnk tlink" to={`/agent/tasks/${row.taskId}`}>
+                        {t(`${NS}.audit.task`)}
+                      </Link>
                     </div>
                   </td>
                   <td data-l={t(`${NS}.list.col.from`)}>
@@ -428,7 +580,12 @@ function DelegationTable({
                     </span>
                   </td>
                   <td data-l={t(`${NS}.list.col.budget`)}>
-                    <span className="budcell">{t(`${NS}.list.budgetOwner`, { name: owner })}</span>
+                    <span className="budcell">
+                      {t(`${NS}.list.budgetOwner`, { name: owner })}
+                      {typeof row.budget?.usedCostUsd === 'number' ? (
+                        <span className="mono ubud">{fmtUsd(row.budget.usedCostUsd)}</span>
+                      ) : null}
+                    </span>
                   </td>
                   <td data-l={t(`${NS}.list.col.status`)}>
                     <StatusPill status={row.status} t={t} />
