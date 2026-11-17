@@ -18,7 +18,7 @@
  *   exists (E10); 401 gets its own "session expired" screen.
  * - Zero engineering language in body copy: statuses, request ids, field names
  *   and the idempotency key only ever appear inside the collapsed 技术信息.
- * - No amount anywhere on this page: no currency symbol, no 元 (§0).
+ * - No amount anywhere on this page: no currency symbol, no local-currency word (§0).
  * - Success does not auto-navigate: the employee id stays copyable with the
  *   primary button moving the user forward (§9-1).
  */
