@@ -4299,6 +4299,7 @@
     "riskFailed": "本日失敗 {{n}}",
     "riskOverBudget": "予算超過",
     "noRisk": "リスクなし",
+    "runsNone": "本日の実行なし",
     "stActive": "在籍",
     "stOnboarding": "オンボーディング",
     "stPaused": "一時停止",

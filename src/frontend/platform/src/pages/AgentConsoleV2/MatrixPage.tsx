@@ -25,6 +25,7 @@ import {
   LIFECYCLE_KEY,
   LIFECYCLE_TONE,
   isBudgetConfigured,
+  normalizeRow,
   riskSignalCount,
   type MatrixEmployeeRow,
   type MatrixListBody,
@@ -53,7 +54,9 @@ export default function MatrixPage() {
   const retry = useCallback(() => setNonce((n) => n + 1), []);
 
   const rows: MatrixEmployeeRow[] =
-    res && res.ok && Array.isArray(res.data?.items) ? (res.data!.items as MatrixEmployeeRow[]) : [];
+    res && res.ok && Array.isArray(res.data?.items)
+      ? (res.data!.items as unknown[]).map(normalizeRow).filter((r) => r.employeeId !== '')
+      : [];
 
   const isTimeout = res != null && !res.ok && res.status === 0 && res.code === 'console.timeout';
   const isQueryError = res != null && !res.ok && res.status === 401;
@@ -217,17 +220,21 @@ export default function MatrixPage() {
               <p className="a2-meta" data-testid="agent-v2-mtx-runs">
                 {t('agentConsole.v2.mtx.runs')}{' '}
                 <span className="a2-mono">
-                  {runs && runs.total != null
-                    ? t('agentConsole.v2.mtx.runsDetail', {
-                        total: runs.total ?? '—',
-                        ok: runs.succeeded ?? '—',
-                        fail: runs.failed ?? '—',
-                      })
-                    : '—'}
+                  {runs == null || runs.total == null
+                    ? '—'
+                    : runs.total === 0
+                      ? t('agentConsole.v2.mtx.runsNone')
+                      : t('agentConsole.v2.mtx.runsDetail', {
+                          total: runs.total,
+                          ok: runs.succeeded ?? '—',
+                          fail: runs.failed ?? '—',
+                        })}
                 </span>
               </p>
               <p className="a2-meta" data-testid="agent-v2-mtx-risk">
-                {riskN === 0 ? (
+                {r.risk == null ? (
+                  <span className="a2-mono">—</span>
+                ) : riskN === 0 ? (
                   <span>{t('agentConsole.v2.mtx.noRisk')}</span>
                 ) : (
                   <span className="a2-warn" style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>

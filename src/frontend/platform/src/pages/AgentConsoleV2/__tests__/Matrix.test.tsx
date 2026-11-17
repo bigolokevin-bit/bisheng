@@ -228,4 +228,41 @@ describe('MATRIX-01 read-only employee matrix', () => {
     expect(document.querySelector('input')).toBeNull();
     expect(document.querySelector('form')).toBeNull();
   });
+
+  it('reads the upstream field spelling: lifecycleState + currentVersionId', async () => {
+    matrixStatus = 200;
+    matrixBody = {
+      items: [
+        {
+          employeeId: 'emp_u1',
+          name: '上游',
+          lifecycleState: 'offboarding',
+          currentVersionId: 'v7',
+        },
+      ],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-mtx-row');
+    const status = rows[0].querySelector('[data-testid="agent-v2-mtx-status"]') as HTMLElement;
+    const version = rows[0].querySelector('[data-testid="agent-v2-mtx-version"]') as HTMLElement;
+    expect(status.textContent).toBe('离职中');
+    expect(version.textContent).toContain('v7');
+    expect(version.textContent).not.toMatch(/—\s*$/);
+    guardNoRawKeys();
+  });
+
+  it('absent risk renders —, never 无风险; zero runs says 今日未运行', async () => {
+    matrixStatus = 200;
+    matrixBody = {
+      items: [{ employeeId: 'emp_u2', name: '空数据', lifecycle: 'active', todayRuns: { total: 0 } }],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-mtx-row');
+    const risk = rows[0].querySelector('[data-testid="agent-v2-mtx-risk"]') as HTMLElement;
+    const runs = rows[0].querySelector('[data-testid="agent-v2-mtx-runs"]') as HTMLElement;
+    expect(risk.textContent).not.toContain('无风险');
+    expect(risk.textContent?.trim()).toBe('—');
+    expect(runs.textContent).toContain('今日未运行');
+    guardNoRawKeys();
+  });
 });

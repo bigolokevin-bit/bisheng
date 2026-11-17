@@ -4354,6 +4354,7 @@
     "riskFailed": "{{n}} failed today",
     "riskOverBudget": "Over budget",
     "noRisk": "No risk",
+    "runsNone": "No runs today",
     "stActive": "Active",
     "stOnboarding": "Onboarding",
     "stPaused": "Paused",
