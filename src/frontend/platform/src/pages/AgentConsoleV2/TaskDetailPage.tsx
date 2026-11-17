@@ -53,7 +53,7 @@ import { CopyId, LkIcon, ReqId, StageCard } from './listkit';
 import { FETCH_TIMEOUT_MS as HEAD_TIMEOUT_MS } from './v2Data';
 import { avatarChar, employeeLabelById, humanLabel } from './identity';
 import { useConsoleCrumbTail } from './Shell';
-import { CopyText, Field, Panel, RUN_STATUS_KEYS, fmtClock, fmtMoment, fullIso, statusTone } from './runDetailKit';
+import { CopyText, Field, Panel, RUN_STATUS_KEYS, fmtClock, fmtMinuteFull, fmtMoment, fullIso, statusTone } from './runDetailKit';
 import {
   StateGraph,
   TERMINAL_TASK_STATUSES,
@@ -516,7 +516,7 @@ export function TaskDetailPage({
                   </span>
                 ) : (
                   <span className="mono" title={t('agentConsole.v2.tsk02.priUnknownTitle')}>
-                    {task.priority}
+                    {t('agentConsole.v2.tsk02.priUnknownTitle')}
                   </span>
                 )}
               </Field>
@@ -980,9 +980,7 @@ export function TaskDetailPage({
 /* ---------- helpers ---------- */
 
 function ttlMoment(updatedAt: string): string {
-  const ms = Date.parse(updatedAt);
-  if (!Number.isFinite(ms)) return '—';
-  return fmtMoment(new Date(ms + 72 * 3_600_000).toISOString());
+  return fmtMinuteFull(updatedAt);
 }
 
 /**

@@ -264,11 +264,11 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(employee.textContent).not.toContain('小鲤');
   });
 
-  it('E08: cost keeps the raw value, prints unknown literally and never shows USD 0.00', async () => {
+  it('E08: cost keeps the raw value, renders an unknown cost as a dash and never shows USD 0.00', async () => {
     const unknown = makeApi({ run: makeRun({ costUsd: null, costStatus: 'unknown', endedAt: null }) });
     const first = renderPage(unknown);
     await waitReady();
-    expect(screen.getByTestId('agent-v2-rd-f-cost').textContent).toContain('unknown');
+    expect(screen.getByTestId('agent-v2-rd-f-cost').textContent).toContain('—');
     expect(document.body.textContent).not.toContain('USD 0.00');
     first.unmount();
 
@@ -359,7 +359,7 @@ describe('RUN-02 — header, meta row and summary card', () => {
     const cal = screen.getByTestId('agent-v2-rd-caliber');
     expect(cal.textContent).toContain('上游实测');
     expect(cal.textContent).toContain('估算');
-    expect(cal.textContent).toContain('unknown');
+    expect(cal.textContent).toContain('—');
     expect(cal.textContent).toContain('尚无账目，成本未知；不显示 0');
     expect(cal.textContent).toContain('占上限 2% 由两者计算得出');
     expect(cal.textContent).toContain('步骤级成本没有读取通路');
