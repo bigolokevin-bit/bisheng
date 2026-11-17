@@ -285,6 +285,16 @@ export function EmployeeDetailPage() {
   );
   const grants = config.data?.grants ?? [];
   const knowledge = currentVersion?.knowledgeScopes ?? [];
+  /* GAP-2: an unset limit is not a limit of 0 — the version budget paragraph
+     prints 「未配置」 per missing field (and one line when all are unset)
+     instead of a fabricated 0 / USD 0.00. */
+  const versionBudget = currentVersion?.budget;
+  const budgetUnset = t('agentConsole.v2.ed.budgetUnset');
+  const budgetConfigured =
+    versionBudget != null &&
+    (versionBudget.dailyTokens != null ||
+      versionBudget.monthlyCostUsd != null ||
+      versionBudget.perRunMaxUsd != null);
   const budgetRow = budget.data?.items?.[0];
   const sums = bucketSum(runs.data?.buckets);
   const runsSpark = sparkPoints(runs.data?.buckets, 7);
@@ -595,20 +605,35 @@ export function EmployeeDetailPage() {
           <h2 className="a2-h2" style={{ marginTop: 16 }}>
             {t('agentConsole.v2.ed.budgetTitle')}
           </h2>
-          {currentVersion?.budget ? (
+          {versionBudget == null ? (
+            <p className="a2-meta" data-testid="agent-v2-ed-budget-row">
+              —
+            </p>
+          ) : budgetConfigured ? (
             <p className="a2-meta" data-testid="agent-v2-ed-budget-row">
               {t('agentConsole.v2.ed.budgetDailyTokens', {
-                count: currentVersion.budget.dailyTokens ?? 0,
+                value:
+                  versionBudget.dailyTokens != null
+                    ? String(versionBudget.dailyTokens)
+                    : budgetUnset,
               })}{' · '}
               {t('agentConsole.v2.ed.budgetMonthly', {
-                usd: fmtUsd(currentVersion.budget.monthlyCostUsd ?? 0),
+                value:
+                  versionBudget.monthlyCostUsd != null
+                    ? fmtUsd(versionBudget.monthlyCostUsd)
+                    : budgetUnset,
               })}{' · '}
               {t('agentConsole.v2.ed.budgetPerRun', {
-                usd: fmtUsd(currentVersion.budget.perRunMaxUsd ?? 0),
+                value:
+                  versionBudget.perRunMaxUsd != null
+                    ? fmtUsd(versionBudget.perRunMaxUsd)
+                    : budgetUnset,
               })}
             </p>
           ) : (
-            <p className="a2-meta">—</p>
+            <p className="a2-meta" data-testid="agent-v2-ed-budget-row">
+              {t('agentConsole.v2.ed.budgetNone')}
+            </p>
           )}
           {budget.ok ? (
             <p className="a2-micro" data-testid="agent-v2-ed-budget-actual">
