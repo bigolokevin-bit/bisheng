@@ -20,6 +20,8 @@
  */
 import { AuthError, type ApiResult } from '@/controllers/API/agent';
 
+import { actorLabel, resourceTypeLabel } from './identity';
+
 // ---------- A3 shapes (audit.py `_PUBLIC_OPTIONAL`, audit_query.py) ----------
 
 export interface AuditActor {
@@ -420,7 +422,7 @@ export type SearchTarget =
  * instead of guessing (§1.5 F3).
  */
 export function dispatchSearch(text: string): SearchTarget | null {
-  const value = text.trim();
+  const value = wireText(text).trim();
   if (!value) return null;
   if (value.startsWith('rn_')) return { kind: 'runId', value };
   if (value.startsWith('tk_')) return { kind: 'taskId', value };
@@ -428,6 +430,73 @@ export function dispatchSearch(text: string): SearchTarget | null {
   if (value.startsWith('emp_')) return { kind: 'employee', value };
   if (value.startsWith('ev_')) return { kind: 'event', value };
   return { kind: 'action', value };
+}
+
+// ---------- wire-value hygiene ----------
+
+/**
+ * Text from a JSON wire value.
+ *
+ * `schemaVersion: 1` (a number, which the live API really sends) used to reach
+ * `String#trim()` and crash a whole page — the E11 class of defect. Every
+ * wire-shaped helper coerces through here first, so a drifted producer can
+ * cost a wrong word but never a white screen.
+ */
+export function wireText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return '';
+}
+
+/**
+ * Enum identity: a known value is matched case-insensitively (`EMPLOYEE` →
+ * `employee`) so the localized word still resolves; an unlisted value keeps
+ * its original spelling and is rendered verbatim (未收录不机翻).
+ */
+export function normalizeEnum(value: unknown, known: ReadonlySet<string>): string {
+  const raw = wireText(value);
+  const lower = raw.trim().toLowerCase();
+  return known.has(lower) ? lower : raw;
+}
+
+/** Known actor types (AUD-01/AUD-02 share this enum). */
+export const ACTOR_TYPES: ReadonlySet<string> = new Set([
+  'human',
+  'employee',
+  'service',
+  'system',
+]);
+
+/** Readable actor line; upper-case enum variants resolve like their known form. */
+export function actorText(
+  actor: AuditActor | null | undefined,
+  names: Map<string, string> | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const type = normalizeEnum(actor?.type, ACTOR_TYPES);
+  const id = wireText(actor?.id);
+  const displayName = wireText(actor?.displayName) || undefined;
+  if (!type && !id && !displayName) return t('agentConsole.v2.id.unknown');
+  return actorLabel({ type, id, displayName }, names, t);
+}
+
+/**
+ * Resource type word (`EMPLOYEE` → 「员工」). The identity module knows the
+ * translated set; an unlisted type keeps its raw spelling.
+ */
+export function resourceWord(
+  type: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const raw = wireText(type);
+  const lower = raw.trim().toLowerCase();
+  const word = resourceTypeLabel(lower, t);
+  return word === lower ? raw : word;
+}
+
+/** True for an employee resource, regardless of the wire's letter case. */
+export function isEmployeeResource(type: unknown): boolean {
+  return wireText(type).trim().toLowerCase() === 'employee';
 }
 
 // ---------- value maps (spec §1.7 C2/C3/C6/C7) ----------
@@ -441,6 +510,18 @@ export const SOURCE_LABEL_KEYS: Record<string, string> = {
   bisheng: 'sourceBisheng',
   console: 'sourceConsole',
 };
+
+const SOURCE_VALUES: ReadonlySet<string> = new Set(Object.keys(SOURCE_LABEL_KEYS));
+
+/** Source-system word (7 known values, case-insensitive); unlisted stays verbatim. */
+export function sourceWord(
+  source: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const raw = wireText(source);
+  const key = SOURCE_LABEL_KEYS[normalizeEnum(raw, SOURCE_VALUES)];
+  return key ? t(`agentConsole.v2.aud01.${key}`) : raw;
+}
 
 /**
  * Exact action → label. Unknown actions render the RAW value in mono and get
@@ -457,9 +538,11 @@ export const ACTION_LABEL_KEYS: Record<string, string> = {
   'kb.read': 'actionKbRead',
 };
 
+const ACTION_VALUES: ReadonlySet<string> = new Set(Object.keys(ACTION_LABEL_KEYS));
+
 /** Label key for a known action, or null when the action is unlisted. */
-export function actionLabelKey(action: string): string | null {
-  return ACTION_LABEL_KEYS[action] ?? null;
+export function actionLabelKey(action: unknown): string | null {
+  return ACTION_LABEL_KEYS[normalizeEnum(action, ACTION_VALUES)] ?? null;
 }
 
 /** `not_applicable` is handled separately: `—` with its own tooltip (G-05). */
@@ -478,26 +561,42 @@ export const OUTCOME_KEYS: Record<string, string> = {
   pending: 'outcomePending',
 };
 
+const DECISION_VALUES: ReadonlySet<string> = new Set([...Object.keys(DECISION_KEYS), 'not_applicable']);
+const OUTCOME_VALUES: ReadonlySet<string> = new Set(Object.keys(OUTCOME_KEYS));
+
+/** Wire decision → known enum key, or the raw value when unlisted. */
+export function decisionEnum(decision: unknown): string {
+  return normalizeEnum(decision, DECISION_VALUES);
+}
+
+/** Wire outcome → known enum key, or the raw value when unlisted. */
+export function outcomeEnum(outcome: unknown): string {
+  return normalizeEnum(outcome, OUTCOME_VALUES);
+}
+
 /** Pill tone suffixes. `not_applicable`/absent never get a semantic colour. */
 export function decisionTone(decision: string | undefined): string {
-  if (decision === 'allow' || decision === 'approved') return 'ok';
-  if (decision === 'deny' || decision === 'rejected') return 'dg';
-  if (decision === 'require_approval') return 'wr';
+  const d = decisionEnum(decision);
+  if (d === 'allow' || d === 'approved') return 'ok';
+  if (d === 'deny' || d === 'rejected') return 'dg';
+  if (d === 'require_approval') return 'wr';
   return '';
 }
 
 export function outcomeTone(outcome: string | undefined): string {
-  if (outcome === 'success') return 'ok';
-  if (outcome === 'failure' || outcome === 'denied') return 'dg';
-  if (outcome === 'pending') return 'wr';
+  const o = outcomeEnum(outcome);
+  if (o === 'success') return 'ok';
+  if (o === 'failure' || o === 'denied') return 'dg';
+  if (o === 'pending') return 'wr';
   return '';
 }
 
-export function actorIcon(type: string): string {
-  if (type === 'human') return 'user';
-  if (type === 'employee') return 'users';
-  if (type === 'service') return 'server';
-  if (type === 'system') return 'cpu';
+export function actorIcon(type: unknown): string {
+  const t = normalizeEnum(type, ACTOR_TYPES);
+  if (t === 'human') return 'user';
+  if (t === 'employee') return 'users';
+  if (t === 'service') return 'server';
+  if (t === 'system') return 'cpu';
   return 'user';
 }
 
@@ -522,7 +621,7 @@ interface Parts {
 }
 
 function shParts(iso: string): Parts | null {
-  const ms = Date.parse(iso);
+  const ms = Date.parse(wireText(iso));
   if (!Number.isFinite(ms)) return null;
   const out: Record<string, string> = {};
   for (const p of SHANGHAI.formatToParts(new Date(ms))) out[p.type] = p.value;
@@ -553,7 +652,7 @@ export function formatStamp(iso: string): string {
 
 /** Verify window readout: `2026-11-16T09:20Z` (minutes resolution, UTC). */
 export function formatUtcMinute(iso: string): string {
-  const ms = Date.parse(iso);
+  const ms = Date.parse(wireText(iso));
   if (!Number.isFinite(ms)) return '—';
   return `${new Date(ms).toISOString().slice(0, 16)}Z`;
 }
@@ -567,8 +666,8 @@ export function formatShanghaiMinute(iso: string): string {
 
 /** recordedAt − occurredAt, `+0.8s` style; null when either is unparsable. */
 export function formatLatency(occurredAt: string, recordedAt: string): string | null {
-  const a = Date.parse(occurredAt);
-  const b = Date.parse(recordedAt);
+  const a = Date.parse(wireText(occurredAt));
+  const b = Date.parse(wireText(recordedAt));
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
   const ms = b - a;
   const sign = ms < 0 ? '−' : '+';
@@ -585,8 +684,8 @@ export function formatLatency(occurredAt: string, recordedAt: string): string | 
 export const CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 export function clockSkewMs(occurredAt: string, recordedAt: string): number {
-  const a = Date.parse(occurredAt);
-  const b = Date.parse(recordedAt);
+  const a = Date.parse(wireText(occurredAt));
+  const b = Date.parse(wireText(recordedAt));
   if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
   return Math.abs(b - a);
 }
@@ -607,21 +706,23 @@ export function formatSpan(ms: number): string {
  * more tail (they are compared by suffix), everything else keeps prefix+4…4.
  */
 export function shortId(id: string | undefined): string {
-  if (!id) return '—';
-  if (id.startsWith('ah_')) {
-    return id.length <= 14 ? id : `ah_${id.slice(3, 7)}…${id.slice(-6)}`;
+  const text = wireText(id);
+  if (!text.trim()) return '—';
+  if (text.startsWith('ah_')) {
+    return text.length <= 14 ? text : `ah_${text.slice(3, 7)}…${text.slice(-6)}`;
   }
-  const us = id.indexOf('_');
-  if (us > 0 && us <= 4 && id.length > us + 9) {
-    return `${id.slice(0, us + 5)}…${id.slice(-4)}`;
+  const us = text.indexOf('_');
+  if (us > 0 && us <= 4 && text.length > us + 9) {
+    return `${text.slice(0, us + 5)}…${text.slice(-4)}`;
   }
-  if (id.length <= 14) return id;
-  return `${id.slice(0, 4)}…${id.slice(-4)}`;
+  if (text.length <= 14) return text;
+  return `${text.slice(0, 4)}…${text.slice(-4)}`;
 }
 
 /** `human:u_10001` → `u_10001`; anything else unchanged (never invented). */
 export function onBehalfDisplay(onBehalfOf: string): string {
-  return onBehalfOf.startsWith('human:') ? onBehalfOf.slice('human:'.length) : onBehalfOf;
+  const raw = wireText(onBehalfOf);
+  return raw.startsWith('human:') ? raw.slice('human:'.length) : raw;
 }
 
 // ---------- row expansion: field diff (spec §1.8) ----------

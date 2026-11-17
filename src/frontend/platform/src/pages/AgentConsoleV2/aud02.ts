@@ -21,10 +21,14 @@ import { AuthError } from '@/controllers/API/agent';
 import {
   actionLabelKey,
   createHttpAuditApi,
+  decisionEnum,
   decisionTone,
   formatLatency,
+  outcomeEnum,
   outcomeTone,
   shortId,
+  sourceWord,
+  wireText,
   type AuditApi,
   type AuditEvent,
 } from './aud01';
@@ -120,8 +124,8 @@ export function createHttpAuditDetailApi(
 // ---------- absence semantics (§2.3) ----------
 
 /** Optional keys present with a usable (non-empty) value. */
-export function hasValue(value: string | null | undefined): boolean {
-  return typeof value === 'string' && value.trim() !== '';
+export function hasValue(value: unknown): boolean {
+  return wireText(value).trim() !== '';
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -239,7 +243,7 @@ function partsOf(fmt: Intl.DateTimeFormat, ms: number): Record<string, string> {
 
 /** Full-second + millisecond rendering; null when the value is unparsable. */
 export function eventClock(iso: string | undefined): WallClock | null {
-  const ms = Date.parse(iso ?? '');
+  const ms = Date.parse(wireText(iso));
   if (!Number.isFinite(ms)) return null;
   const bj = partsOf(SHANGHAI_PARTS, ms);
   const ut = partsOf(UTC_PARTS, ms);
@@ -263,8 +267,8 @@ export const SKEW_MS = 5 * 60 * 1000;
 
 /** >5min drift is a data-quality signal, never an error (§1.5 cell 2). */
 export function hasSkew(event: AuditEventDetail): boolean {
-  const a = Date.parse(event.occurredAt);
-  const b = Date.parse(event.recordedAt);
+  const a = Date.parse(wireText(event.occurredAt));
+  const b = Date.parse(wireText(event.recordedAt));
   if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
   return Math.abs(b - a) > SKEW_MS;
 }
@@ -293,10 +297,12 @@ export function outcomeLabel(
   outcome: string,
   t: (key: string) => string,
 ): { text: string; tone: string } | null {
-  const key = `agentConsole.v2.aud01.outcome${outcome.charAt(0).toUpperCase()}${outcome.slice(1)}`;
+  const value = outcomeEnum(outcome);
+  if (!value) return null;
+  const key = `agentConsole.v2.aud01.outcome${value.charAt(0).toUpperCase()}${value.slice(1)}`;
   const text = t(key);
   if (!text || text === key) return null;
-  return { text, tone: outcomeTone(outcome) };
+  return { text, tone: outcomeTone(value) };
 }
 
 /** Decision pill label + tone; `not_applicable` and absence never get colour. */
@@ -304,34 +310,27 @@ export function decisionLabel(
   decision: string,
   t: (key: string) => string,
 ): { text: string; tone: string } | null {
-  if (decision === 'not_applicable') return null;
-  const key = `agentConsole.v2.aud01.decision${decision.charAt(0).toUpperCase()}${decision.slice(1)}`;
+  const value = decisionEnum(decision);
+  if (!value || value === 'not_applicable') return null;
+  const key = `agentConsole.v2.aud01.decision${value.charAt(0).toUpperCase()}${value.slice(1)}`;
   const text = t(key);
   if (!text || text === key) return null;
-  return { text, tone: decisionTone(decision) };
+  return { text, tone: decisionTone(value) };
 }
 
 /** Source-system word (7 known values; anything else stays verbatim). */
 export function sourceText(source: string, t: (key: string) => string): string {
-  const keys: Record<string, string> = {
-    employee: 'sourceEmployee',
-    policy: 'sourcePolicy',
-    approval: 'sourceApproval',
-    runtime: 'sourceRuntime',
-    channel: 'sourceChannel',
-    bisheng: 'sourceBisheng',
-    console: 'sourceConsole',
-  };
-  const key = keys[source];
-  return key ? t(`agentConsole.v2.aud01.${key}`) : source;
+  return sourceWord(source, t);
 }
 
 /** Unresolved-reason words; an unlisted value passes through (未收录不机翻). */
 export function reasonText(reason: string, t: (key: string) => string): string {
-  if (reason === 'unknown_sender') return t('agentConsole.v2.aud02.reasonUnknownSender');
-  if (reason === 'system_job') return t('agentConsole.v2.aud02.reasonSystemJob');
-  if (reason === 'missing_owner') return t('agentConsole.v2.aud02.reasonMissingOwner');
-  return reason;
+  const raw = wireText(reason);
+  const value = raw.trim().toLowerCase();
+  if (value === 'unknown_sender') return t('agentConsole.v2.aud02.reasonUnknownSender');
+  if (value === 'system_job') return t('agentConsole.v2.aud02.reasonSystemJob');
+  if (value === 'missing_owner') return t('agentConsole.v2.aud02.reasonMissingOwner');
+  return raw;
 }
 
 /** Employee reference → name, 「员工 · 短码」, or 「未知」 (never a bare emp_ id). */
@@ -340,7 +339,7 @@ export function employeeText(
   names: Map<string, string> | undefined,
   t: (key: string) => string,
 ): string {
-  return employeeLabelById(id, names, t);
+  return employeeLabelById(wireText(id), names, t);
 }
 
 /** Human reference (`u_10001` / `human:u_10001`) → 「用户 #…」 or a real name. */
@@ -349,14 +348,14 @@ export function humanText(
   t: (key: string, options?: Record<string, unknown>) => string,
   name?: string | null,
 ): string {
-  const value = bareId((raw ?? '').trim());
+  const value = bareId(wireText(raw).trim());
   if (!value) return t(`${ID_NS}.unknown`);
   return humanLabel(value, t, name);
 }
 
 /** True when an id must not be printed verbatim (placeholders / opaque uids). */
 export function looksUnreadableId(value: string | undefined): boolean {
-  const v = (value ?? '').trim();
+  const v = wireText(value).trim();
   return v === '' || isPlaceholderIdentity(v);
 }
 

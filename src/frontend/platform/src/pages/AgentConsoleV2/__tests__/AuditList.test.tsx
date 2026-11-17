@@ -687,3 +687,106 @@ describe('AUD-01 S4 — state honesty', () => {
     }
   });
 });
+
+// ------------------------------------------- L4p4 identity + type closeout
+
+describe('AUD-01 identity closeout — upstream casing never leaks raw machine words', () => {
+  it('renders uppercase enums as Chinese and keeps the employee honourific', async () => {
+    const h = harness({
+      pages: [
+        okList([
+          event({
+            eventId: 'ev_UPPER',
+            sourceSystem: 'CHANNEL',
+            decision: 'APPROVED',
+            outcome: 'SUCCESS',
+            actor: { type: 'SYSTEM', id: 'employee-api' },
+            resource: { type: 'EMPLOYEE', id: 'emp_5B3C7A9D1E2F4068B5C3D7E9' },
+          }),
+        ]),
+      ],
+    });
+    renderPage(h);
+    const row = await screen.findByTestId('aud01-row-ev_UPPER');
+    const text = row.textContent ?? '';
+    expect(text).toContain('渠道');
+    expect(text).toContain('已批准');
+    expect(text).toContain('成功');
+    expect(text).toContain('员工');
+    expect(text).toContain('系统 · employee-api');
+    // machine words and the raw employee id stay off the visible line
+    expect(text).not.toContain('EMPLOYEE');
+    expect(text).not.toContain('SUCCESS');
+    expect(text).not.toContain('APPROVED');
+    expect(text).not.toContain('emp_5B3C7A9D1E2F4068B5C3D7E9');
+    // the copy button still carries the exact value for anyone who needs it
+    expect(row.querySelector('[title="emp_5B3C7A9D1E2F4068B5C3D7E9"]')).not.toBeNull();
+  });
+
+  it('logs no console error for known or unlisted enum values', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const h = harness({
+        pages: [
+          okList([
+            event({
+              eventId: 'ev_UNLISTED',
+              sourceSystem: 'mystery',
+              decision: 'odd_state',
+              outcome: 'half_done',
+            }),
+          ]),
+        ],
+      });
+      renderPage(h);
+      const row = await screen.findByTestId('aud01-row-ev_UNLISTED');
+      expect(row.textContent).toContain('mystery');
+      expect(row.textContent).toContain('odd_state');
+      expect(row.textContent).toContain('half_done');
+      const noise = spy.mock.calls.filter((args) => String(args[0]).includes('[AUD-01]'));
+      expect(noise).toEqual([]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('shows schemaVersion 0 as 0 in the expansion, not as a dash', async () => {
+    const h = harness({
+      pages: [okList([event({ eventId: 'ev_V0', schemaVersion: 0 })])],
+    });
+    renderPage(h);
+    fireEvent.click(await screen.findByTestId('aud01-expand-ev_V0'));
+    const box = await screen.findByTestId('aud01-exp-ev_V0');
+    const rows = Array.from(box.querySelectorAll('.integ .kv'));
+    const schemaRow = rows.find((node) => node.querySelector('.k')?.textContent === '契约版本');
+    expect(schemaRow).toBeTruthy();
+    expect(schemaRow?.querySelector('.mono')?.textContent).toBe('0');
+  });
+
+  it('treats the custom window as Beijing wall clock on the way out', async () => {
+    const h = harness({});
+    renderPage(h, '?window=custom');
+    fireEvent.change(await screen.findByTestId('aud01-custom-from'), {
+      target: { value: '2026-11-17T09:00' },
+    });
+    fireEvent.change(screen.getByTestId('aud01-custom-to'), {
+      target: { value: '2026-11-17T10:30' },
+    });
+    fireEvent.click(screen.getByTestId('aud01-custom-apply'));
+    await waitFor(() => expect(h.listCalls.length).toBe(1));
+    expect(h.listCalls[0].from).toBe('2026-11-17T01:00:00.000Z');
+    expect(h.listCalls[0].to).toBe('2026-11-17T02:30:00.000Z');
+  });
+
+  it('reads a Beijing custom window back into the inputs', async () => {
+    const h = harness({});
+    renderPage(
+      h,
+      '?window=custom&from=2026-11-17T01:00:00.000Z&to=2026-11-17T02:30:00.000Z',
+    );
+    const from = (await screen.findByTestId('aud01-custom-from')) as HTMLInputElement;
+    const to = screen.getByTestId('aud01-custom-to') as HTMLInputElement;
+    expect(from.value).toBe('2026-11-17T09:00');
+    expect(to.value).toBe('2026-11-17T10:30');
+  });
+});

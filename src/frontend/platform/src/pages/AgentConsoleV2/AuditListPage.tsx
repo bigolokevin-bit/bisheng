@@ -49,6 +49,7 @@ import {
   dispatchSearch,
   emptyQuery,
   filterSignature,
+  formatShanghaiMinute,
   formatStamp,
   hasAnyAuditFilter,
   listRange,
@@ -951,20 +952,18 @@ function hasExtraFilters(q: AuditQuery): boolean {
   );
 }
 
-/** ISO → `<input type="datetime-local">` value (local wall clock, minutes). */
+/** ISO → `<input type="datetime-local">` value, always Beijing wall clock (minutes). */
 function toLocalInput(iso: string): string {
   if (!iso) return '';
-  const ms = Date.parse(iso);
-  if (!Number.isFinite(ms)) return '';
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const stamp = formatShanghaiMinute(iso);
+  return stamp === '—' ? '' : stamp.replace(' ', 'T');
 }
 
-/** `<input type="datetime-local">` value → ISO (empty stays empty). */
+/** `<input type="datetime-local">` value (Beijing wall clock) → ISO (empty stays empty). */
 function fromLocalInput(value: string): string {
   if (!value) return '';
-  const ms = Date.parse(value);
+  const stamp = value.length === 16 ? `${value}:00` : value;
+  const ms = Date.parse(`${stamp}+08:00`);
   if (!Number.isFinite(ms)) return '';
   return new Date(ms).toISOString();
 }
