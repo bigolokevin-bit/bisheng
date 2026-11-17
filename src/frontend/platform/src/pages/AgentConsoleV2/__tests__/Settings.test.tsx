@@ -13,6 +13,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('react-i18next', async () => {
@@ -237,8 +238,11 @@ describe('SET-01 chain panel', () => {
     expect(goto.getAttribute('href')).toBe('/agent/audit');
     expect(goto.textContent).toContain('去审计中心');
     expect(within(panel).queryByTestId('aud01-verify-run')).toBeNull();
-    // the window seg and the auto-loaded result stay
-    expect(within(panel).getByTestId('aud01-vw-24h')).toBeTruthy();
+    // the window seg stays and still applies itself (no dead control)
+    const seg = within(panel).getByTestId('aud01-vw-7d');
+    expect(seg.getAttribute('aria-pressed')).toBe('false');
+    await userEvent.click(seg);
+    expect((await screen.findByTestId('aud01-vw-7d')).getAttribute('aria-pressed')).toBe('true');
 
     // scanned=0 with no anchor is S0 — neutral, never green
     const s0 = await screen.findByTestId('aud01-verify-s0');

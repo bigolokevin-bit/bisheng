@@ -167,6 +167,11 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run' }: AuditVerifyPane
               disabled={phase === 'loading'}
               onClick={() => {
                 setWindow(w);
+                /* In 'link' mode there is no run button, so a window change
+                 * must apply itself — otherwise the seg would be a control
+                 * that visibly presses and does nothing. Still a read-only A7
+                 * GET; AUD-01 keeps its explicit two-step behaviour. */
+                if (cta === 'link') run(w);
               }}
             >
               {t(WINDOW_LABEL_KEYS[w])}
