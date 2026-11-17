@@ -1,0 +1,913 @@
+/* COL-01 `/agent/collab` — read-only collaboration view.
+ *
+ * Tokens only: every colour is a design-system token declared on `.agent-app`
+ * and re-pointed for the light theme in the same DOM (agentConsoleV2.css).
+ * The three blocks share one 1120px left edge and centre as one column; below
+ * 768 the seven-column table becomes cards and the pairs stack, with zero
+ * horizontal scrolling at 375. */
+
+.agent-app .lk.collab {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- chrome */
+
+.agent-app .lk.collab .phead {
+  align-items: flex-start;
+}
+
+.agent-app .lk.collab .fresh-acts {
+  margin-left: 8px;
+}
+
+.agent-app .lk.collab .fresh-acts .b {
+  gap: 6px;
+}
+
+.agent-app .lk.collab .roband {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted-foreground);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.agent-app .lk.collab .roband .lk-i {
+  flex: 0 0 auto;
+  color: hsl(var(--accent));
+}
+
+.agent-app .lk.collab .roband p {
+  margin: 0;
+  min-width: 0;
+}
+
+.agent-app .lk.collab .roband .mono {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--micro-foreground);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- card shell */
+
+.agent-app .lk.collab .card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.agent-app .lk.collab .card-hd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.agent-app .lk.collab .hd-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.agent-app .lk.collab .card-hd .t {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.agent-app .lk.collab .hd-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .card-ft {
+  padding: 10px 18px;
+  border-top: 1px solid var(--hairline);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--micro-foreground);
+}
+
+/* 「协」/「审」 head glyph — a word, not a serial number (D-1). */
+.agent-app .lk.collab .zno {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- ① table */
+
+.agent-app .lk.collab .ctable-card .tblwrap {
+  overflow-x: visible;
+}
+
+.agent-app .lk.collab table.ctbl {
+  min-width: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.agent-app .lk.collab .ctbl th {
+  position: static;
+  padding: 10px 14px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--micro-foreground);
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+}
+
+.agent-app .lk.collab .ctbl th.c-task {
+  width: 30%;
+}
+
+.agent-app .lk.collab .ctbl th.c-tm,
+.agent-app .lk.collab .ctbl td.c-tm {
+  width: 116px;
+}
+
+.agent-app .lk.collab .ctbl th.c-act,
+.agent-app .lk.collab .ctbl td.c-act {
+  width: 92px;
+  text-align: right;
+}
+
+.agent-app .lk.collab .ctbl td {
+  height: auto;
+  padding: 12px 14px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: hsl(var(--foreground));
+}
+
+.agent-app .lk.collab .ctbl tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.agent-app .lk.collab .ctbl tbody tr.is-selected td {
+  background: hsl(var(--accent) / 0.06);
+}
+
+.agent-app .lk.collab .cttl {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-app .lk.collab .cttl .ttl {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-app .lk.collab .cttl .micro {
+  font-size: 10.5px;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .who .nm {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.agent-app .lk.collab .who .role {
+  font-size: 10.5px;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .budcell {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .c-act .b {
+  gap: 5px;
+  white-space: nowrap;
+}
+
+/* accent pill + open ring (the shared kit has neither). */
+.agent-app .lk.collab .pill.ac {
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+  border-color: hsl(var(--accent) / 0.45);
+}
+
+.agent-app .lk.collab .pill .dot.ring {
+  background: transparent;
+  border: 1.5px solid currentColor;
+}
+
+/* ---------------------------------------------------------------- ② detail */
+
+.agent-app .lk.collab .cbody {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+}
+
+.agent-app .lk.collab .cpair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) minmax(0, 0.9fr);
+  align-items: stretch;
+  gap: 14px;
+}
+
+.agent-app .lk.collab .person {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.agent-app .lk.collab .ava-lg {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: hsl(var(--accent) / 0.16);
+  color: hsl(var(--accent));
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.agent-app .lk.collab .pmeta {
+  min-width: 0;
+}
+
+.agent-app .lk.collab .pname {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.agent-app .lk.collab .pname .nm {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.agent-app .lk.collab .tagx {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.agent-app .lk.collab .tagx.acc {
+  background: hsl(var(--accent) / 0.14);
+  color: hsl(var(--accent));
+}
+
+.agent-app .lk.collab .tagx.nt {
+  background: var(--neutral-pill-bg);
+  color: var(--neutral-pill-fg);
+}
+
+.agent-app .lk.collab .psub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .carrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .carrow .lk-i {
+  transform: rotate(180deg);
+}
+
+/* ---------------------------------------------------------------- budget */
+
+.agent-app .lk.collab .bud {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.agent-app .lk.collab .budl {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .budv {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.agent-app .lk.collab .budbar {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: hsl(var(--foreground) / 0.08);
+  overflow: hidden;
+}
+
+.agent-app .lk.collab .budbar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: hsl(var(--accent));
+}
+
+.agent-app .lk.collab .budn {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .budnote {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--micro-foreground);
+}
+
+/* ---------------------------------------------------------------- rail */
+
+.agent-app .lk.collab .srail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-app .lk.collab .snode {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.agent-app .lk.collab .snode::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -9px;
+  width: 8px;
+  height: 1px;
+  background: var(--hairline);
+}
+
+.agent-app .lk.collab .snode:last-child::after {
+  display: none;
+}
+
+.agent-app .lk.collab .sdot {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .sdot .lk-i {
+  width: 11px;
+  height: 11px;
+}
+
+.agent-app .lk.collab .sn {
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .snode.done {
+  background: hsl(var(--accent) / 0.08);
+  border-color: hsl(var(--accent) / 0.3);
+}
+
+.agent-app .lk.collab .snode.done .sdot {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--accent));
+  color: hsl(var(--primary-foreground));
+}
+
+.agent-app .lk.collab .snode.done .sn {
+  color: hsl(var(--foreground));
+}
+
+.agent-app .lk.collab .snode.current {
+  background: hsl(var(--accent) / 0.12);
+  border-color: hsl(var(--accent) / 0.45);
+}
+
+.agent-app .lk.collab .snode.current .sdot {
+  border: 1px solid hsl(var(--accent));
+  color: hsl(var(--accent));
+  box-shadow: 0 0 0 4px hsl(var(--accent) / 0.16);
+}
+
+.agent-app .lk.collab .snode.current .sn {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.agent-app .lk.collab .snode.dead {
+  opacity: 0.55;
+}
+
+.agent-app .lk.collab .snode.dead .sn {
+  text-decoration: line-through;
+  text-decoration-color: var(--border);
+}
+
+/* ---------------------------------------------------------------- timeline */
+
+.agent-app .lk.collab .tlblock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.agent-app .lk.collab .tl-h {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .tl {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-app .lk.collab .tlrow {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 0 0 16px 0;
+}
+
+.agent-app .lk.collab .tlrow::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 20px;
+  bottom: 0;
+  width: 1px;
+  background: var(--hairline);
+}
+
+.agent-app .lk.collab .tlrow:last-child {
+  padding-bottom: 0;
+}
+
+.agent-app .lk.collab .tlrow:last-child::before {
+  display: none;
+}
+
+.agent-app .lk.collab .tdot {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  margin-top: 1px;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--accent) / 0.4);
+  background: hsl(var(--accent) / 0.12);
+  color: hsl(var(--accent));
+}
+
+.agent-app .lk.collab .tdot .lk-i {
+  width: 11px;
+  height: 11px;
+}
+
+.agent-app .lk.collab .tlrow.pending .tdot {
+  border-color: var(--border);
+  background: transparent;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .tlrow.stop .tdot {
+  border-color: var(--border);
+  background: var(--neutral-pill-bg);
+  color: var(--neutral-pill-fg);
+}
+
+.agent-app .lk.collab .tlc {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.agent-app .lk.collab .tlh {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.agent-app .lk.collab .tlh .stg {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.agent-app .lk.collab .tlrow.pending .tlh .stg {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.agent-app .lk.collab .tlh .tm {
+  font-size: 11px;
+  color: var(--micro-foreground);
+  white-space: nowrap;
+}
+
+.agent-app .lk.collab .tlh .ppl {
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .tln {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.agent-app .lk.collab .tln .k {
+  flex: 0 0 auto;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .tln .q {
+  min-width: 0;
+  color: hsl(var(--foreground));
+  overflow-wrap: anywhere;
+}
+
+.agent-app .lk.collab .tl-none {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .tl-skel {
+  gap: 8px;
+}
+
+.agent-app .lk.collab .chain-err {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.agent-app .lk.collab .chain-err p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+/* ---------------------------------------------------------------- notes */
+
+.agent-app .lk.collab .wnote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.agent-app .lk.collab .wnote .lk-i {
+  flex: 0 0 auto;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .endline {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--neutral-pill-bg);
+  color: var(--neutral-pill-fg);
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.agent-app .lk.collab .endline .lk-i {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+/* ---------------------------------------------------------------- ③ audit */
+
+.agent-app .lk.collab .audit-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-app .lk.collab .arow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.agent-app .lk.collab .arow .k {
+  flex: 0 0 96px;
+  font-size: 11.5px;
+  color: var(--micro-foreground);
+}
+
+.agent-app .lk.collab .audit-line {
+  margin: 0;
+  padding: 12px 18px 16px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+}
+
+/* ---------------------------------------------------------------- a11y */
+
+.agent-app .lk.collab .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.agent-app .lk.collab :focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- 1280 / 1024 */
+
+@media (max-width: 1279px) {
+  .agent-app .lk.collab {
+    max-width: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .agent-app .lk.collab .cpair {
+    grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr);
+  }
+
+  .agent-app .lk.collab .bud {
+    grid-column: 1 / -1;
+  }
+
+  .agent-app .lk.collab .ctbl th.c-task {
+    width: 26%;
+  }
+}
+
+/* ---------------------------------------------------------------- 768 */
+
+@media (max-width: 767px) {
+  .agent-app .lk.collab .roband {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .agent-app .lk.collab .roband .mono {
+    margin-left: 24px;
+  }
+
+  .agent-app .lk.collab .cpair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agent-app .lk.collab .carrow {
+    justify-content: flex-start;
+    padding-left: 18px;
+    transform: rotate(90deg);
+    height: 18px;
+  }
+
+  .agent-app .lk.collab .carrow .lk-i {
+    transform: none;
+  }
+
+  .agent-app .lk.collab .srail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agent-app .lk.collab .snode::after {
+    display: none;
+  }
+
+  .agent-app .lk.collab .card-hd,
+  .agent-app .lk.collab .cbody,
+  .agent-app .lk.collab .card-ft {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  /* Seven columns → cards: label + value on their own rows, zero overflow. */
+  .agent-app .lk.collab .ctable-card .tblwrap {
+    overflow-x: visible;
+  }
+
+  .agent-app .lk.collab table.ctbl,
+  .agent-app .lk.collab .ctbl tbody,
+  .agent-app .lk.collab .ctbl tr,
+  .agent-app .lk.collab .ctbl td {
+    display: block;
+    width: auto;
+  }
+
+  .agent-app .lk.collab .ctbl thead {
+    display: none;
+  }
+
+  .agent-app .lk.collab .ctbl tbody tr {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .agent-app .lk.collab .ctbl tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .agent-app .lk.collab .ctbl td {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    width: auto;
+    padding: 3px 0;
+    border: 0;
+  }
+
+  .agent-app .lk.collab .ctbl td::before {
+    content: attr(data-l);
+    flex: 0 0 84px;
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--micro-foreground);
+  }
+
+  /* The title keeps its own full-width line; the action label stays invisible. */
+  .agent-app .lk.collab .ctbl td:first-child {
+    display: block;
+    padding-bottom: 6px;
+  }
+
+  .agent-app .lk.collab .ctbl td:first-child::before {
+    display: none;
+  }
+
+  .agent-app .lk.collab .ctbl td.c-act {
+    display: flex;
+    justify-content: flex-start;
+    padding-top: 8px;
+  }
+
+  .agent-app .lk.collab .ctbl td.c-act::before {
+    display: none;
+  }
+
+  .agent-app .lk.collab .cttl .ttl {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .agent-app .lk.collab .who {
+    min-width: 0;
+  }
+
+  .agent-app .lk.collab .arow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .agent-app .lk.collab .arow .k {
+    flex: none;
+  }
+}
+
+/* ---------------------------------------------------------------- 375 */
+
+@media (max-width: 420px) {
+  .agent-app .lk.collab .srail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agent-app .lk.collab .cpair {
+    gap: 10px;
+  }
+
+  .agent-app .lk.collab .person,
+  .agent-app .lk.collab .bud,
+  .agent-app .lk.collab .tlblock {
+    padding: 12px;
+  }
+
+  .agent-app .lk.collab .ava-lg {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+  }
+
+  .agent-app .lk.collab .tlh {
+    gap: 4px 8px;
+  }
+
+  .agent-app .lk.collab .fresh {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-app .lk.collab * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

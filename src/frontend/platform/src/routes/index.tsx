@@ -52,6 +52,7 @@ const ShellApprovalsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages"
 const ShellApprovalDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.ApprovalDetailScreen })));
 const ShellTasksPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.TasksPage })));
 const ShellTaskDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.TaskDetailScreen })));
+const ShellCollabPage = lazy(() => import("@/pages/AgentConsoleV2/CollabPage").then(module => ({ default: module.CollabPage })));
 const ShellRunsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.RunsPage })));
 const ShellRunDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.RunDetailScreen })));
 const ShellMetricsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.MetricsPage })));
@@ -177,6 +178,7 @@ const privateRouter = [
             { path: "tasks", element: <ShellTasksPage /> },
             { path: "tasks/new", element: <ShellTaskCreatePage /> },
             { path: "tasks/:taskId", element: <ShellTaskDetailPage /> },
+            { path: "collab", element: <ShellCollabPage /> },
             { path: "runs", element: <ShellRunsPage /> },
             { path: "runs/:runId", element: <ShellRunDetailPage /> },
             { path: "metrics", element: <ShellMetricsPage /> },
