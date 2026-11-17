@@ -110,6 +110,10 @@ function bodyFor(url: string): unknown {
     };
   }
   if (url.includes('/api/employees')) return { items: [EMP_A, EMP_B] };
+  if (url.includes('/api/matrix')) {
+    return { items: [{ employeeId: EMP_A.employeeId, name: EMP_A.name, lifecycle: 'active' }] };
+  }
+  if (url.includes('/api/delegations')) return { items: [] };
   if (url.includes('/api/approvals')) return { items: [] };
   if (url.includes('/api/tasks')) {
     // the dueBefore query returns a COMPLETED task — it must never look pending
@@ -209,24 +213,27 @@ describe('OV-01 redo', () => {
     stubFetch();
     renderOverview();
     await waitFor(() => expect(screen.getByTestId('agent-v2-ov-kpi-onduty-dots')).toBeInTheDocument());
-    expect(screen.getByTestId('agent-v2-ov-kpi-pending-dots')).toBeInTheDocument();
+    // 0 pending is an empty state (copy), not a 40px zero with a fake spark slot.
+    expect(screen.getByTestId('agent-v2-ov-kpi-pending-empty')).toHaveTextContent('暂无待办审批');
+    expect(screen.queryByTestId('agent-v2-ov-kpi-pending-dots')).toBeNull();
     expect(screen.getByTestId('agent-v2-ov-kpi-runs-spark')).toBeInTheDocument();
     expect(screen.getByTestId('agent-v2-ov-kpi-cost-spark')).toBeInTheDocument();
     // 2 active employees → on-duty KPI shows the real value
     expect(screen.getByTestId('agent-v2-ov-kpi-onduty').textContent).toContain('2');
   });
 
-  it('activity localizes known actions and keeps the snake_case only in the mono raw line', async () => {
+  it('activity localizes known actions and never prints the raw snake_case', async () => {
     stubFetch();
     renderOverview();
     await screen.findAllByTestId('agent-v2-ov-activity-row');
-    expect(screen.getByTestId('agent-v2-ov-block-activity').textContent).toContain('员工版本创建');
-    const raws = Array.from(document.querySelectorAll('.ov-actn .raw')).map((el) => el.textContent);
-    expect(raws).toContain('employee.version.created');
+    const block = screen.getByTestId('agent-v2-ov-block-activity');
+    expect(block.textContent).toContain('员工版本创建');
+    expect(block.textContent).not.toContain('employee.version.created');
+    expect(block.textContent).not.toContain('weird.custom.event');
+    expect(document.querySelectorAll('.ov-actn .raw')).toHaveLength(0);
     // unknown action falls back to the generic localized name, not raw text
     const zhs = Array.from(document.querySelectorAll('.ov-actn .zh')).map((el) => el.textContent);
     expect(zhs).toContain('审计事件');
-    expect(zhs.some((z) => z === 'weird.custom.event')).toBe(false);
   });
 
   it('heat draws a real 7×24 grid with focus row and hour-axis labels', async () => {
