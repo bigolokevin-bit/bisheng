@@ -72,13 +72,13 @@ export function isUnassignedOwner(ownerUserId?: string | null): boolean {
   return isPlaceholderIdentity(value);
 }
 
-/** Owner slot label: never leaks a placeholder; an empty slot is '—'. */
+/** Owner slot label: never leaks a placeholder; an empty slot reads 「未指派」. */
 export function ownerSlotLabel(
   ownerUserId: string | null | undefined,
   t: Translate,
   opts?: { currentUid?: string | number; currentName?: string }
 ): string {
-  if (isUnassignedOwner(ownerUserId)) return t('agentConsole.v2.id.none');
+  if (isUnassignedOwner(ownerUserId)) return t('agentConsole.v2.emp01.unassigned');
   return ownerDisplayLabel(ownerUserId ?? '', t, {
     currentUid:
       opts?.currentUid === undefined || opts.currentUid === null || opts.currentUid === ''

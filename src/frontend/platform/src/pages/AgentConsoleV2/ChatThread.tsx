@@ -10,7 +10,6 @@ import type { ChatFailure, ChatMessageRow, ChatSessionDetailBody } from './chat0
 import { fmtChatTime, hasText, messageSide } from './chat01';
 import { ChatFailureNote } from './ChatFailureNote';
 import { ReqId } from './listkit/ReqId';
-import { fmtId } from './v2Data';
 import { idTail } from './identity';
 
 export type ChatThreadState = 'idle' | 'loading' | 'ready' | 'error' | 'denied';
@@ -40,13 +39,25 @@ export function ChatThread({
 }: ChatThreadProps) {
   const { t } = useTranslation();
   const ns = 'agentConsole.v2.chat01';
-  const title = detail?.title?.trim() || (sessionId ? fmtId(sessionId) : '');
+  // PRD CHAT-HEAD-01: a session with no title reads 未命名会话 — a
+  // truncated id is engineering language and never becomes a heading.
+  const title = detail?.title?.trim() || '';
   const showHeader = Boolean(sessionId) && state !== 'denied';
 
   return (
     <div className="cchat-thread-inner">
       {showHeader ? (
         <header className="cchat-thread-head">
+          {/* PRD CHAT-HEAD-02: below 900px the list and thread stack, so the
+              thread needs its own way back to the list. */}
+          <button
+            type="button"
+            className="a2-btn cchat-back"
+            onClick={onBack}
+            data-testid="agent-v2-chat-back"
+          >
+            {t(`${ns}.backToList`)}
+          </button>
           <h2 className="a2-h2" data-testid="agent-v2-chat-thread-title">
             {title || t(`${ns}.untitled`)}
           </h2>

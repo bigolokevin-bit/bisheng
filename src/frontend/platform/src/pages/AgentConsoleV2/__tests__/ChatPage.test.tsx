@@ -101,6 +101,23 @@ describe('L4p2 console chat page', () => {
     await screen.findByTestId('agent-v2-chat-list');
   });
 
+  it('names a titleless session 未命名会话 and offers the narrow-screen back control', async () => {
+    const api = makeApi({
+      sessionDetail: vi.fn(async (sessionId: string) =>
+        ok({ sessionId, title: '', employeeId: 'emp_x2', updatedAt: SESSION_A.updatedAt, messages: [] }),
+      ),
+    });
+    renderPage(api, '/agent/chat?session=ses_a1');
+
+    const title = await screen.findByTestId('agent-v2-chat-thread-title');
+    expect(title.textContent).toBe('未命名会话');
+    expect(document.body.textContent).not.toContain('ses_a1');
+
+    fireEvent.click(screen.getByTestId('agent-v2-chat-back'));
+    await waitFor(() => expect(screen.queryByTestId('agent-v2-chat-thread-title')).toBeNull());
+    guardNoRawKeys();
+  });
+
   it('renders sessions and two-color bubbles from the server payload', async () => {
     const api = makeApi({
       sessionDetail: vi.fn(async (sessionId: string) =>

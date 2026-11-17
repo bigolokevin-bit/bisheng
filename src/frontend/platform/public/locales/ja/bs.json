@@ -7109,6 +7109,12 @@
           "unknown": "状態不明"
         },
         "taskFallback": "このタスク · 末尾 {{tail}}"
+      },
+      "emp01": {
+        "unassigned": "未割当",
+        "shortCode": "ショートコード",
+        "noMatch": "一致する従業員はいません",
+        "clearFilters": "フィルターを解除"
       }
     },
     "approvals": {
