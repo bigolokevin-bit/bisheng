@@ -328,3 +328,5 @@ src/backend/migration_reports
 .cursor/
 config-106120.yaml
 values-106120.yaml
+
+src/frontend/platform/build.bak-s10b6/
