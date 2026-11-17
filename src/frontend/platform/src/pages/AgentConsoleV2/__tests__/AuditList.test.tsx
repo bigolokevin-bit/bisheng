@@ -15,6 +15,8 @@
  * - cursor foot: explicit next page, last page on key omission, stale guard.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('@/components/bs-ui/message', () => ({
@@ -788,5 +790,40 @@ describe('AUD-01 identity closeout — upstream casing never leaks raw machine w
     const to = screen.getByTestId('aud01-custom-to') as HTMLInputElement;
     expect(from.value).toBe('2026-11-17T09:00');
     expect(to.value).toBe('2026-11-17T10:30');
+  });
+});
+
+// ---------------------------- 1280 band: scroll the wrapper, never squeeze glyphs
+
+describe('AUD-01 width contract — 1280 scrolls instead of clipping characters', () => {
+  const css = readFileSync(resolve(__dirname, '../aud01.css'), 'utf8');
+  const between = (from: string, to: string) => {
+    const start = css.indexOf(from);
+    const end = css.indexOf(to, start + from.length);
+    return start < 0 ? '' : css.slice(start, end < 0 ? undefined : end);
+  };
+
+  it('keeps the 12-column table at its 1282px floor', () => {
+    expect(css).toMatch(/table\.tbl\s*\{[^}]*min-width:\s*1282px/);
+  });
+
+  it('gives the wrapper horizontal scroll in the 1280–1399 band', () => {
+    const band = between(
+      '@media (min-width: 1280px) and (max-width: 1399px)',
+      '@media (min-width: 1400px)',
+    );
+    expect(band).toContain('overflow-x: auto');
+    expect(band).toContain('.tblhint');
+  });
+
+  it('drops the wrapper scroll only at 1400+ where the columns fit', () => {
+    const wide = between('@media (min-width: 1400px)', '@media (min-width: 1024px)');
+    expect(wide).toContain('overflow-x: visible');
+  });
+
+  it('never lets a cell break mid-token (ellipsis, no word splitting)', () => {
+    expect(css).not.toMatch(/word-break:\s*break-all/);
+    expect(css.match(/text-overflow:\s*ellipsis/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    expect(css.match(/white-space:\s*nowrap/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
   });
 });
