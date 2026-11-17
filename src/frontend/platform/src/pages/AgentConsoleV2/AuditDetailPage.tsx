@@ -12,8 +12,9 @@
  *   exist: no export, download, edit, delete, backfill, replay, "apply the
  *   previous version", "verify this row". The banner explains why (§1.3).
  * - Absence is absence (§2.3): a missing optional key drops its row, its cell,
- *   its section or its chain segment. `—` is reserved for `not_applicable` and
- *   for an absent `decision`, and the note/tooltip says which one it is.
+ *   its section or its chain segment. The 判定 card prints no `—` at all: an
+ *   absent / not_applicable decision shows an empty value block and an
+ *   unreadable time says 「未记录」, with the note saying which case it is.
  * - Unknown stays neutral: 「未知（本次未能读取）」 never looks like an error and
  *   never looks like a pass. Green impossible by accident — the only colour
  *   gate lives in the shared verify panel (aud01.classifyVerify).
@@ -299,7 +300,7 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
           title={`HTTP ${head.status}`}
         >
           <span className="ic">
-            <LkIcon name="lock" size={20} />
+            {notFound ? <LkIcon name="info" size={20} /> : <LkIcon name="lock" size={20} />}
           </span>
           <div className="t">
             {t(
@@ -330,7 +331,11 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
               onClick={refresh}
             >
               <LkIcon name="refresh" size={16} />
-              {t('agentConsole.v2.aud02.forbiddenRetry')}
+              {t(
+                notFound
+                  ? 'agentConsole.v2.aud02.notFoundRetry'
+                  : 'agentConsole.v2.aud02.forbiddenRetry',
+              )}
             </button>
             <Link className="lnk" to="/agent/audit" data-testid="aud02-forbidden-back">
               {t('agentConsole.v2.aud02.backFirst')}
@@ -603,7 +608,11 @@ function JudgeCard({
                 <span className="u">{occurred.ms}</span>
               </>
             ) : (
-              <span className="faint">—</span>
+              /* D4: the card's own rule is 「不画 —」, so an unreadable time
+                 says 「未记录」 instead of a dash. The raw value stays in title. */
+              <span className="faint" data-testid="aud02-occurred-missing">
+                {t('agentConsole.v2.aud02.timeMissing')}
+              </span>
             )}
           </div>
           {occurred ? (
@@ -626,7 +635,9 @@ function JudgeCard({
                 <span className="u">{recorded.ms}</span>
               </>
             ) : (
-              <span className="faint">—</span>
+              <span className="faint" data-testid="aud02-recorded-missing">
+                {t('agentConsole.v2.aud02.timeMissing')}
+              </span>
             )}
           </div>
           <div className={skew ? 'n skew' : 'n'} data-testid="aud02-gap">
@@ -637,9 +648,11 @@ function JudgeCard({
               </>
             ) : null}
             <span>
-              {skew
-                ? t('agentConsole.v2.aud02.recordedSkewNote', { delta: gap ?? '' })
-                : t('agentConsole.v2.aud02.recordedNote', { delta: gap ?? '' })}
+              {gap === null
+                ? null
+                : skew
+                  ? t('agentConsole.v2.aud02.recordedSkewNote', { delta: gap })
+                  : t('agentConsole.v2.aud02.recordedNote', { delta: gap })}
             </span>
           </div>
         </div>
