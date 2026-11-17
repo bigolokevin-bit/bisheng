@@ -515,9 +515,6 @@ function Head01({
             testId="aud02-event-id"
           />
           <HelpTip term="eventIdKey" testId="aud02-help-eid" />
-          <span className="c" data-testid="aud02-action-raw">
-            {actionRaw}
-          </span>
           {schema ? (
             <span className="c">{t('agentConsole.v2.aud02.schemaChip', { v: schema })}</span>
           ) : null}
@@ -708,7 +705,9 @@ function JudgeCard({
               ? t('agentConsole.v2.aud02.decisionAbsentNote')
               : decisionEnum(decisionRaw) === 'not_applicable'
                 ? t('agentConsole.v2.aud02.decisionNaNote')
-                : t('agentConsole.v2.aud02.decisionNote', { raw: decisionRaw })}
+                : decisionEnum(decisionRaw)
+                  ? null
+                  : t('agentConsole.v2.aud02.decisionNote', { raw: decisionRaw })}
           </div>
         </div>
 
