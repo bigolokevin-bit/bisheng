@@ -13,6 +13,8 @@
  *   error bar so navigation and the other groups survive (S-10).
  */
 import type { ReactNode } from 'react';
+
+import { ReqId } from './listkit';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -280,7 +282,6 @@ export function SetRow({
               {pill}
             </span>
           ) : null}
-          {tag ? <SrcChip tag={tag} /> : null}
         </div>
         {children}
       </div>
@@ -312,15 +313,12 @@ export interface GroupGateProps {
 export function GroupGate({
   phase,
   label,
-  httpStatus = 0,
   requestId = null,
   onRetry,
   testIdPrefix,
   children,
 }: GroupGateProps) {
   const { t } = useTranslation();
-  const code = httpStatus > 0 ? `HTTP ${httpStatus}` : t('agentConsole.v2.set01.networkError');
-
   if (phase === 'loading') {
     return (
       <div
@@ -366,21 +364,10 @@ export function GroupGate({
           )}
         </div>
         <div className="s">
-          {forbidden ? (
-            <>
-              {t('agentConsole.v2.set01.forbiddenDescPre')}
-              {label}
-              {t('agentConsole.v2.set01.forbiddenDescPost')}
-              <span className="mono">{code}</span>
-              {t('agentConsole.v2.set01.forbiddenDescTail')}
-            </>
-          ) : (
-            <>
-              {t('agentConsole.v2.set01.notProvidedDescPre')}
-              <span className="mono">{code}</span>
-              {t('agentConsole.v2.set01.notProvidedDescPost')}
-            </>
-          )}
+          {forbidden
+            ? `当前账号未获授权访问「${label}」。这一组整体替换为说明，不会先渲染字段骨架再消失。请由管理员开通后刷新。`
+            : '这项只读自检在当前环境尚未接入；页面不展示字段骨架，也不猜测数据。'}
+          <ReqId requestId={requestId} testId={`${testIdPrefix}-reqid`} />
         </div>
         <div className="acts2">
           {forbidden && onRetry ? (
@@ -399,13 +386,6 @@ export function GroupGate({
             </Link>
           )}
         </div>
-        <div className="s1stage-note">
-          {t(
-            forbidden
-              ? 'agentConsole.v2.set01.forbiddenNote'
-              : 'agentConsole.v2.set01.notProvidedNote',
-          )}
-        </div>
       </div>
     );
   }
@@ -420,20 +400,9 @@ export function GroupGate({
         </div>
         <div className="s1err" role="alert">
           <SetIcon name="alert" size={14} />
-          <span className="tx">
-            {t('agentConsole.v2.set01.errBodyPre')}
-            <span className="mono">{code}</span>
-            {t('agentConsole.v2.set01.errBodyPost')}
-          </span>
+          <span className="tx">{t('agentConsole.v2.errorQuery')}</span>
           {/* S4: the request line is always present — id or 「未提供」. */}
-          <span className="rid">
-            {t('agentConsole.v2.set01.errReqLabel')}{' '}
-            {requestId ? (
-              <span className="mono">{requestId}</span>
-            ) : (
-              t('agentConsole.v2.id.requestIdAbsent')
-            )}
-          </span>
+          <ReqId requestId={requestId} testId={`${testIdPrefix}-reqid`} />
           {onRetry ? (
             <button
               type="button"
@@ -446,7 +415,6 @@ export function GroupGate({
             </button>
           ) : null}
         </div>
-        <div className="a2r-cf">{t('agentConsole.v2.set01.errNote')}</div>
       </div>
     );
   }

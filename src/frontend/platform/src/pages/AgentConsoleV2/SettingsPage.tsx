@@ -64,7 +64,6 @@ import {
   SetCard,
   SetIcon,
   SetRow,
-  SrcChip,
   type GroupPhase,
 } from './set01Kit';
 import { useConsoleCrumbTail } from './Shell';
@@ -115,6 +114,18 @@ export function SettingsPage({
     summary: null,
     status: 0,
   });
+
+  const navDot = (def: (typeof SET_SECTIONS)[number]) => {
+    if (def.id !== 'models' && def.id !== 'integrations') {
+      return { tone: def.tone, label: t(def.dotKey) };
+    }
+    if (hermesView.phase !== 'ready') return { tone: 'nt', label: t(`${NS}.unknown`) };
+    const state = hermesSourceState(hermesView.summary, 'gateway_health');
+    return state === 'ok'
+      ? { tone: 'ok', label: t(`${NS}.dotModels`) }
+      : { tone: 'nt', label: t(`${NS}.unknown`) };
+  };
+
   const [a7, setA7] = useState<AuditVerifyStatus>({
     phase: 'idle',
     httpStatus: 0,
@@ -212,14 +223,6 @@ export function SettingsPage({
           <span aria-live="polite">
             {t(`${NS}.metaReadAt`)} <span className="mono">{fmtClock(readAt)}</span>
           </span>
-          <span className="faint" aria-hidden="true">
-            ·
-          </span>
-          <span>
-            {t(`${NS}.metaSourcePre`)}
-            <span className="mono">/api/hermes-summary</span>
-            {t(`${NS}.metaSourcePost`)}
-          </span>
         </div>
 
         {/* page-level read-only boundary: third state (未知), never ok/error */}
@@ -230,8 +233,6 @@ export function SettingsPage({
             {t(`${NS}.roBody`)}
           </span>
           <HelpTip term="settingsWriteUnknown" testId="agent-v2-set-ro-help" />
-          <span className="sp" />
-          <span className="mono">{t(`${NS}.roTag`)}</span>
         </div>
 
         {/* page head — settings has no 「保存全部」, so no primary action */}
@@ -259,7 +260,7 @@ export function SettingsPage({
               >
                 <SetIcon name={s.icon} size={18} />
                 <span className="tx">{t(s.labelKey)}</span>
-                <SDot tone={s.tone} label={t(s.dotKey)} testId={`agent-v2-set-dot-${s.id}`} />
+                <SDot tone={navDot(s).tone} label={navDot(s).label} testId={`agent-v2-set-dot-${s.id}`} />
               </Link>
             ))}
             <div className="s1-div" role="separator" />
@@ -273,7 +274,7 @@ export function SettingsPage({
               >
                 <SetIcon name={s.icon} size={18} />
                 <span className="tx">{t(s.labelKey)}</span>
-                <SDot tone={s.tone} label={t(s.dotKey)} testId={`agent-v2-set-dot-${s.id}`} />
+                <SDot tone={navDot(s).tone} label={navDot(s).label} testId={`agent-v2-set-dot-${s.id}`} />
               </Link>
             ))}
           </nav>
@@ -336,13 +337,6 @@ export function SettingsPage({
         </div>
 
         <div className="pfoot">
-          <span>
-            {t(`${NS}.footSourcePre`)}
-            <span className="mono">/api/hermes-summary</span>
-            {t(`${NS}.footSourcePost`)}
-          </span>
-          <span className="sp" />
-          <span>{t(`${NS}.footCaliber`)}</span>
           <span className="sp" />
           <span>{t(`${NS}.footZeroWrite`)}</span>
         </div>
@@ -378,7 +372,7 @@ function TenantGroup({
         testId="agent-v2-set-identity"
       >
         <div className="a2r-hfs">
-          <Field label={t(`${NS}.fEnv`)} sans note={t(`${NS}.nEnv`)} testId="agent-v2-set-f-env">
+          <Field label={t(`${NS}.fEnv`)} sans testId="agent-v2-set-f-env">
             <span className="pill nt">
               <span className="dot" aria-hidden="true" />
               {t('agentConsole.v2.envPilot')}
@@ -423,7 +417,6 @@ function TenantGroup({
               <span className="dot" aria-hidden="true" />
               {t(`${NS}.unknownFull`)}
             </span>
-            <SrcChip tag="GAP-SET-04">{t(`${NS}.noEndpoint`)}</SrcChip>
           </Field>
         </div>
       </SetCard>
@@ -442,14 +435,12 @@ function TenantGroup({
               key={w.id}
               label={t(w.labelKey)}
               sans
-              note={t(w.noteKey)}
               testId={`agent-v2-set-write-${w.id}`}
             >
               <span className="pill nt" data-unknown="true">
                 <span className="dot" aria-hidden="true" />
                 {t(`${NS}.unknown`)}
               </span>
-              {w.tag ? <SrcChip tag={w.tag} /> : null}
             </Field>
           ))}
         </div>
@@ -458,7 +449,6 @@ function TenantGroup({
       <SetCard
         icon="shield"
         title={t(`${NS}.accessTitle`)}
-        note={<SrcChip tag={t(`${NS}.tagContract`)}>{t(`${NS}.srcNotRuntime`)}</SrcChip>}
         testId="agent-v2-set-access"
       >
         <div className="s1rows">
@@ -519,15 +509,12 @@ function ModelsGroup({ t, summary }: { t: TFunction; summary: HermesSummary | nu
       <SetCard
         icon="plug"
         title={t(`${NS}.runtimeTitle`)}
-        badge="hermes-summary"
-        note={t(`${NS}.runtimeNote`)}
         testId="agent-v2-set-runtime"
       >
         <div className="a2r-hfs">
           <Field
             label={t(`${NS}.fGateway`)}
             sans
-            note={t(`${NS}.nGateway`)}
             testId="agent-v2-set-f-gateway"
           >
             <StatePill t={t} state={gateway} />
@@ -572,7 +559,6 @@ function ModelsGroup({ t, summary }: { t: TFunction; summary: HermesSummary | nu
               <span className="dot" aria-hidden="true" />
               {t(`${NS}.notWired`)}
             </span>
-            <SrcChip tag="CR-M2-13" />
           </Field>
         </div>
       </SetCard>
@@ -588,7 +574,6 @@ function PolicyGroup({ t }: { t: TFunction }) {
       <SetCard
         icon="coins"
         title={t(`${NS}.policyTitle`)}
-        note={<SrcChip tag={t(`${NS}.tagContract`)}>POLICY §1.5</SrcChip>}
         foot={t(`${NS}.policyFoot`)}
         testId="agent-v2-set-policy"
       >
@@ -612,7 +597,6 @@ function PolicyGroup({ t }: { t: TFunction }) {
       <SetCard
         icon="bell"
         title={t(`${NS}.softTitle`)}
-        note={<SrcChip tag={t(`${NS}.tagContract`)}>{t(`${NS}.srcNotConfigurable`)}</SrcChip>}
         testId="agent-v2-set-soft-alert"
       >
         <div className="a2r-hfs">
@@ -674,38 +658,29 @@ function IntegrationsGroup({
         testId="agent-v2-set-upstream"
       >
         <div className="a2r-hfs">
-          <Field label={t(`${NS}.fBisheng`)} sans note={t(`${NS}.nBisheng`)} testId="agent-v2-set-f-bisheng">
-            {accountName ? (
-              <span className="pill ok">
-                <span className="dot" aria-hidden="true" />
-                {t(`${NS}.ok`)}
-              </span>
-            ) : (
-              <span className="pill nt">
-                <span className="dot" aria-hidden="true" />
-                {t(`${NS}.unknownFull`)}
-              </span>
-            )}
+          <Field label={t(`${NS}.fBisheng`)} sans sans testId="agent-v2-set-f-bisheng">
+            <span className="pill nt">
+              <span className="dot" aria-hidden="true" />
+              {t(`${NS}.unknownFull`)}
+            </span>
           </Field>
 
-          <Field label={t(`${NS}.fHermes`)} sans note={t(`${NS}.nHermes`)} testId="agent-v2-set-f-hermes">
+          <Field label={t(`${NS}.fHermes`)} sans testId="agent-v2-set-f-hermes">
             <StatePill t={t} state={gateway} />
           </Field>
 
-          <Field label={t(`${NS}.fDomain`)} sans note={t(`${NS}.nDomain`)} testId="agent-v2-set-f-domain">
+          <Field label={t(`${NS}.fDomain`)} sans testId="agent-v2-set-f-domain">
             <span className="pill wr">
               <span className="dot" aria-hidden="true" />
               {t(`${NS}.vDomain`)}
             </span>
-            <SrcChip tag="GAP-SET-07" />
           </Field>
 
-          <Field label={t(`${NS}.fFeishu`)} sans note={t(`${NS}.nFeishu`)} testId="agent-v2-set-f-feishu">
+          <Field label={t(`${NS}.fFeishu`)} sans testId="agent-v2-set-f-feishu">
             <span className="pill nt">
               <span className="dot" aria-hidden="true" />
               {t(`${NS}.notWired`)}
             </span>
-            <SrcChip tag="GAP-SET-08" />
           </Field>
         </div>
       </SetCard>
@@ -748,8 +723,6 @@ function DataGroup({ t }: { t: TFunction }) {
     <SetCard
       icon="database"
       title={t(`${NS}.dataTitle`)}
-      note={<SrcChip tag={t(`${NS}.tagContract`)}>AUDIT §1.4</SrcChip>}
-      foot={t(`${NS}.dataFoot`)}
       testId="agent-v2-set-data"
     >
       <div className="a2r-hfs">

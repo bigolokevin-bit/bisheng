@@ -166,12 +166,12 @@ describe('SET-01 page frame', () => {
     const fresh = screen.getByTestId('agent-v2-set-fresh');
     expect(fresh.textContent).toContain('读于');
     expect(fresh.textContent).toContain('10:20:41');
-    expect(fresh.textContent).toContain('/api/hermes-summary');
+    expect(fresh.textContent).not.toMatch(/\/api\/|HTTP|数据源/);
 
     const ro = document.querySelector('.s1roband') as HTMLElement;
     expect(ro.textContent).toContain('写入开关状态未知（本次未能读取）');
     expect(ro.textContent).toContain('未知'); // the third state, not on/off
-    expect(ro.textContent).toContain('sanitized 投影 · 零写');
+    expect(ro.textContent).not.toMatch(/sanitized|GAP-|CR-M2/);
     // HelpTip carries the "未知不是关" caliber
     expect(within(ro).getByTestId('agent-v2-set-ro-help')).toBeTruthy();
 
@@ -198,7 +198,7 @@ describe('SET-01 page frame', () => {
     // status is never colour-only: each dot names itself
     const dots = nav.querySelectorAll('[role="img"]');
     expect(dots).toHaveLength(6);
-    dots.forEach((d) => expect(d.getAttribute('aria-label')).toMatch(/^状态：/));
+    dots.forEach((d) => expect(d.getAttribute('aria-label')).toBeTruthy());
   });
 });
 
@@ -299,15 +299,14 @@ describe('SET-01 danger group', () => {
 // ---------------------------------------------------------------- E04 / E06
 
 describe('SET-01 rules vs readings', () => {
-  it('shows retention constants tagged 来源=契约, and nothing invented', async () => {
+  it('shows retention constants without contract tags, and nothing invented', async () => {
     renderPage('data');
     const card = await screen.findByTestId('agent-v2-set-data');
-    expect(card.textContent).toContain('来源=契约');
+    expect(card.textContent).not.toMatch(/来源=|GAP-|AUDIT/);
     expect(card.textContent).toContain('90');
     expect(card.textContent).toContain('不可删除');
     // no build-time aggregate, no fake runtime reading
     expect(card.textContent).not.toMatch(/共\s*\d+\s*条|总计/);
-    expect(card.textContent).toContain('暂无数据');
   });
 
   it('keeps a degraded usage reading as — and never rewrites it to 0', async () => {
@@ -349,11 +348,12 @@ describe('SET-01 group states', () => {
     expect(screen.getByRole('navigation', { name: '设置分组' })).toBeTruthy();
   });
 
-  it('keeps a failed group inside its own card, with the HTTP code and a retry', async () => {
+  it('keeps a failed group inside its own card, with a human reason, request id and retry', async () => {
     renderPage('models', { hermes: makeHermes({ ok: false, status: 502 }) });
     const bar = await screen.findByTestId('agent-v2-set-models-error');
-    expect(bar.textContent).toContain('这一组的配置没能读出来');
-    expect(within(bar).getByText('HTTP 502')).toBeTruthy();
+    expect(bar.textContent).toContain('查询失败，请重试');
+    expect(bar.textContent).toContain('请求编号');
+    expect(bar.textContent).not.toContain('HTTP');
     expect(within(bar).getByTestId('agent-v2-set-models-retry')).toBeTruthy();
     // navigation survives a single group failure
     expect(screen.getByRole('navigation', { name: '设置分组' })).toBeTruthy();
@@ -363,7 +363,8 @@ describe('SET-01 group states', () => {
     renderPage('tenant', { audit: makeAudit(403) });
     const stage = await screen.findByTestId('agent-v2-set-tenant-forbidden');
     expect(stage.textContent).toContain('你没有查看此组设置的权限');
-    expect(within(stage).getByText('HTTP 403')).toBeTruthy();
+    expect(stage.textContent).not.toContain('HTTP');
+    expect(stage.textContent).toContain('请求编号');
     expect(screen.queryByTestId('agent-v2-set-writes')).toBeNull();
     expect(screen.queryByTestId('agent-v2-set-identity')).toBeNull();
   });
@@ -372,8 +373,9 @@ describe('SET-01 group states', () => {
     renderPage('tenant', { audit: makeAudit(404) });
     const stage = await screen.findByTestId('agent-v2-set-tenant-unsupported');
     expect(stage.textContent).toContain('这项自检能力尚未提供');
-    expect(within(stage).getByText('HTTP 404')).toBeTruthy();
-    expect(stage.textContent).toContain('CR-M2-02');
+    expect(stage.textContent).not.toContain('HTTP');
+    expect(stage.textContent).not.toContain('CR-M2-02');
+    expect(stage.textContent).toContain('请求编号');
     expect(screen.queryByTestId('agent-v2-set-identity')).toBeNull();
   });
 });
