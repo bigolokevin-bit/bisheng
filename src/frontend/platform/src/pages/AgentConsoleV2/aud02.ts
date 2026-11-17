@@ -24,6 +24,7 @@ import {
   decisionEnum,
   decisionTone,
   formatLatency,
+  humanRefDisplay,
   outcomeEnum,
   outcomeTone,
   shortId,
@@ -32,13 +33,7 @@ import {
   type AuditApi,
   type AuditEvent,
 } from './aud01';
-import {
-  ID_NS,
-  bareId,
-  employeeLabelById,
-  humanLabel,
-  isPlaceholderIdentity,
-} from './identity';
+import { bareId, employeeLabelById, isPlaceholderIdentity } from './identity';
 import { makeFetcher, type ApiRes } from './v2Data';
 
 export type { AuditEvent } from './aud01';
@@ -348,15 +343,27 @@ export function humanText(
   t: (key: string, options?: Record<string, unknown>) => string,
   name?: string | null,
 ): string {
-  const value = bareId(wireText(raw).trim());
-  if (!value) return t(`${ID_NS}.unknown`);
-  return humanLabel(value, t, name);
+  return humanRefDisplay(wireText(raw), t, name);
 }
 
 /** True when an id must not be printed verbatim (placeholders / opaque uids). */
 export function looksUnreadableId(value: string | undefined): boolean {
   const v = wireText(value).trim();
   return v === '' || isPlaceholderIdentity(v);
+}
+
+/**
+ * D3 (display layer only): seed values such as `pilot_owner_placeholder` are a
+ * data-side fact (owner L1/L7). The page does not rewrite them — it reads the
+ * placeholder shape, says 「未指派」 and keeps the raw value in title.
+ */
+export function isNeutralPlaceholder(value: string | null | undefined): boolean {
+  const v = wireText(value).trim();
+  if (!v) return false;
+  const bare = bareId(v).trim();
+  if (isPlaceholderIdentity(v) || isPlaceholderIdentity(bare)) return true;
+  if (/^pilot_owner$/i.test(bare)) return true;
+  return /(^|[_-])placeholder($|[_-])/i.test(bare);
 }
 
 // ---------- related references (§1.7) ----------

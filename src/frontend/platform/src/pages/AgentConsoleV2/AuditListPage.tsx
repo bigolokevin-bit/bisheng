@@ -620,7 +620,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
       <div className="lk aud01" data-testid="agent-v2-page-audit">
         {head}
         <ReadonlyBanner t={t} />
-        <AuditVerifyPanel api={auditApi} />
+        <AuditVerifyPanel api={auditApi} showCode={false} />
         <ListSkeleton
           ariaLabel={t('agentConsole.v2.aud01.loadingAria')}
           note={t('agentConsole.v2.aud01.loadingNote')}
@@ -707,7 +707,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
     <div className="lk aud01" data-testid="agent-v2-page-audit">
       {head}
       <ReadonlyBanner t={t} />
-      <AuditVerifyPanel api={auditApi} />
+      <AuditVerifyPanel api={auditApi} showCode={false} />
 
       <div className="card" style={{ padding: 0 }}>
         {filterBar}
@@ -766,7 +766,7 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
       </div>
       <PageFoot t={t} />
       <span className="sr-only" data-testid="aud01-range">
-        {range.from ?? ''} → {range.to ?? ''}
+        {formatShanghaiMinute(range.from ?? '')} → {formatShanghaiMinute(range.to ?? '')}
       </span>
     </div>
   );
@@ -790,9 +790,8 @@ function PageHead({ t, updatedAt }: { t: TFunction; updatedAt: string | null }) 
         </span>
         <span className="faint">·</span>
         <span>
-          {t('agentConsole.v2.aud01.freshSource')} <span className="mono">GET /api/audit</span> (A3) +{' '}
-          <span className="mono">GET /api/audit-verify</span> (A7) ·{' '}
-          {t('agentConsole.v2.aud01.freshReadonly')}
+          {t('agentConsole.v2.aud01.freshSource')}{' '}
+          {t('agentConsole.v2.aud01.freshSourceValue')} · {t('agentConsole.v2.aud01.freshReadonly')}
         </span>
         <span className="faint">·</span>
         <span>{t('agentConsole.v2.aud01.freshNoPolling')}</span>
@@ -906,8 +905,8 @@ function buildColumns(t: TFunction): LkColumn[] {
       align: 'right',
     },
     { key: 'source', label: t('agentConsole.v2.aud01.colSource'), width: 84 },
-    { key: 'action', label: t('agentConsole.v2.aud01.colAction'), width: 176 },
-    { key: 'actor', label: t('agentConsole.v2.aud01.colActor'), width: 150 },
+    { key: 'action', label: t('agentConsole.v2.aud01.colAction'), width: 160 },
+    { key: 'actor', label: t('agentConsole.v2.aud01.colActor'), width: 138 },
     { key: 'behalf', label: t('agentConsole.v2.aud01.colBehalf'), width: 84 },
     {
       key: 'decision',
@@ -933,9 +932,9 @@ function buildColumns(t: TFunction): LkColumn[] {
     { key: 'task', label: t('agentConsole.v2.aud01.colTask'), width: 108 },
     { key: 'approval', label: t('agentConsole.v2.aud01.colApproval'), width: 88 },
     { key: 'resource', label: t('agentConsole.v2.aud01.colResource'), width: 112 },
-    // 48px (target) cannot hold two 28px controls without clipping; 68 keeps
-    // the same look while the column sum stays inside the 1440 content box.
-    { key: 'ops', label: t('agentConsole.v2.aud01.colOps'), width: 68, align: 'right' },
+    // 96px holds three 28px controls (expand · 详情 link · ⋯ menu); the 28px
+    // comes out of 动作/主体 so the 12-column sum stays at the 1282 floor.
+    { key: 'ops', label: t('agentConsole.v2.aud01.colOps'), width: 96, align: 'right' },
   ];
 }
 

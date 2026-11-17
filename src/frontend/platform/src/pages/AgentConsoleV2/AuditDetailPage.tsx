@@ -42,8 +42,11 @@ import {
   decisionEnum,
   diffRows,
   isEmployeeResource,
+  resourceDisplay,
   resourceWord,
+  shortCode,
   shortId,
+  typeShortLabel,
   wireText,
   type DiffRow,
 } from './aud01';
@@ -64,6 +67,7 @@ import {
   hasSkew,
   hasValue,
   humanText,
+  isNeutralPlaceholder,
   outcomeLabel,
   readStampClock,
   reasonText,
@@ -241,9 +245,7 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
       <span className="faint">·</span>
       <span>
         {t('agentConsole.v2.aud01.freshSource')}{' '}
-        <span className="mono">GET /api/audit-detail?id=</span>
-        {' + '}
-        <span className="mono">GET /api/audit-verify</span>
+        {t('agentConsole.v2.aud02.freshSourceValue')}
       </span>
       <span className="faint">·</span>
       <span>{t('agentConsole.v2.aud02.freshNoPolling')}</span>
@@ -284,22 +286,40 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
   }
 
   if (head.kind === 'forbidden') {
-    /* 403 and 404 are one screen with one body; the code is the only difference,
-     * so the page never confirms whether this event exists (§1.11). */
+    /* R1 (D1/D2): 403 and 404 answer the same envelope upstream, but they are
+     * different facts. The copy now says which: 404 = this event does not exist
+     * or has passed retention, 403 = no view permission. The screen, actions and
+     * test ids stay shared, and the status code lives in title/aria only. */
+    const notFound = head.status === 404;
     return shell(
       <div className="flow">
-        <div className="card stage" data-testid="aud02-forbidden">
+        <div
+          className="card stage"
+          data-testid="aud02-forbidden"
+          title={`HTTP ${head.status}`}
+        >
           <span className="ic">
             <LkIcon name="lock" size={20} />
           </span>
-          <div className="t">{t('agentConsole.v2.aud02.forbiddenTitle')}</div>
-          <div className="s">
-            {t('agentConsole.v2.aud02.forbiddenDescPre')}
-            <span className="mono" data-testid="aud02-status-code">
-              HTTP {head.status}
-            </span>
-            {t('agentConsole.v2.aud02.forbiddenDescPost')}
+          <div className="t">
+            {t(
+              notFound
+                ? 'agentConsole.v2.aud02.notFoundTitle'
+                : 'agentConsole.v2.aud02.forbiddenTitle',
+            )}
           </div>
+          <div className="s">
+            {t(
+              notFound
+                ? 'agentConsole.v2.aud02.notFoundDesc'
+                : 'agentConsole.v2.aud02.forbiddenDesc',
+            )}
+          </div>
+          <span
+            className="sr-only"
+            data-testid="aud02-status-code"
+            aria-label={`HTTP ${head.status}`}
+          />
           <div className="acts2">
             <button
               type="button"
@@ -326,7 +346,11 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
     const is400 = head.status === 400;
     return shell(
       <div className="flow">
-        <div className="card stage" data-testid="aud02-error">
+        <div
+          className="card stage"
+          data-testid="aud02-error"
+          title={head.status > 0 ? `HTTP ${head.status}` : undefined}
+        >
           <span className="ic">{is400 ? <LkIcon name="info" size={20} /> : <LkIcon name="alert" size={20} />}</span>
           <div className="t">
             {t(
@@ -334,36 +358,27 @@ export function AuditDetailPage({ api, consoleApi, eventIdOverride }: AuditDetai
             )}
           </div>
           <div className="s">
-            {is400 ? (
-              <>
-                {t('agentConsole.v2.aud02.error400DescPre')}
-                <span className="mono" data-testid="aud02-status-code">
-                  HTTP 400
-                </span>
-                {t('agentConsole.v2.aud02.error400DescPost')}
-              </>
-            ) : (
-              <>
-                {t('agentConsole.v2.aud02.errorDescPre')}
-                <span className="mono" data-testid="aud02-status-code">
-                  {head.status > 0
-                    ? `HTTP ${head.status}`
-                    : t('agentConsole.v2.aud02.errorNetworkCode')}
-                </span>
-                {t('agentConsole.v2.aud02.errorDescPost')}
-              </>
-            )}
+            {is400
+              ? t('agentConsole.v2.aud02.error400Desc')
+              : t('agentConsole.v2.aud02.errorDesc')}
           </div>
-          {/* The error facts live in one line: HTTP code + request id + retry. */}
-          <div className="errbar" data-testid="aud02-error-bar">
+          <span
+            className="sr-only"
+            data-testid="aud02-status-code"
+            aria-label={
+              head.status > 0 ? `HTTP ${head.status}` : t('agentConsole.v2.aud02.errorNetworkCode')
+            }
+          />
+          {/* The error facts live in one line: request id + retry. The HTTP code
+              stays in title/aria (R1 / D2) — it is a diagnostic value, not copy.
+              Support gets a copyable request id instead. */}
+          <div
+            className="errbar"
+            data-testid="aud02-error-bar"
+            title={head.status > 0 ? `HTTP ${head.status}` : t('agentConsole.v2.aud02.errorNetworkCode')}
+          >
             <LkIcon name="alert" size={14} />
             <div className="bx">
-              <div>
-                <span className="k">HTTP</span>{' '}
-                <span className="mono">
-                  {head.status > 0 ? head.status : t('agentConsole.v2.aud02.errorNetworkCode')}
-                </span>
-              </div>
               <ReqId requestId={head.requestId} testId="aud02-error-reqid" />
               <div className="k">{t('agentConsole.v2.aud02.reqIdNote')}</div>
             </div>
@@ -489,7 +504,7 @@ function Head01({
           <span className="micro">{t('agentConsole.v2.aud02.eventIdLabel')}</span>
           <CopyId
             value={eventId}
-            display={refShort(eventId)}
+            display={typeShortLabel(eventId, t) ?? refShort(eventId)}
             ariaLabel={t('agentConsole.v2.aud01.copyEventId')}
             copiedLabel={t('agentConsole.v2.aud01.copied')}
             testId="aud02-event-id"
@@ -558,6 +573,7 @@ function JudgeCard({
   const employeeResource = isEmployeeResource(resourceType);
   const ownerRef = wireText(event.resource?.ownerRef);
   const scopeRef = wireText(event.resource?.scopeRef);
+  const res = resourceDisplay(resourceType, resourceId, t);
   const onBehalf = (event as unknown as Record<string, unknown>).onBehalfOf;
   const onBehalfRef = typeof onBehalf === 'string' ? onBehalf : '';
 
@@ -660,6 +676,9 @@ function JudgeCard({
                 {decision.text}
               </span>
             ) : (
+              /* R1 (D4): this card's own rule is 「缺省不画 —」, so an absent /
+                 not_applicable decision draws nothing; the note below says
+                 which of the two it is. */
               <span
                 className="faint"
                 data-testid="aud02-decision-absent"
@@ -668,9 +687,7 @@ function JudgeCard({
                     ? t('agentConsole.v2.aud02.decisionNaNote')
                     : t('agentConsole.v2.aud02.decisionAbsentNote')
                 }
-              >
-                —
-              </span>
+              />
             )}
           </div>
           <div className="n">
@@ -736,7 +753,18 @@ function JudgeCard({
           {resp === 'a' || resp === 'c' ? (
             <>
               <div className="v t" data-testid="aud02-responsible-name">
-                {humanText(event.responsibleHumanId, t)}
+                {isNeutralPlaceholder(event.responsibleHumanId) ? (
+                  /* R1 (D3): a seed value like `pilot_owner_placeholder` is not
+                     a person. Read it as 「未指派」; the raw value stays in title. */
+                  <span className="pill nt" title={wireText(event.responsibleHumanId)}>
+                    <span className="dot" aria-hidden="true" />
+                    {t('agentConsole.v2.aud02.responsiblePlaceholder')}
+                  </span>
+                ) : (
+                  <span title={wireText(event.responsibleHumanId)}>
+                    {humanText(event.responsibleHumanId, t)}
+                  </span>
+                )}
               </div>
               {resp === 'c' ? (
                 <div className="sub2">
@@ -783,7 +811,7 @@ function JudgeCard({
         <div className="hf wide" data-testid="aud02-f-resource">
           <div className="l micro">{t('agentConsole.v2.aud02.fResource')}</div>
           <div className="v">
-            <span className="micro">{resourceWord(resourceType, t)}</span>
+            <span className="micro">{employeeResource ? resourceWord(resourceType, t) : res.typeWord}</span>
             {employeeResource ? (
               <>
                 <span className="mono" data-testid="aud02-resource-emp">
@@ -804,9 +832,11 @@ function JudgeCard({
                 </Link>
               </>
             ) : (
+              /* R1 (D3): 「类型 · 短码」; an unreadable id is omitted here and
+                 kept in the copy control's title, never sliced into a fragment. */
               <CopyId
                 value={resourceId}
-                display={refShort(resourceId)}
+                display={res.value ?? ''}
                 ariaLabel={t('agentConsole.v2.aud01.copyResource')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
                 testId="aud02-resource-id"
@@ -818,13 +848,17 @@ function JudgeCard({
               {ownerRef ? (
                 <span>
                   <span className="k">{t('agentConsole.v2.aud02.ownerLabel')}</span>
-                  <span className="mono">{ownerRef}</span>
+                  <span className="mono" title={ownerRef}>
+                    {typeShortLabel(ownerRef, t) ?? ownerRef}
+                  </span>
                 </span>
               ) : null}
               {scopeRef ? (
                 <span>
                   <span className="k">{t('agentConsole.v2.aud02.scopeLabel')}</span>
-                  <span className="mono">{scopeRef}</span>
+                  <span className="mono" title={scopeRef}>
+                    {typeShortLabel(scopeRef, t) ?? scopeRef}
+                  </span>
                 </span>
               ) : null}
             </div>
@@ -997,7 +1031,7 @@ function RefsCard({ t, event }: { t: TFunction; event: AuditEventDetail }) {
             <span className="v">
               <CopyId
                 value={ref.value}
-                display={shortId(ref.value)}
+                display={shortCode(ref.value)}
                 ariaLabel={t(REF_COPY_KEYS[ref.key])}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
                 testId={`aud02-copy-${ref.key}`}
@@ -1068,7 +1102,7 @@ function IntegrityCard({
               {hasValue(event.prevHash) ? (
                 <CopyId
                   value={wireText(event.prevHash)}
-                  display={shortId(event.prevHash)}
+                  display={typeShortLabel(event.prevHash, t) ?? shortId(event.prevHash)}
                   ariaLabel={t('agentConsole.v2.aud01.copyPrevHash')}
                   copiedLabel={t('agentConsole.v2.aud01.copied')}
                   testId="aud02-prev-hash"
@@ -1097,7 +1131,7 @@ function IntegrityCard({
               {hasValue(event.hash) ? (
                 <CopyId
                   value={wireText(event.hash)}
-                  display={shortId(event.hash)}
+                  display={typeShortLabel(event.hash, t) ?? shortId(event.hash)}
                   ariaLabel={t('agentConsole.v2.aud01.copyHash')}
                   copiedLabel={t('agentConsole.v2.aud01.copied')}
                   testId="aud02-cur-hash"

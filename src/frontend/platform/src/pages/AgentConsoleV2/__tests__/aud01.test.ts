@@ -290,12 +290,16 @@ describe('AUD-01 wire hygiene — odd upstream shapes never throw', () => {
     expect(isEmployeeResource(undefined)).toBe(false);
   });
 
-  it('actorText keeps display names, localizes system subjects and survives numbers', () => {
+  it('actorText keeps display names, hides system worker ids, localizes the type', () => {
     const names = new Map<string, string>();
+    // R1 (VG-B2): the worker id is title-only; screen says 「系统」/「服务」.
     expect(actorText({ type: 'SYSTEM', id: 'employee-api' }, names, t)).toBe(
-      'agentConsole.v2.id.systemActor',
+      'agentConsole.v2.id.typeSystem',
     );
-    expect(actorText({ type: 'EMPLOYEE', id: 'emp_5B3C7A9D1E2F4068B5C3D7E9' }, names, t)).toBe(
+    expect(actorText({ type: 'service', id: 'runtime-worker' }, names, t)).toBe(
+      'agentConsole.v2.id.typeService',
+    );
+    expect(actorText({ type: 'employee', id: 'emp_5B3C7A9D1E2F4068B5C3D7E9' }, names, t)).toBe(
       'agentConsole.v2.id.employeeRef',
     );
     expect(actorText({ type: 'human', id: 'u_10001', displayName: '陈诚' }, names, t)).toBe('陈诚');

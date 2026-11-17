@@ -320,11 +320,13 @@ describe('AUD-02 — sections, fields and absence', () => {
     expect(refs.textContent).toContain('任务');
   });
 
-  it('E02: decision — absent is `—` with 「没有决定字段」, not 「不经过判定」', async () => {
+  it('E02: decision — absent draws nothing (no 「—」), and says 「没有决定字段」', async () => {
     renderPage({ api: makeApi({ ok: true, event: failureEvent() }) });
     await waitReady();
     const cell = screen.getByTestId('aud02-f-decision');
-    expect(screen.getByTestId('aud02-decision-absent').textContent).toBe('—');
+    // R1 (D4): the card's own rule is 「缺省不画 —」 — the value block is empty.
+    expect(screen.getByTestId('aud02-decision-absent').textContent).toBe('');
+    expect(cell.querySelector('.v')?.textContent).toBe('');
     expect(cell.textContent).toContain('没有决定字段');
     expect(cell.textContent).not.toContain('不经过权限判定');
   });
@@ -578,11 +580,14 @@ describe('AUD-02 — zero write entries (E09, E10)', () => {
 // ---------------------------------------------------------------- state screens
 
 describe('AUD-02 — state screens (E11)', () => {
-  it('403 and 404 share one body; only the status code differs', async () => {
+  it('403 and 404 keep one screen and test ids, but say different, honest things', async () => {
     renderPage({ api: makeApi({ ok: false, status: 403, requestId: 'req-403' }) });
     await screen.findByTestId('aud02-forbidden');
-    const forbidden = screen.getByTestId('aud02-forbidden').textContent;
-    expect(screen.getByTestId('aud02-status-code').textContent).toBe('HTTP 403');
+    const forbidden = screen.getByTestId('aud02-forbidden').textContent ?? '';
+    // R1 (D2): the code lives in aria/title, never in the sentence.
+    expect(screen.getByTestId('aud02-status-code').getAttribute('aria-label')).toBe('HTTP 403');
+    expect(forbidden).not.toContain('HTTP 403');
+    expect(forbidden).toContain('查看权限');
     // No data, no skeleton — the whole page is replaced.
     expect(screen.queryByTestId('aud02-detail')).toBeNull();
     expect(document.body.textContent).not.toContain(EVENT_ID);
@@ -590,19 +595,25 @@ describe('AUD-02 — state screens (E11)', () => {
     cleanup();
     renderPage({ api: makeApi({ ok: false, status: 404, requestId: 'req-404' }) });
     await screen.findByTestId('aud02-forbidden');
-    const notFound = screen.getByTestId('aud02-forbidden').textContent;
-    expect(screen.getByTestId('aud02-status-code').textContent).toBe('HTTP 404');
-
-    const strip = (text: string | null) =>
-      (text ?? '').replace(/HTTP 40[34]/g, 'HTTP').replace(/req-\d+/g, 'req');
-    expect(strip(notFound)).toBe(strip(forbidden));
+    const notFound = screen.getByTestId('aud02-forbidden').textContent ?? '';
+    expect(screen.getByTestId('aud02-status-code').getAttribute('aria-label')).toBe('HTTP 404');
+    // R1 (D1): 404 is 「不存在/超出保留期」, never 「没有查看权限」.
+    expect(notFound).not.toContain('HTTP 404');
+    expect(notFound).toContain('不存在');
+    expect(notFound).toContain('保留期');
+    expect(notFound).not.toContain('查看权限');
+    // Same structure, same controls: only the copy differs.
+    expect(screen.getByTestId('aud02-forbidden-retry')).toBeTruthy();
+    expect(screen.getByTestId('aud02-forbidden-reqid').textContent).toContain('req-404');
   });
 
-  it('a 500 shows the plain-language screen with the code and the request id', async () => {
+  it('a 500 shows the plain-language screen with the request id (code in title only)', async () => {
     renderPage({ api: makeApi({ ok: false, status: 502, requestId: '7c1e94d2b08a' }) });
     await screen.findByTestId('aud02-error');
     expect(screen.getByTestId('aud02-error').textContent).toContain('这条事件没能读出来');
-    expect(screen.getByTestId('aud02-error-bar').textContent).toContain('502');
+    expect(screen.getByTestId('aud02-error').textContent).not.toContain('HTTP 502');
+    expect(screen.getByTestId('aud02-error-bar').getAttribute('title')).toBe('HTTP 502');
+    expect(screen.getByTestId('aud02-error-bar').textContent).not.toContain('502');
     expect(screen.getByTestId('aud02-error-reqid').textContent).toContain('7c1e94d2b08a');
     expect(screen.queryByTestId('aud02-detail')).toBeNull();
   });
@@ -886,7 +897,7 @@ describe('AUD-02 identity closeout — machine casing, tenant and honest links',
     const api = makeApi({ ok: false, status: 404 });
     renderPage({ api });
     await screen.findByTestId('aud02-forbidden');
-    expect(screen.getByTestId('aud02-status-code').textContent).toContain('404');
+    expect(screen.getByTestId('aud02-status-code').getAttribute('aria-label')).toContain('404');
     expect(screen.getByTestId('aud02-forbidden-reqid').textContent).toContain('未提供');
     expect(screen.getByTestId('aud02-forbidden-retry')).toBeTruthy();
   });
@@ -901,5 +912,44 @@ describe('AUD-02 identity closeout — machine casing, tenant and honest links',
     renderPage({ api });
     await waitReady();
     expect(screen.getByTestId('aud02-f-actor').textContent).toContain('员工');
+  });
+});
+
+// ------------------------------------------------ R1: D1–D4 + header closeout
+
+describe('AUD-02 R1 — type+short ids, neutral placeholders, plain header', () => {
+  it('prints 「事件 · 短码」 for the event id and 「岗位版本 · 短码」 for the version ref', async () => {
+    renderPage();
+    await waitReady();
+    const idCell = screen.getByTestId('aud02-event-id');
+    expect(idCell.textContent).toContain('事件 ·');
+    expect(idCell.textContent).not.toContain('ev_01M7DF41');
+    expect(idCell.getAttribute('title')).toBe(EVENT_ID);
+    const version = screen.getByTestId('aud02-ref-employeeVersionRef');
+    expect(version.textContent).toContain('岗位版本');
+    expect(version.textContent).toContain('X3Z5');
+    expect(version.textContent).not.toContain('empv_01M7DF3Z');
+  });
+
+  it('reads a seed owner as 「未指派」 while keeping the raw value in title', async () => {
+    const api = makeApi({
+      ok: true,
+      event: event({ responsibleHumanId: 'pilot_owner_placeholder' }),
+    });
+    renderPage({ api });
+    await waitReady();
+    const cell = screen.getByTestId('aud02-f-responsible');
+    expect(cell.textContent).toContain('未指派');
+    expect(cell.textContent).not.toContain('pilot_owner_placeholder');
+    expect(cell.querySelector('[title="pilot_owner_placeholder"]')).not.toBeNull();
+  });
+
+  it('keeps the detail header free of endpoints and contract codes', async () => {
+    renderPage();
+    await waitReady();
+    const page = screen.getByTestId('agent-v2-page-audit-detail').textContent ?? '';
+    expect(page).not.toContain('GET /api');
+    expect(page).not.toContain('A4');
+    expect(page).not.toContain('A7');
   });
 });

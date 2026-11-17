@@ -629,6 +629,27 @@
   border: 1px solid var(--hairline);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
+/* R1 (NV): the row menu must survive the table's horizontal scroll band.
+   Fixed positioning takes it out of `.tblwrap`'s overflow clip; the button
+   measures itself and passes top/left inline. */
+.agent-app .lk.aud01 .opmenu.float {
+  position: fixed;
+  right: auto;
+  top: auto;
+  z-index: 60;
+}
+/* R1 (NV): an always-visible detail link sits beside the chevron; text, not an
+   icon, so the row's way into the detail page is self-evident. */
+.agent-app .lk.aud01 .opb.detail {
+  width: 28px;
+  font-size: 10.5px;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk.aud01 .opb.detail:hover {
+  color: hsl(var(--foreground));
+}
 .agent-app .lk.aud01 .opmenu button {
   text-align: left;
   padding: 7px 9px;

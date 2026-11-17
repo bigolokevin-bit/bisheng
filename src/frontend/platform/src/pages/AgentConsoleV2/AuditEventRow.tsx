@@ -18,7 +18,6 @@ import { CopyId } from './listkit';
 import { LkIcon } from './listkit/icons';
 import {
   employeeResourceIdLabel,
-  humanRefLabel,
   isPlaceholderIdentity,
 } from './identity';
 import {
@@ -27,9 +26,12 @@ import {
   CLOCK_SKEW_MS,
   DECISION_KEYS,
   decisionEnum,
+  humanRefDisplay,
+  idDisplay,
   isEmployeeResource,
   OUTCOME_KEYS,
   outcomeEnum,
+  resourceDisplay,
   resourceWord,
   sourceWord,
   wireText,
@@ -42,7 +44,7 @@ import {
   formatSpan,
   isStructured,
   outcomeTone,
-  shortId,
+  shortCode,
   type AuditEvent,
   type DiffRow,
 } from './aud01';
@@ -85,6 +87,7 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
   const resourceType = wireText(event.resource?.type);
   const resourceId = wireText(event.resource?.id);
   const employeeResource = isEmployeeResource(resourceType);
+  const res = resourceDisplay(resourceType, resourceId, t);
   const behalfRef = refText(event.onBehalfOf);
 
   const timeTitle = [
@@ -154,7 +157,7 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
             <span className="behalf" title={`onBehalfOf: ${behalfRef}`}>
               → {isPlaceholderIdentity(behalfRef)
                 ? t('agentConsole.v2.id.unknown')
-                : humanRefLabel(behalfRef, t)}
+                : humanRefDisplay(behalfRef, t)}
             </span>
           ) : (
             <span className="faint">—</span>
@@ -172,10 +175,10 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
         <td className="mono" data-l="run">
           {runId ? (
             <span className="idcell">
-              {/* the id itself is the RUN-02 jump: one line, like the target */}
+              {/* R1 (VG-B1): 「运行 · 短码」 — the raw rn_/ws_ id stays in title. */}
               <CopyId
                 value={runId}
-                display={shortId(runId)}
+                display={idDisplay(runId, t)}
                 ariaLabel={t('agentConsole.v2.aud01.copyRun')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
                 href={`/agent/runs/${encodeURIComponent(runId)}`}
@@ -193,7 +196,7 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
             <span className="idcell">
               <CopyId
                 value={taskId}
-                display={shortId(taskId)}
+                display={idDisplay(taskId, t)}
                 ariaLabel={t('agentConsole.v2.aud01.copyTask')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -218,7 +221,7 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
             <span className="idcell">
               <CopyId
                 value={approvalId}
-                display={shortId(approvalId)}
+                display={idDisplay(approvalId, t)}
                 ariaLabel={t('agentConsole.v2.aud01.copyApproval')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -233,41 +236,46 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
         <td data-l={t('agentConsole.v2.aud01.colResource')}>
           <span
             className="rescell"
-            title={
-              event.resource?.ownerRef || event.resource?.scopeRef
-                ? [
-                    event.resource.ownerRef ? `ownerRef: ${wireText(event.resource.ownerRef)}` : null,
-                    event.resource.scopeRef ? `scopeRef: ${wireText(event.resource.scopeRef)}` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
-                : undefined
-            }
+            title={[
+              resourceType ? `${wireText(resourceType)}${resourceId ? `: ${wireText(resourceId)}` : ''}` : null,
+              event.resource?.ownerRef ? `ownerRef: ${wireText(event.resource.ownerRef)}` : null,
+              event.resource?.scopeRef ? `scopeRef: ${wireText(event.resource.scopeRef)}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ') || undefined}
           >
-            {/* S2: type word is localized (EMPLOYEE → 员工) and employee
-                resources print the name or 「员工 · 短码」 — the CopyId keeps
-                the full `emp_…` id in title + copy (visual truncation rule). */}
-            <span className="rt">{resourceWord(resourceType, t)}</span>
-            <CopyId
-              value={resourceId}
-              display={
-                employeeResource
-                  ? employeeResourceIdLabel(resourceId, names, t)
-                  : shortId(resourceId)
-              }
-              ariaLabel={t('agentConsole.v2.aud01.copyResource')}
-              copiedLabel={t('agentConsole.v2.aud01.copied')}
-            />
+            {/* R1 (VG-B1/B4): 「类型 · 短码」 (员工 keeps its name / 员工 · 短码).
+                An unreadable resource is omitted entirely; the raw type and id
+                stay in the cell title above. */}
             {employeeResource ? (
-              <a
-                className="jump"
-                href={`/agent/employees/${encodeURIComponent(resourceId)}`}
-                data-testid={`aud01-employee-link-${event.eventId}`}
-              >
-                {t('agentConsole.v2.aud01.viewEmployee')}
-                <LkIcon name="chevR" size={13} />
-              </a>
-            ) : null}
+              <>
+                <span className="rt">{resourceWord(resourceType, t)}</span>
+                <CopyId
+                  value={resourceId}
+                  display={employeeResourceIdLabel(resourceId, names, t)}
+                  ariaLabel={t('agentConsole.v2.aud01.copyResource')}
+                  copiedLabel={t('agentConsole.v2.aud01.copied')}
+                />
+                <a
+                  className="jump"
+                  href={`/agent/employees/${encodeURIComponent(resourceId)}`}
+                  data-testid={`aud01-employee-link-${event.eventId}`}
+                >
+                  {t('agentConsole.v2.aud01.viewEmployee')}
+                  <LkIcon name="chevR" size={13} />
+                </a>
+              </>
+            ) : (
+              <>
+                {res.value ? null : res.typeWord ? <span className="rt">{res.typeWord}</span> : null}
+                <CopyId
+                  value={resourceId}
+                  display={res.value ?? ''}
+                  ariaLabel={t('agentConsole.v2.aud01.copyResource')}
+                  copiedLabel={t('agentConsole.v2.aud01.copied')}
+                />
+              </>
+            )}
           </span>
         </td>
 
@@ -289,6 +297,17 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
                 <LkIcon name="chevR" size={14} />
               </span>
             </button>
+            {/* R1 (NV): a row-level, always-visible way into the detail page —
+                navigation only, the inline expansion stays as it was. */}
+            <a
+              className="opb detail"
+              href={`/agent/audit/${encodeURIComponent(event.eventId)}`}
+              aria-label={t('agentConsole.v2.aud01.openDetail')}
+              title={t('agentConsole.v2.aud01.openDetail')}
+              data-testid={`aud01-detail-${event.eventId}`}
+            >
+              {t('agentConsole.v2.aud01.detailShort')}
+            </a>
             <RowMenu eventId={event.eventId} t={t} />
           </span>
         </td>
@@ -374,7 +393,27 @@ function OutcomeCell({ outcome, t }: { outcome: string; t: TFunction }) {
 /** `⋯` row menu: copy the event id, or open the AUD-02 detail page. */
 function RowMenu({ eventId, t }: { eventId: string; t: TFunction }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const rootRef = useRef<HTMLSpanElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+
+  /* R1 (NV): the popover used to be `position: absolute` inside the table, so
+     the wrapper's `overflow-x: auto` (1280–1399) clipped it and the row looked
+     like a dead control. It is now `position: fixed`, anchored to the button by
+     measurement — the table (and any sticky header) can no longer crop it. */
+  const openMenu = () => {
+    const rect = btnRef.current?.getBoundingClientRect?.() ?? null;
+    const width = 160;
+    const viewport = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+    const right = rect ? rect.right : 0;
+    const rawLeft = right - width;
+    const maxLeft = viewport > 0 ? viewport - width - 8 : rawLeft;
+    setPos({
+      top: (rect ? rect.bottom : 0) + 4,
+      left: Math.max(8, Math.min(rawLeft, maxLeft)),
+    });
+    setOpen(true);
+  };
 
   useEffect(() => {
     if (!open) return undefined;
@@ -384,11 +423,18 @@ function RowMenu({ eventId, t }: { eventId: string; t: TFunction }) {
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') setOpen(false);
     };
+    const onDismiss = () => setOpen(false);
     window.addEventListener('mousedown', onDown);
     window.addEventListener('keydown', onKey);
+    /* A fixed popover does not follow the row on scroll/resize; dismiss it
+       instead of leaving it floating over unrelated rows. */
+    window.addEventListener('scroll', onDismiss, true);
+    window.addEventListener('resize', onDismiss);
     return () => {
       window.removeEventListener('mousedown', onDown);
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('scroll', onDismiss, true);
+      window.removeEventListener('resize', onDismiss);
     };
   }, [open]);
 
@@ -404,18 +450,23 @@ function RowMenu({ eventId, t }: { eventId: string; t: TFunction }) {
   return (
     <span className="opsmore" ref={rootRef}>
       <button
+        ref={btnRef}
         type="button"
         className="opb"
         aria-label={t('agentConsole.v2.aud01.moreActions')}
         aria-haspopup="menu"
         aria-expanded={open}
         data-testid={`aud01-more-${eventId}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? setOpen(false) : openMenu())}
       >
         <LkIcon name="more" size={14} />
       </button>
       {open ? (
-        <span className="opmenu" role="menu">
+        <span
+          className="opmenu float"
+          role="menu"
+          style={pos ? { top: pos.top, left: pos.left } : undefined}
+        >
           <button type="button" role="menuitem" onClick={copy} data-testid={`aud01-copy-event-${eventId}`}>
             {t('agentConsole.v2.aud01.copyEventId')}
           </button>
@@ -532,7 +583,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
             {hash ? (
               <CopyId
                 value={hash}
-                display={shortId(hash)}
+                display={shortCode(hash)}
                 ariaLabel={t('agentConsole.v2.aud01.copyHash')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -545,7 +596,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
             {prevHash ? (
               <CopyId
                 value={prevHash}
-                display={shortId(prevHash)}
+                display={shortCode(prevHash)}
                 ariaLabel={t('agentConsole.v2.aud01.copyPrevHash')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -586,7 +637,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
               <span className="k">{t('agentConsole.v2.aud01.relApproval')}</span>
               <CopyId
                 value={approvalRef}
-                display={shortId(approvalRef)}
+                display={shortCode(approvalRef)}
                 ariaLabel={t('agentConsole.v2.aud01.copyApproval')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -601,7 +652,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
               <span className="k">{t('agentConsole.v2.aud01.relCorrelation')}</span>
               <CopyId
                 value={correlationRef}
-                display={shortId(correlationRef)}
+                display={shortCode(correlationRef)}
                 ariaLabel={t('agentConsole.v2.aud01.copyCorrelation')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -613,7 +664,7 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
               <span className="k">{t('agentConsole.v2.aud01.relPolicy')}</span>
               <CopyId
                 value={policyRef}
-                display={shortId(policyRef)}
+                display={shortCode(policyRef)}
                 ariaLabel={t('agentConsole.v2.aud01.copyPolicy')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />

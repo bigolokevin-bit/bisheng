@@ -27,10 +27,11 @@ import {
   VERIFY_WINDOWS,
   classifyVerify,
   formatShanghaiMinute,
-  formatUtcMinute,
+  formatUtcStamp,
   groupNumber,
   isVerifyGreen,
   shortId,
+  typeShortLabel,
   verifyRange,
   type AuditApi,
   type AuditVerifyResult,
@@ -66,6 +67,12 @@ export interface AuditVerifyPanelProps {
    * and all five states stay word-for-word identical to AUD-01.
    */
   hideCode?: boolean;
+  /**
+   * AUD-01 (R1 / VG-B2): the list page's page-head chrome carries no contract
+   * codes, and the panel follows the page it is mounted on. Default true keeps
+   * SET-01's reference header untouched.
+   */
+  showCode?: boolean;
 }
 
 export interface AuditVerifyStatus {
@@ -74,7 +81,7 @@ export interface AuditVerifyStatus {
   requestId: string | null;
 }
 
-export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false }: AuditVerifyPanelProps) {
+export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false, showCode = true }: AuditVerifyPanelProps) {
   const { t, i18n } = useTranslation();
   const [window, setWindow] = useState<VerifyWindow>(DEFAULT_VERIFY_WINDOW);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
@@ -136,7 +143,7 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false 
           <LkIcon name="shieldCheck" size={18} />
           {t('agentConsole.v2.aud01.verifyTitle')}
         </span>
-        {hideCode ? null : <span className="c mono">A7</span>}
+        {hideCode || !showCode ? null : <span className="c mono">A7</span>}
         <div className="sp" />
         <span className="hd-note">{t('agentConsole.v2.aud01.verifyReadonlyNote')}</span>
       </div>
@@ -186,11 +193,11 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false 
           ))}
         </div>
         {/* S1: the window reads in Beijing time; the raw UTC bounds stay in
-            the title (报障口径), per 本地时间显示 + title 留 UTC 原值. */}
+            the title (报障口径) without the machine `T…Z` shape (R1 / B2). */}
         <span
           className="mono win-range"
           data-testid="aud01-verify-range"
-          title={`${formatUtcMinute(range.from)} → ${formatUtcMinute(range.to)} UTC`}
+          title={`${formatUtcStamp(range.from)} → ${formatUtcStamp(range.to)}`}
         >
           {formatShanghaiMinute(range.from)} → {formatShanghaiMinute(range.to)}
         </span>
@@ -344,7 +351,7 @@ function VerifyPassed({
             <span className="k">{t('agentConsole.v2.aud01.verifyAnchorLabel')}</span>
             <CopyId
               value={result.anchorCheckpointId}
-              display={shortId(result.anchorCheckpointId)}
+              display={typeShortLabel(result.anchorCheckpointId, t) ?? shortId(result.anchorCheckpointId)}
               ariaLabel={t('agentConsole.v2.aud01.verifyCopyAnchor')}
               copiedLabel={t('agentConsole.v2.aud01.copied')}
               testId="aud01-anchor"
@@ -356,7 +363,7 @@ function VerifyPassed({
             <span className="k">{t('agentConsole.v2.aud01.verifyHeadLabel')}</span>
             <CopyId
               value={result.chainHeadHash}
-              display={shortId(result.chainHeadHash)}
+              display={typeShortLabel(result.chainHeadHash, t) ?? shortId(result.chainHeadHash)}
               ariaLabel={t('agentConsole.v2.aud01.verifyCopyHead')}
               copiedLabel={t('agentConsole.v2.aud01.copied')}
               testId="aud01-chain-head"
@@ -499,8 +506,13 @@ function VerifyBroken({
           <div className="kv">
             <span className="k">{t('agentConsole.v2.aud01.verifyAnchorHeadLabel')}</span>
             <span className="mono">
-              {result.anchorCheckpointId ? shortId(result.anchorCheckpointId) : '—'} ·{' '}
-              {result.chainHeadHash ? shortId(result.chainHeadHash) : '—'}
+              {result.anchorCheckpointId
+                ? typeShortLabel(result.anchorCheckpointId, t) ?? shortId(result.anchorCheckpointId)
+                : '—'}{' '}
+              ·{' '}
+              {result.chainHeadHash
+                ? typeShortLabel(result.chainHeadHash, t) ?? shortId(result.chainHeadHash)
+                : '—'}
             </span>
           </div>
         ) : null}

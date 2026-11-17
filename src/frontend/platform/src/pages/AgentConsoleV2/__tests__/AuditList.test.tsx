@@ -503,7 +503,8 @@ describe('AUD-01 expansion (§1.8)', () => {
     expect(exp.textContent).toContain('契约版本');
     expect(exp.textContent).not.toContain('schemaVersion');
     expect(exp.textContent).toContain('没有「验证此条」入口');
-    expect(exp.textContent).toContain('idem_gr_3…8_01');
+    expect(exp.textContent).toContain('3801');
+    expect(exp.textContent).not.toContain('idem_gr_3…');
     expect(exp.querySelector('.cp[title="idem_gr_3A38_01"]')).not.toBeNull();
     expect(exp.textContent).toContain('无只读通路，不可跳转');
   });
@@ -583,14 +584,16 @@ describe('AUD-01 empty / error / forbidden (§1.10)', () => {
 // ---------------------------------------------------------------- S2 identity
 
 describe('AUD-01 S2 — readable identities in list rows', () => {
-  it('system actor reads 「系统 · employee-api」; an unlisted employee resource reads 「员工 · 短码」, no bare emp_ id', async () => {
+  it('system actor reads 「系统」 with the worker id in title; an unlisted employee resource reads 「员工 · 短码」, no bare emp_ id', async () => {
     const h = harness({ pages: [okList([FAILED_EVENT])] });
     const { container } = renderPage(h, '?action=employee.version.create');
     await waitFor(() => expect(screen.getByTestId('aud01-row-ev_FAILED')).toBeInTheDocument());
     const row = screen.getByTestId('aud01-row-ev_FAILED');
 
     const who = row.querySelector('.who') as HTMLElement;
-    expect(who.textContent).toContain('系统 · employee-api');
+    // R1 (VG-B2): the screen says 「系统」; the worker id stays in title.
+    expect(who.textContent).toBe('系统');
+    expect(who.getAttribute('title')).toContain('employee-api');
 
     const resCell = row.querySelector('.rescell') as HTMLElement;
     expect(resCell.querySelector('.rt')?.textContent).toBe('员工');
@@ -625,6 +628,68 @@ describe('AUD-01 S2 — readable identities in list rows', () => {
     const behalf = (base.querySelector('.behalf') as HTMLElement).textContent ?? '';
     expect(behalf).toContain('用户 #u_10001');
     expect(behalf).not.toContain('human:');
+  });
+});
+
+// ------------------------------------------------ R1: type+short, plain chrome, live menu
+
+describe('AUD-01 R1 — business ids, plain-language chrome, live row entry', () => {
+  it('prints 「类型 · 短码」 for run / task / approval and keeps raw ids in title', async () => {
+    const h = harness({ pages: [okList([event()])] });
+    renderPage(h);
+    await waitFor(() =>
+      expect(screen.getByTestId('aud01-row-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C')).toBeInTheDocument(),
+    );
+    const row = screen.getByTestId('aud01-row-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
+    const text = row.textContent ?? '';
+    expect(text).toContain('运行 · GPWJ');
+    expect(text).not.toContain('rn_01M7DEY8');
+    expect(row.querySelector('[title="rn_01M7DEY86XMD8J2SJZES4TGPWJ"]')).not.toBeNull();
+  });
+
+  it('drops engineering chrome from the head and footer (no endpoints, no A3/A7)', async () => {
+    const h = harness({ pages: [okList([event()])] });
+    renderPage(h);
+    await waitFor(() => expect(screen.getByTestId('agent-v2-page-audit')).toBeInTheDocument());
+    const page = screen.getByTestId('agent-v2-page-audit').textContent ?? '';
+    expect(page).not.toContain('GET /api');
+    expect(page).not.toContain('A3');
+    expect(page).not.toContain('A7');
+    // the read-only promise itself stays
+    expect(page).toContain('只读');
+    // no ISO/UTC `T…Z` stamp in copy (the sr-only range reads Beijing time)
+    expect(page).not.toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+  });
+
+  it('offers an always-visible row link into the detail page, next to the expansion', async () => {
+    const h = harness({ pages: [okList([event()])] });
+    renderPage(h);
+    const row = await screen.findByTestId('aud01-row-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
+    const detail = screen.getByTestId('aud01-detail-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
+    expect(detail.tagName).toBe('A');
+    expect(detail.getAttribute('href')).toBe(
+      '/agent/audit/ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C',
+    );
+    expect(detail.textContent).toBe('详情');
+    // the inline expansion stays independent and still works
+    expect(within(row).getByTestId('aud01-expand-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C')).toBeTruthy();
+  });
+
+  it('opens a real menu (copy + detail) and closes on Escape', async () => {
+    const h = harness({ pages: [okList([event()])] });
+    renderPage(h);
+    const more = await screen.findByTestId('aud01-more-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
+    expect(more.getAttribute('aria-haspopup')).toBe('menu');
+    expect(more.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(more);
+    await waitFor(() => expect(more.getAttribute('aria-expanded')).toBe('true'));
+    const menu = await screen.findByRole('menu');
+    expect(within(menu).getByTestId('aud01-copy-event-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C')).toBeTruthy();
+    expect(
+      within(menu).getByTestId('aud01-open-detail-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C').getAttribute('href'),
+    ).toBe('/agent/audit/ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
   });
 });
 
@@ -715,7 +780,9 @@ describe('AUD-01 identity closeout — upstream casing never leaks raw machine w
     expect(text).toContain('已批准');
     expect(text).toContain('成功');
     expect(text).toContain('员工');
-    expect(text).toContain('系统 · employee-api');
+    expect(text).toContain('系统');
+    expect(text).not.toContain('employee-api');
+    expect(row.querySelector('.who')?.getAttribute('title')).toContain('employee-api');
     // machine words and the raw employee id stay off the visible line
     expect(text).not.toContain('EMPLOYEE');
     expect(text).not.toContain('SUCCESS');

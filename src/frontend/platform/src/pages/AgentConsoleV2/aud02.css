@@ -35,6 +35,20 @@
   margin: 0 auto;
 }
 
+/* R1 (D2): the HTTP status stays in title/aria, not in the sentence — this
+   carries it for assistive tech without printing it on screen. */
+.agent-app .lk.aud02 .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---------- 元信息行 / 只读 banner ---------- */
 .agent-app .lk.aud02 .roband {
   display: flex;

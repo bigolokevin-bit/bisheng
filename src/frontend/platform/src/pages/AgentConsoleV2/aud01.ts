@@ -20,7 +20,7 @@
  */
 import { AuthError, type ApiResult } from '@/controllers/API/agent';
 
-import { actorLabel, resourceTypeLabel } from './identity';
+import { actorLabel, actorTypeLabel, humanRefLabel, idTail, resourceTypeLabel } from './identity';
 
 // ---------- A3 shapes (audit.py `_PUBLIC_OPTIONAL`, audit_query.py) ----------
 
@@ -477,6 +477,12 @@ export function actorText(
   const id = wireText(actor?.id);
   const displayName = wireText(actor?.displayName) || undefined;
   if (!type && !id && !displayName) return t('agentConsole.v2.id.unknown');
+  /* R1 (VG-B2): a system/service worker id is an implementation detail
+     (`employee-api`, `runtime-worker`). The row says 「系统」/「服务」 alone and
+     the raw id stays in the cell's title, where support can read it. */
+  if (!displayName && (type === 'system' || type === 'service')) {
+    return actorTypeLabel(type, t);
+  }
   return actorLabel({ type, id, displayName }, names, t);
 }
 
@@ -657,6 +663,15 @@ export function formatUtcMinute(iso: string): string {
   return `${new Date(ms).toISOString().slice(0, 16)}Z`;
 }
 
+/** Support-facing UTC stamp without the machine `T…Z` shape: `2026-11-16 09:20 UTC`. */
+export function formatUtcStamp(iso: string): string {
+  const ms = Date.parse(wireText(iso));
+  if (!Number.isFinite(ms)) return '—';
+  const d = new Date(ms);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+}
+
 /** S1: the same readout in Shanghai wall clock `2026-11-16 17:20`. */
 export function formatShanghaiMinute(iso: string): string {
   const p = shParts(iso);
@@ -723,6 +738,153 @@ export function shortId(id: string | undefined): string {
 export function onBehalfDisplay(onBehalfOf: string): string {
   const raw = wireText(onBehalfOf);
   return raw.startsWith('human:') ? raw.slice('human:'.length) : raw;
+}
+
+// ---------- type + short code (R1: VG-B1 / VG-B4 / D3) ----------
+
+/**
+ * Prefix → Chinese type word. Longest prefix wins (`empv_` before `emp_`).
+ * These are business object kinds, not contract codes: the word is what the
+ * operator reads, the tail is only a distinguisher (4 chars, same rule as
+ * identity.idTail). The raw value never leaves title/copy.
+ */
+const ID_TYPE_KEYS: ReadonlyArray<[string, string]> = [
+  ['empv_', 'agentConsole.v2.aud02.refVersion'],
+  ['emp_', 'agentConsole.v2.id.res.employee'],
+  ['ev_', 'agentConsole.v2.aud01.idTypeEvent'],
+  ['tk_', 'agentConsole.v2.id.res.task'],
+  ['rn_', 'agentConsole.v2.id.res.run'],
+  ['ws_', 'agentConsole.v2.id.res.workstation'],
+  ['ap_', 'agentConsole.v2.id.res.approval'],
+  ['gr_', 'agentConsole.v2.id.res.grant'],
+  ['pd_', 'agentConsole.v2.id.res.policy'],
+  ['ps_', 'agentConsole.v2.aud01.idTypeSnapshot'],
+  ['ah_', 'agentConsole.v2.aud01.idTypeHash'],
+  ['cpk_', 'agentConsole.v2.aud01.idTypeAnchor'],
+  ['cp_', 'agentConsole.v2.aud01.idTypeAnchor'],
+  ['ck_', 'agentConsole.v2.aud01.idTypeAnchor'],
+  ['ou_', 'agentConsole.v2.aud01.idTypeUser'],
+  ['u_', 'agentConsole.v2.aud01.idTypeUser'],
+  ['idem_', 'agentConsole.v2.aud01.idTypeCorrelation'],
+  ['msg_', 'agentConsole.v2.aud01.idTypeMessage'],
+  ['om_', 'agentConsole.v2.aud01.idTypeMessage'],
+];
+
+/**
+ * Is this an opaque object id (`tk_…`, `empv_…`, a bare hash) rather than a
+ * readable token such as `order.read`? Only id-shaped values get a 4-char
+ * short code — a tail sliced out of prose is the VG-B4 defect.
+ */
+export function isCodeId(value: string | undefined): boolean {
+  const v = wireText(value).trim();
+  if (!v) return false;
+  if (/^[a-z][a-z0-9]*_[A-Za-z0-9_-]{3,}$/i.test(v)) return true;
+  if (/^[0-9a-f]{16,}$/i.test(v)) return true;
+  return false;
+}
+
+/** Locale key of the type word for a code id; null when the prefix is unknown. */
+export function idTypeKey(value: string | undefined): string | null {
+  const v = wireText(value).trim().toLowerCase();
+  if (!v) return null;
+  for (const [prefix, key] of ID_TYPE_KEYS) {
+    if (v.startsWith(prefix)) return key;
+  }
+  return null;
+}
+
+/**
+ * `tk_E283…A453` → 「任务 · A453」. Null when the value is not id-shaped or its
+ * prefix has no reliable type word — callers then omit the display and keep the
+ * raw value in title (never a meaningless `CHAN…ated` fragment).
+ */
+export function typeShortLabel(
+  value: string | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string | null {
+  const v = wireText(value).trim();
+  if (!isCodeId(v)) return null;
+  const key = idTypeKey(v);
+  if (!key) return null;
+  const tail = idTail(v, 4);
+  return tail ? `${t(key)} · ${tail}` : null;
+}
+
+/** Display text for an id cell: type+short when possible, the raw value otherwise. */
+export function idDisplay(
+  value: string | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const v = wireText(value).trim();
+  if (!v) return '—';
+  return typeShortLabel(v, t) ?? v;
+}
+
+/**
+ * Short code alone, for cells that already print the type word as a row label
+ * (AUD-02 关联): `empv_…` → `X3Z5`, with the full value in title/copy.
+ */
+export function shortCode(value: string | undefined): string {
+  const v = wireText(value).trim();
+  if (!v) return '—';
+  if (isCodeId(v)) {
+    const alnum = v.replace(/[^A-Za-z0-9]/g, '');
+    if (alnum.length >= 4) return alnum.slice(-4);
+  }
+  return shortId(v);
+}
+
+/**
+ * Resource cell (VG-B1/B4): employee → name/「员工 · 短码」; a typed resource →
+ * 「类型 · 短码」 (type word from the resource enum, else from the id prefix);
+ * anything unreadable is omitted entirely and kept in title only.
+ */
+export function resourceDisplay(
+  type: unknown,
+  id: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): { typeWord: string | null; value: string | null } {
+  const rawType = wireText(type);
+  const rawId = wireText(id).trim();
+  const word = resourceWord(rawType, t);
+  const knownType = word.trim() !== rawType.trim();
+  if (knownType && rawId) {
+    const typed = typeShortLabel(rawId, t);
+    if (typed) return { typeWord: null, value: `${word} · ${idTail(rawId, 4)}` };
+    /* A readable business token (`order.read`) keeps its value; an opaque
+       non-conforming id is dropped (raw value stays in title). */
+    if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,47}$/.test(rawId)) {
+      return { typeWord: null, value: `${word} · ${rawId}` };
+    }
+    return { typeWord: word, value: null };
+  }
+  if (!knownType && rawId) {
+    const typed = typeShortLabel(rawId, t);
+    if (typed) return { typeWord: null, value: typed };
+  }
+  return { typeWord: knownType ? word : null, value: null };
+}
+
+/**
+ * Human reference on screen: a real name stays; a short uid keeps the S2
+ * 「用户 #uid」 honourific; a long opaque id (`ou_13307ada…39c1e`) becomes
+ * 「用户 · 39c1e」 — no bare 40-char token across the row.
+ */
+export function humanRefDisplay(
+  raw: string | null | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  name?: string | null,
+): string {
+  const value = (raw ?? '').trim();
+  if (!value) return t('agentConsole.v2.id.none');
+  const bare = onBehalfDisplay(value);
+  if (!bare) return t('agentConsole.v2.id.none');
+  if (bare.length > 12 && isCodeId(bare)) {
+    const typed = typeShortLabel(bare, t);
+    if (typed) return typed;
+  }
+  if (bare.length > 16) return `${t('agentConsole.v2.aud01.idTypeUser')} · ${idTail(bare, 4)}`;
+  return humanRefLabel(value, t, name);
 }
 
 // ---------- row expansion: field diff (spec §1.8) ----------
