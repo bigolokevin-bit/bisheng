@@ -14,7 +14,7 @@
  * the backend is wired (spec §2, E06).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -38,6 +38,8 @@ import {
   fmtUsd,
   isFilterActive,
   nextActions,
+  readCollabQuery,
+  writeCollabQuery,
   writeErrorKey,
   statusLabelKey,
   type ChainRow,
@@ -107,7 +109,20 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
   const [more, setMore] = useState<MoreState>('idle');
   const [chainToken, setChainToken] = useState(0);
   const [authLost, setAuthLost] = useState(false);
-  const [filters, setFilters] = useState<DelegationFilter>(EMPTY_FILTER);
+  // The URL drives the filters (FILT-01..03): refresh, back/forward and a shared
+  // link all land on the same three legs. Nothing is mirrored in local state.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { filter: filters, unknown: unknownFilters } = useMemo(
+    () => readCollabQuery(searchParams.toString()),
+    [searchParams],
+  );
+  const applyFilters = useCallback(
+    (next: DelegationFilter) => {
+      const query = writeCollabQuery(next);
+      setSearchParams(new URLSearchParams(query.startsWith('?') ? query.slice(1) : query));
+    },
+    [setSearchParams],
+  );
 
   // Directory names: degraded silently — 「员工 · 末4位」 is the honest fallback.
   useEffect(() => {
@@ -221,7 +236,7 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
     return Array.from(seen, ([id, name]) => ({ id, name }));
   }, [rows, names, t]);
   const filterActive = isFilterActive(filters);
-  const clearFilters = useCallback(() => setFilters(EMPTY_FILTER), []);
+  const clearFilters = useCallback(() => applyFilters(EMPTY_FILTER), [applyFilters]);
 
   // A filtered-out selection would leave the detail card describing a row
   // the reader can no longer see; move the selection to the first visible row.
@@ -355,9 +370,14 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
 
       {list.kind === 'ready' ? (
         <>
+          {unknownFilters.length > 0 ? (
+            <p className="cfnote" role="status" data-testid="collab-filter-unknown">
+              {t(`${NS}.filter.unknown`)}
+            </p>
+          ) : null}
           <FilterBar
             filters={filters}
-            onChange={(patch) => setFilters((current) => ({ ...current, ...patch }))}
+            onChange={(patch) => applyFilters({ ...filters, ...patch })}
             participants={participants}
             active={filterActive}
             onClear={clearFilters}
@@ -366,7 +386,7 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
           {visible.length === 0 ? (
             <EmptyPanel
               title={t(`${NS}.state.empty.title`)}
-              desc={t('agentConsole.v2.tsk.emptyCond', { conditions: filterSummary(filters, t) })}
+              desc={t('agentConsole.v2.tsk.emptyCond', { conditions: filterSummary(filters, names, t) })}
               actionLabel={t('agentConsole.v2.tsk.clear')}
               onAction={clearFilters}
             />
@@ -422,14 +442,14 @@ const WINDOW_FILTERS: Array<{ value: WindowFilter; key: string }> = [
   { value: '30d', key: 'agentConsole.v2.runs01.window30d' },
 ];
 
-function filterSummary(filters: DelegationFilter, t: TFunction): string {
+function filterSummary(filters: DelegationFilter, names: Map<string, string>, t: TFunction): string {
   const parts: string[] = [];
   if (filters.status !== 'all') parts.push(t(statusLabelKey(filters.status)));
   if (filters.window !== 'all') {
     const hit = WINDOW_FILTERS.find((item) => item.value === filters.window);
     if (hit) parts.push(t(hit.key));
   }
-  if (filters.participant) parts.push(filters.participant);
+  if (filters.participant) parts.push(personName(filters.participant, names, t));
   return parts.join(' · ');
 }
 

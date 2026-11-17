@@ -7288,11 +7288,15 @@
             "network": "No connection; nothing was submitted, you can retry.",
             "unauthorized": "Your session expired; sign in again and retry.",
             "denied": "You do not have permission for this action.",
+            "noMandate": "This account has no mandate to delegate to that employee.",
             "notFound": "This delegation does not exist or is outside your tenant.",
             "conflict": "This delegation has moved on; refresh and retry.",
             "invalid": "The submission is incomplete; check it and retry.",
             "server": "The service is busy; nothing was submitted, you can retry."
           }
+        },
+        "filter": {
+          "unknown": "Some filter values were not recognised; showing everything."
         },
         "chain": {
           "title": "Handover chain",
