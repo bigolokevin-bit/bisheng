@@ -134,6 +134,14 @@ function gotoLoginWithReturn(): void {
 
 // ---------------------------------------------------------------- small pieces
 
+/** Integer share: no data → 「—」; a non-zero slice never 0%; a partial slice never 100%. */
+export function honestPct(n: number, total: number): string {
+  if (!(total > 0)) return '—';
+  if (n <= 0) return '0';
+  if (n >= total) return '100';
+  return String(Math.min(99, Math.max(1, Math.floor((n / total) * 100))));
+}
+
 function OpsButton({ title, label }: { title: string; label: string }) {
   return (
     <button type="button" className="met-ops" aria-label={label} title={title}>
@@ -1039,8 +1047,8 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
               {t('agentConsole.v2.met.heatSummary', {
                 day: platScaled.peak ? t(HEAT_DAY_KEYS[platScaled.peak.dow - 1]) : '—',
                 hour: platScaled.peak ? pad2(platScaled.peak.hour) : '—',
-                peakCount: platScaled.peak ? fmtInt(platScaled.peak.count) : '0',
-                night: platScaled.nightAvg !== null ? platScaled.nightAvg.toFixed(1) : '0.0',
+                peakCount: platScaled.peak ? fmtInt(platScaled.peak.count) : '—',
+                night: platScaled.nightAvg !== null ? platScaled.nightAvg.toFixed(1) : '—',
                 total: fmtInt(platScaled.total),
               })}
             </div>
@@ -1495,9 +1503,9 @@ function SessionsCard({
     rest.length > 0
       ? [...top.map(([name, n]) => ({ name, n })), { name: t('agentConsole.v2.met.a4Other'), n: restSum }]
       : top.map(([name, n]) => ({ name, n }));
-  // S5: integer shares; a non-zero slice never prints 0%.
-  const pct = (n: number) =>
-    total > 0 && n > 0 ? String(Math.max(1, Math.round((n / total) * 100))) : '0';
+  // Integer shares: no data → 「—」; a non-zero slice never prints 0%; a partial
+  // slice never rounds up to 100% (99.6% must stay 99%).
+  const pct = (n: number) => honestPct(n, total);
   return (
     <div className="ov-card" data-testid="agent-v2-met-a4">
       <CardHead
