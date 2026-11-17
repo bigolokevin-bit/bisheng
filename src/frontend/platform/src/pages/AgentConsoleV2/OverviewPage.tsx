@@ -29,14 +29,12 @@ import {
   dayWindow,
   fetchActivity,
   fetchApprovalStats,
-  fetchBudgetMonth,
   fetchEmployeeStats,
   fetchEmployeesPage,
   fetchRunStats,
   fmtUsd,
   isoDay,
   makeFetcher,
-  monthPeriod,
   sparkPoints,
   type ActivityBody,
   type ApiRes,
@@ -121,14 +119,24 @@ function listKpi(res: ApiRes<QueueBody> | null): BlockState<QueueBody> {
 }
 
 /* Beijing-time "now" pieces for heat focus row / current cell / quota today. */
-function beijingNow(now = new Date()): { dow: number; hour: number; day: number } {
+function beijingNow(now = new Date()): { dow: number; hour: number; day: number; date: string } {
   const d = new Date(now.getTime() + 480 * 60000);
   const jsDay = d.getUTCDay(); // 0=Sun
   return {
     dow: jsDay === 0 ? 7 : jsDay, // 1=Mon … 7=Sun, matches R7 cells
     hour: d.getUTCHours(),
     day: d.getUTCDate(),
+    date: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`,
   };
+}
+
+/* OV-01 §5.1: KPI-02 counts TODAY, not a rolling week. The boundary is the
+ * Beijing calendar day (the product's only time zone), so a UTC dayWindow
+ * would silently include yesterday 08:00–24:00. */
+function beijingDayWindow(now = new Date()): { from: string; to: string } {
+  const bj = new Date(now.getTime() + 480 * 60000);
+  const startUtc = Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()) - 480 * 60000;
+  return { from: new Date(startUtc).toISOString(), to: now.toISOString() };
 }
 
 function daysInMonth(year: number, month1: number): number {
@@ -170,7 +178,7 @@ export function OverviewPage() {
   const [approvals, setApprovals] = useState<BlockState<ApprovalStats>>(pendingKpi);
   const [runs, setRuns] = useState<BlockState<RunStatsBody>>(pendingKpi);
   const [runs7, setRuns7] = useState<BlockState<RunStatsBody>>(pendingKpi);
-  const [runsPrev, setRunsPrev] = useState<BlockState<RunStatsBody>>(pendingKpi);
+  const [runsToday, setRunsToday] = useState<BlockState<RunStatsBody>>(pendingKpi);
   const [cost, setCost] = useState<BlockState<BudgetBody>>(pendingKpi);
   const [queueApprovals, setQueueApprovals] = useState<BlockState<QueueBody>>(pendingKpi);
   const [queueTasks, setQueueTasks] = useState<BlockState<QueueBody>>(pendingKpi);
@@ -239,7 +247,7 @@ export function OverviewPage() {
     setApprovals(pendingKpi);
     setRuns(pendingKpi);
     setRuns7(pendingKpi);
-    setRunsPrev(pendingKpi);
+    setRunsToday(pendingKpi);
     setCost(pendingKpi);
     setQueueApprovals(pendingKpi);
     setQueueTasks(pendingKpi);
@@ -262,19 +270,20 @@ export function OverviewPage() {
       // KPI-3 + AL-5 use a FIXED rolling 7-day window (C1 audit item 5):
       // the 28-day period chip only drives the trend card.
       const window7 = dayWindow(KPI_RUN_DAYS);
-      const window7Prev = { from: dayWindow(KPI_RUN_DAYS * 2).from, to: window7.from };
+      const windowToday = beijingDayWindow();
       const window24 = {
         from: new Date(Date.now() - 86400000).toISOString(),
         to: new Date().toISOString(),
       };
-      const [s, a, r, r7, rp, ids, qa, qt, qr, h, au, rr, mx, cb] = await Promise.all([
+      const [s, a, r, r7, rt, ids, qa, qt, qr, h, au, rr, mx, cb] = await Promise.all([
         fetchEmployeeStats(fetcher),
         uid ? fetchApprovalStats(fetcher, `human:${uid}`) : Promise.resolve(null),
         fetchRunStats(fetcher, { ...windowCur, bucket: 'day' }),
         // all-platform day buckets, NO employeeId filter (audit item 5:
         // the overview total must be completed 13 + running 1 = 14)
         fetchRunStats(fetcher, { ...window7, bucket: 'day' }),
-        fetchRunStats(fetcher, { ...window7Prev, bucket: 'day' }),
+        // KPI-02: today only, Beijing calendar day — never a rolling week.
+        fetchRunStats(fetcher, { ...windowToday, bucket: 'day' }),
         fetchEmployeesPage(fetcher, { limit: COST_ID_LIMIT, expand: 'version' }),
         uid
           ? fetcher<QueueBody>('/api/approvals', {
@@ -350,13 +359,13 @@ export function OverviewPage() {
         requestId: r7.requestId,
         data: r7.data,
       });
-      setRunsPrev({
+      setRunsToday({
         loading: false,
-        ok: rp.ok,
-        status: rp.status,
-        code: rp.code,
-        requestId: rp.requestId,
-        data: rp.data,
+        ok: rt.ok,
+        status: rt.status,
+        code: rt.code,
+        requestId: rt.requestId,
+        data: rt.data,
       });
       setQueueApprovals(listKpi(qa));
       setQueueTasks(listKpi(qt));
@@ -409,7 +418,8 @@ export function OverviewPage() {
         heat: h.ok ? nowIso : prev.heat,
       }));
       // P9 requires an explicit employeeId list (BFF contract): resolve ids
-      // from E11 first, then one batched month query. No silent "0.00".
+      // from E11 first, then one batched DAY query. KPI-04 is today's spend;
+      // a month row is not a substitute, so month-only responses show —.
       const empIds = (ids.data?.items ?? []).map((e) => e.employeeId);
       if (!ids.ok) {
         setCost({
@@ -422,16 +432,32 @@ export function OverviewPage() {
       } else if (empIds.length === 0) {
         setCost({ loading: false, ok: false, status: 0, code: 'agent-console.no-employees' });
       } else {
-        const b = await fetchBudgetMonth(fetcher, empIds, monthPeriod());
-        if (!alive) return;
-        setCost({
-          loading: false,
-          ok: b.ok,
-          status: b.status,
-          code: b.code,
-          requestId: b.requestId,
-          data: b.data,
+        const todayKey = beijingNow().date;
+        const b = await fetcher<BudgetBody>('/api/budget-usage', {
+          employeeId: empIds.join(','),
+          period: todayKey,
+          periodKind: 'day',
         });
+        if (!alive) return;
+        const dayRowsOnly = (b.data?.items ?? []).every((row) => row.periodKind === 'day');
+        if (b.ok && !dayRowsOnly) {
+          setCost({
+            loading: false,
+            ok: false,
+            status: b.status,
+            code: 'agent-console.cost.month-only',
+            requestId: b.requestId,
+          });
+        } else {
+          setCost({
+            loading: false,
+            ok: b.ok,
+            status: b.status,
+            code: b.code,
+            requestId: b.requestId,
+            data: b.data,
+          });
+        }
       }
       if (alive) setUpdatedAt(new Date().toISOString());
     })();
@@ -468,6 +494,7 @@ export function OverviewPage() {
   );
   const runSums = bucketSum(runs.data?.buckets);
   const run7Sums = bucketSum(runs7.data?.buckets);
+  const runTodaySums = bucketSum(runsToday.data?.buckets);
   /* MUST 2: 14 = 13 succeeded + 0 failed + 1 running/unknown — the residual
    * is always spelled out; buckets may also carry unknownRuns directly.
    * KPI-3 / heat rollup / AL-5 read the FIXED 7-day window (C1 item 5). */
@@ -535,9 +562,6 @@ export function OverviewPage() {
     }
     return out;
   }, [runs, monthNow]);
-
-  const prevSums = runsPrev.ok ? bucketSum(runsPrev.data?.buckets) : null;
-  const deltaRuns = prevSums ? run7Sums.runs - prevSums.runs : null;
 
   /* trend bars: R6 returns only non-empty buckets — missing days stay empty,
    * never back-filled with zeros (§2.4). */
@@ -649,7 +673,7 @@ export function OverviewPage() {
     approvals,
     runs,
     runs7,
-    runsPrev,
+    runsToday,
     cost,
     queueApprovals,
     queueTasks,
@@ -810,16 +834,16 @@ export function OverviewPage() {
           )}
         </div>
 
-        {/* 近 7 天运行（固定 7 天窗口，不随期间段变化 — C1 item 5） */}
+        {/* 今日运行（KPI-02：北京日历日，不是滚动 7 天） */}
         <div className="ov-card ov-kpi" data-testid="agent-v2-ov-kpi-runs">
-          <NavLink className="ov-kpi-link" to="/agent/runs?src=ov" aria-label={`${t('agentConsole.v2.ov.kpiWeekRuns')} →`} />
-          <span className="a2-micro">{t('agentConsole.v2.ov.kpiWeekRuns')}</span>
+          <NavLink className="ov-kpi-link" to="/agent/runs?src=ov" aria-label={`${t('agentConsole.v2.mtx.runs')} →`} />
+          <span className="a2-micro">{t('agentConsole.v2.mtx.runs')}</span>
           <div className="ov-kr">
-            {runs7.loading ? (
+            {runsToday.loading ? (
               <span className="ov-v">…</span>
-            ) : runs7.ok ? (
+            ) : runsToday.ok ? (
               <>
-                <span className="ov-v" data-testid="agent-v2-ov-kpi-runs-value">{run7Sums.runs}</span>
+                <span className="ov-v" data-testid="agent-v2-ov-kpi-runs-value">{runTodaySums.runs}</span>
                 {runsSpark ? (
                   <KpiSpark points={runsSpark} testId="agent-v2-ov-kpi-runs-spark" />
                 ) : (
@@ -828,37 +852,20 @@ export function OverviewPage() {
               </>
             ) : null}
           </div>
-          {runs7.ok ? (
+          {runsToday.ok ? (
             <span className="ov-kn">
-              {deltaRuns != null && deltaRuns !== 0 ? (
-                <span className={`ov-dtl ${deltaRuns > 0 ? 'up' : 'dwn'}`}>
-                  {deltaRuns > 0 ? <Icon name="trend" size={13} /> : null}
-                  {deltaRuns > 0 ? `+${deltaRuns}` : deltaRuns}
-                </span>
-              ) : (
-                <span className="ov-dtl flat">—</span>
-              )}
-              {prevSums
-                ? t('agentConsole.v2.ov.trendVsPrevCount', { days: KPI_RUN_DAYS, prev: prevSums.runs })
-                : t('agentConsole.v2.ov.kpiNoTrend')}
+              <span className="ov-dtl flat">—</span>
+              {t('agentConsole.v2.ov.kpiNoTrend')}
               {' · '}
-              {t('agentConsole.v2.trendSucceeded')} {run7Sums.succeeded} · {t('agentConsole.v2.trendFailed')}{' '}
-              {run7Sums.failed}
-              {unknownRuns > 0 ? (
-                <>
-                  {' · '}
-                  <em data-testid="agent-v2-ov-kpi-runs-unknown">
-                    {t('agentConsole.v2.ov.runsUnknown', { count: unknownRuns })}
-                  </em>
-                </>
-              ) : null}
+              {t('agentConsole.v2.trendSucceeded')} {runTodaySums.succeeded} · {t('agentConsole.v2.trendFailed')}{' '}
+              {runTodaySums.failed}
             </span>
-          ) : runs7.loading ? null : (
+          ) : runsToday.loading ? null : (
             <span className="ov-kn">
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-runs-error">
                 {t('agentConsole.v2.errorQuery')}
               </span>
-              <ReqId requestId={runs7.requestId} testId="agent-v2-ov-kpi-runs-reqid" />
+              <ReqId requestId={runsToday.requestId} testId="agent-v2-ov-kpi-runs-reqid" />
               <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-runs" onClick={refresh}>
                 {t('agentConsole.v2.ov.retry')}
               </button>
@@ -866,10 +873,10 @@ export function OverviewPage() {
           )}
         </div>
 
-        {/* 本月成本 */}
+        {/* 今日成本（KPI-04：成本账本日窗口；上游只给月时显 —，不改口径） */}
         <div className="ov-card ov-kpi" data-testid="agent-v2-ov-kpi-cost">
-          <NavLink className="ov-kpi-link" to="/agent/metrics?src=ov" aria-label={`${t('agentConsole.v2.ov.kpiMonthCost')} →`} />
-          <span className="a2-micro">{t('agentConsole.v2.ov.kpiMonthCost')}</span>
+          <NavLink className="ov-kpi-link" to="/agent/metrics?src=ov" aria-label={`${t('agentConsole.v2.met.costTitle')} · ${t('dsh.range.today')} →`} />
+          <span className="a2-micro">{t('agentConsole.v2.met.costTitle')} · {t('dsh.range.today')}</span>
           <div className="ov-kr">
             {cost.loading ? (
               <span className="ov-v">…</span>
@@ -885,7 +892,9 @@ export function OverviewPage() {
                   <KpiDots testId="agent-v2-ov-kpi-cost-dots" />
                 )}
               </>
-            ) : null}
+            ) : (
+              <span className="ov-v">—</span>
+            )}
           </div>
           {cost.ok ? (
             <>
@@ -918,14 +927,23 @@ export function OverviewPage() {
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-cost-error">
                 {cost.code === 'agent-console.no-employees'
                   ? t('agentConsole.v2.ov.noteNoEmployees')
-                  : t('agentConsole.v2.errorQuery')}
+                  : cost.code === 'agent-console.cost.month-only'
+                    ? t('agentConsole.v2.run02.costNone')
+                    : t('agentConsole.v2.errorQuery')}
               </span>
+              {cost.code === 'agent-console.cost.month-only' ? (
+                <span className="a2-micro" data-testid="agent-v2-ov-kpi-cost-caliber">
+                  {t('agentConsole.v2.ov.noteLedger')} · {t('agentConsole.v2.ov.costCaliber')}
+                </span>
+              ) : null}
               {cost.code === 'agent-console.no-employees' ? null : (
                 <>
                   <ReqId requestId={cost.requestId} testId="agent-v2-ov-kpi-cost-reqid" />
-                  <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-cost" onClick={refresh}>
-                    {t('agentConsole.v2.ov.retry')}
-                  </button>
+                  {cost.code === 'agent-console.cost.month-only' ? null : (
+                    <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-cost" onClick={refresh}>
+                      {t('agentConsole.v2.ov.retry')}
+                    </button>
+                  )}
                 </>
               )}
             </span>

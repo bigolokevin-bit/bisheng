@@ -126,6 +126,11 @@
   border-bottom: 1px solid var(--hairline);
 }
 
+.agent-app .cchat-back {
+  display: none;
+  align-self: flex-start;
+}
+
 .agent-app .cchat-thread-meta {
   display: flex;
   flex-wrap: wrap;
@@ -309,6 +314,10 @@
 
 /* At and below 900px the list and the message stream stack vertically. */
 @media (max-width: 900px) {
+  .agent-app .cchat-back {
+    display: inline-flex;
+  }
+
   .agent-app .cchat-shell {
     grid-template-columns: minmax(0, 1fr);
   }

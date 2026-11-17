@@ -925,3 +925,32 @@
 .agent-app .lk.collab .lk-more .b {
   margin-left: auto;
 }
+
+/* §FILT — filter bar (status / window / participant / clear) */
+.agent-app .lk.collab .cfilt {
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: hsl(var(--card));
+}
+.agent-app .lk.collab .cfilt .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.agent-app .lk.collab .cfilt .fsel { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.agent-app .lk.collab .cfilt select {
+  max-width: 160px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: hsl(var(--surface-2));
+  color: hsl(var(--foreground));
+  font: inherit;
+  padding: 4px 8px;
+}
+.agent-app .lk.collab .tlink { margin-top: 2px; align-self: flex-start; font-size: 12px; }
+.agent-app .lk.collab .ubud { margin-left: 8px; color: hsl(var(--foreground)); }
+@media (max-width: 767px) {
+  .agent-app .lk.collab .cfilt { gap: 6px; }
+  .agent-app .lk.collab .cfilt .fsel { width: 100%; }
+  .agent-app .lk.collab .cfilt select { max-width: none; flex: 1; }
+}

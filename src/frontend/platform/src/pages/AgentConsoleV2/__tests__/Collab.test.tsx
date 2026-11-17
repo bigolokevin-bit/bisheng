@@ -332,3 +332,45 @@ describe('COL-01 S3-W3 — PRD v0.3 alignment', () => {
     expect(container.textContent).not.toMatch(/T06:05|06:05/);
   });
 });
+
+describe('COL-01 §FILT — filters narrow what was loaded', () => {
+  it('filters by status and clears back to the full list', async () => {
+    const second = row({ delegationId: `${DL}02`, taskId: `${TK}02`, status: 'requested', title: '把对账单按客户拆成十份' });
+    const api = makeApi({ list: ok({ items: [row(), second] }) });
+    const { container } = renderPage(api);
+    await waitFor(() => expect(screen.getByTestId('collab-filters')).toBeTruthy());
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+
+    fireEvent.change(screen.getByTestId('collab-filter-status'), { target: { value: 'requested' } });
+    await waitFor(() => expect(container.querySelectorAll('tbody tr')).toHaveLength(1));
+    expect(container.textContent).toContain('把对账单按客户拆成十份');
+
+    fireEvent.click(screen.getByTestId('collab-clear-filters'));
+    await waitFor(() => expect(container.querySelectorAll('tbody tr')).toHaveLength(2));
+    expect(screen.queryByTestId('collab-clear-filters')).toBeNull();
+  });
+
+  it('filters by a 24h window on the last action time', async () => {
+    const now = Date.now();
+    const old = row({ delegationId: `${DL}03`, taskId: `${TK}03`, title: '去年的一份旧交接', updatedAt: new Date(now - 10 * 24 * 3600 * 1000).toISOString() });
+    const fresh = row({ delegationId: `${DL}04`, taskId: `${TK}04`, title: '刚刚发生的一次交接', updatedAt: new Date(now - 60 * 1000).toISOString() });
+    const api = makeApi({ list: ok({ items: [old, fresh] }) });
+    const { container } = renderPage(api);
+    await waitFor(() => expect(screen.getByTestId('collab-filters')).toBeTruthy());
+
+    fireEvent.click(screen.getByTestId('collab-filter-window-24h'));
+    await waitFor(() => expect(container.querySelectorAll('tbody tr')).toHaveLength(1));
+    expect(container.textContent).toContain('刚刚发生的一次交接');
+    expect(container.textContent).not.toContain('去年的一份旧交接');
+  });
+
+  it('shows the related-task link and the owner-side USD amount without a raw id', async () => {
+    const api = makeApi({});
+    const { container } = renderPage(api);
+    await waitFor(() => expect(container.textContent).toContain('记在发起方：小鲤'));
+    expect(container.textContent).toContain('$18.00');
+    const link = within(container).getAllByRole('link').find((node) => node.getAttribute('href') === `/agent/tasks/${TK}`);
+    expect(link).toBeTruthy();
+    expect(container.textContent).not.toContain(TK);
+  });
+});

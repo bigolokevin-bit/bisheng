@@ -537,6 +537,7 @@ export const ACTION_LABEL_KEYS: Record<string, string> = {
   'grant.created': 'actionGrantCreated',
   'employee.version.create': 'actionEmployeeVersionCreate',
   'employee.lifecycle.update': 'actionEmployeeLifecycleUpdate',
+  'employee.update': 'actionEmployeeUpdate',
   'workstation.bound': 'actionWorkstationBound',
   'message.send': 'actionMessageSend',
   'approval.decided': 'actionApprovalDecided',
@@ -723,15 +724,13 @@ export function formatSpan(ms: number): string {
 export function shortId(id: string | undefined): string {
   const text = wireText(id);
   if (!text.trim()) return '—';
-  if (text.startsWith('ah_')) {
-    return text.length <= 14 ? text : `ah_${text.slice(3, 7)}…${text.slice(-6)}`;
-  }
-  const us = text.indexOf('_');
-  if (us > 0 && us <= 4 && text.length > us + 9) {
-    return `${text.slice(0, us + 5)}…${text.slice(-4)}`;
-  }
   if (text.length <= 14) return text;
-  return `${text.slice(0, 4)}…${text.slice(-4)}`;
+  // One shape everywhere: `xx_` namespace + 4 head … 4 tail (`tk_E283…A453`).
+  const us = text.indexOf('_');
+  const prefix = us > 0 && us <= 4 ? text.slice(0, us + 1) : '';
+  const body = prefix ? text.slice(us + 1) : text;
+  if (body.length <= 12) return text;
+  return `${prefix}${body.slice(0, 4)}…${body.slice(-4)}`;
 }
 
 /** `human:u_10001` → `u_10001`; anything else unchanged (never invented). */
@@ -852,14 +851,12 @@ export function typeShortLabel(
   return shown ? `${t(key)} · ${shown}` : null;
 }
 
-/** Display text for an id cell: type+short when possible, the raw value otherwise. */
+/** Display text for an id cell: one mid-ellipsis short code (`tk_E283…A453`). */
 export function idDisplay(
   value: string | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  _t: (key: string, options?: Record<string, unknown>) => string,
 ): string {
-  const v = wireText(value).trim();
-  if (!v) return '—';
-  return typeShortLabel(v, t) ?? v;
+  return shortId(value);
 }
 
 /**

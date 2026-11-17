@@ -727,18 +727,17 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
             foot={
               <CursorFoot
                 pageRowsText={t('agentConsole.v2.aud01.pageRows', { n: list.items.length })}
-                noteText={t('agentConsole.v2.aud01.cursorNote', { n: query.limit })}
+                noteText={t('agentConsole.v2.aud01.cursorNoteHuman', { n: query.limit })}
                 lastPageNote={
                   list.nextCursor
                     ? undefined
-                    : t('agentConsole.v2.aud01.lastPageNote', {
+                    : t('agentConsole.v2.aud01.lastPageNoteHuman', {
                         n: list.items.length,
-                        limit: query.limit,
                       })
                 }
-                hintText={t('agentConsole.v2.aud01.tblHint')}
+                hintText={t('agentConsole.v2.aud01.tblHintHuman')}
                 nextLabel={t('agentConsole.v2.aud01.next')}
-                nextTitle={t('agentConsole.v2.aud01.nextTitle')}
+                nextTitle={t('agentConsole.v2.aud01.nextTitleHuman')}
                 lastPageTitle={t('agentConsole.v2.aud01.lastPageTitle')}
                 hasNext={list.nextCursor !== null}
                 loadingMore={list.loadingMore}
@@ -808,7 +807,7 @@ function ReadonlyBanner({ t }: { t: TFunction }) {
       <LkIcon name="lock" size={14} />
       <span>
         <b>{t('agentConsole.v2.aud01.bannerLead')}</b>
-        {t('agentConsole.v2.aud01.bannerBody')}
+        {t('agentConsole.v2.aud01.bannerBodyHuman')}
       </span>
       <HelpTip term="readonlyBanner" testId="aud01-help-readonly" />
       <div className="sp" />

@@ -4354,6 +4354,7 @@
     "riskFailed": "{{n}} failed today",
     "riskOverBudget": "Over budget",
     "noRisk": "No risk",
+    "runsNone": "No runs today",
     "stActive": "Active",
     "stOnboarding": "Onboarding",
     "stPaused": "Paused",
@@ -6457,6 +6458,14 @@
         "verifyS0Title": "No anchor yet, nothing to check",
         "verifyS0Desc": "This tenant has not produced its first chain checkpoint yet. That does not mean the data is clean, nor that anything is wrong — there is simply no starting point to check from.",
         "verifyScannedUnit": "critical events scanned",
+        "verifyScannedUnitHuman": "key events scanned",
+        "bannerBodyHuman": "Audit events are final once written: this page offers no edit, delete, backfill or revert entry, and no export. Exporting happens elsewhere as a new action and is audited too.",
+        "verifyReadonlyNoteHuman": "Read-only check, no events modified; the result covers this window only",
+        "verifyLoadingDescHuman": "Running a read-only check; no events are modified and the result covers this window only.",
+        "cursorNoteHuman": "{{n}} per page · no total shown",
+        "nextTitleHuman": "Load the next page",
+        "tblHintHuman": "Scroll sideways to see every column",
+        "lastPageNoteHuman": "{{n}} on this page — that is the end",
         "verifyGateLabel": "Green gate",
         "verifyS0Note": "Even a successful check with zero scans and no anchor is not a pass; the panel stays neutral.",
         "verifyAnchorLabel": "Anchor",
@@ -6562,6 +6571,7 @@
         "actionGrantCreated": "Grant created",
         "actionEmployeeVersionCreate": "New employee version",
         "actionEmployeeLifecycleUpdate": "Lifecycle change",
+        "actionEmployeeUpdate": "Employee updated",
         "actionWorkstationBound": "Workstation bound",
         "actionMessageSend": "Message send",
         "actionApprovalDecided": "Approval decision",
@@ -7100,6 +7110,7 @@
       "forbiddenDesc": "This account cannot view the skill ledger, or the page does not exist. To avoid disclosure, both cases show this same message.",
       "backHome": "Back to console",
       "emptyTitle": "No skills yet",
+      "emptyTitleV2": "No skill versions yet",
       "emptyHint": "Skills appear here once an employee version references them. This console offers no create entry.",
       "deepMiss": "This skill is not part of this read. It may not be in the ledger yet, or the link is out of date.",
       "deepBack": "View all skills",
@@ -7282,6 +7293,12 @@
           "unknown": "Unknown state"
         },
         "taskFallback": "this task · …{{tail}}"
+      },
+      "emp01": {
+        "unassigned": "Unassigned",
+        "shortCode": "Short code",
+        "noMatch": "No matching employees",
+        "clearFilters": "Clear filters"
       }
     },
     "approvals": {

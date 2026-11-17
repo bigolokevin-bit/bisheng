@@ -50,12 +50,14 @@ type Scenario = {
   matrixItems?: unknown[];
   collabItems?: unknown[];
   recentItems?: unknown[];
+  budgetItems?: unknown[];
   gate?: boolean;
 };
 
 let scenario: Scenario = {};
 let release: (() => void) | null = null;
 let gate: Promise<void> | null = null;
+let fetched: string[] = [];
 
 const EMP = { employeeId: 'emp_1', name: '鲤爪' };
 
@@ -79,7 +81,7 @@ function bodyFor(url: string): unknown {
   }
   if (url.includes('/api/run-activity')) return { cells: [], max: 0 };
   if (url.includes('/api/audit')) return { events: [] };
-  if (url.includes('/api/budget-usage')) return { items: [], missingEmployeeIds: [] };
+  if (url.includes('/api/budget-usage')) return { items: scenario.budgetItems ?? [], missingEmployeeIds: [] };
   if (url.includes('/api/employees')) return { items: [EMP] };
   if (url.includes('/api/matrix')) return { items: scenario.matrixItems ?? [] };
   if (url.includes('/api/delegations')) return { items: scenario.collabItems ?? [] };
@@ -88,6 +90,7 @@ function bodyFor(url: string): unknown {
 }
 
 function stubFetch() {
+  fetched = [];
   gate = scenario.gate
     ? new Promise<void>((resolve) => {
         release = resolve;
@@ -98,6 +101,7 @@ function stubFetch() {
     vi.fn(async (input: RequestInfo | URL) => {
       if (gate) await gate;
       const url = String(input);
+      fetched.push(url);
       if (url.includes('/api/matrix') && scenario.matrixStatus && scenario.matrixStatus !== 200) {
         return new Response(JSON.stringify({ code: 'agent.http.500' }), {
           status: scenario.matrixStatus,
@@ -222,12 +226,66 @@ describe('OV-01 PRD §5.1 additions', () => {
     expect(document.querySelectorAll('a[href="#"]')).toHaveLength(0);
   });
 
+  it('OV-KPI-02/04: KPIs use the Beijing calendar day, never a rolling week/month', async () => {
+    stubFetch();
+    renderOverview();
+    await screen.findByTestId('agent-v2-ov-updated');
+
+    expect(screen.getByTestId('agent-v2-ov-kpi-runs')).toHaveTextContent('今日运行');
+    expect(screen.getByTestId('agent-v2-ov-kpi-runs-value')).toHaveTextContent('3');
+    expect(screen.getByTestId('agent-v2-ov-kpi-cost')).toHaveTextContent('成本 · 今天');
+
+    const bj = new Date(Date.now() + 480 * 60000);
+    const today = `${bj.getUTCFullYear()}-${String(bj.getUTCMonth() + 1).padStart(2, '0')}-${String(bj.getUTCDate()).padStart(2, '0')}`;
+
+    const budgetUrl = fetched.find((u) => u.includes('/api/budget-usage')) ?? '';
+    expect(budgetUrl).toContain('periodKind=day');
+    expect(decodeURIComponent(budgetUrl)).toContain(`period=${today}`);
+
+    const todayRun = fetched
+      .filter((u) => u.includes('/api/run-stats'))
+      .some((u) => {
+        const from = new URL(u, 'http://localhost').searchParams.get('from');
+        if (!from) return false;
+        const d = new Date(new Date(from).getTime() + 480 * 60000);
+        return (
+          d.getUTCHours() === 0 &&
+          d.getUTCMinutes() === 0 &&
+          `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}` === today
+        );
+      });
+    expect(todayRun).toBe(true);
+  });
+
+  it('a month-only budget response shows — with the caliber, never monthly spend as today', async () => {
+    scenario = {
+      budgetItems: [
+        { employeeId: 'emp_1', period: '2026-11', periodKind: 'month', costUsd: 9 },
+      ],
+    };
+    stubFetch();
+    renderOverview();
+    const error = await screen.findByTestId('agent-v2-ov-kpi-cost-error');
+    expect(error).toHaveTextContent('尚无成本账目');
+    const caliber = screen.getByTestId('agent-v2-ov-kpi-cost-caliber');
+    expect(caliber.textContent).toContain('口径：成本账本');
+    expect(caliber.textContent).toContain('无账目显示 —');
+    const card = screen.getByTestId('agent-v2-ov-kpi-cost');
+    expect(card.textContent).toContain('—');
+    expect(card.textContent).not.toContain('USD 9.00');
+    expect(screen.queryByTestId('agent-v2-ov-retry-kpi-cost')).toBeNull();
+  });
+
   it('mobile: entry cards collapse and the runs table scrolls inside its card', () => {
     const css = readFileSync(
       `${process.cwd()}/src/pages/AgentConsoleV2/overview.css`,
       'utf8'
     );
     expect(css).toContain('@media (max-width: 900px)');
+    expect(css).toContain('@media (max-width: 420px)');
+    // C1-V9: 375 keeps the 2×2 KPI grid; clipping is fixed inside the card.
+    expect(css).toContain('.ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }');
+    expect(css).toContain('font-size: 24px');
     expect(css).toContain('grid-template-columns: minmax(0, 1fr)');
     expect(css).toContain('.ov-rtbl { min-width: 620px; }');
   });

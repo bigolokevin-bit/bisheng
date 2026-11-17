@@ -145,7 +145,7 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false,
         </span>
         {hideCode || !showCode ? null : <span className="c mono">A7</span>}
         <div className="sp" />
-        <span className="hd-note">{t('agentConsole.v2.aud01.verifyReadonlyNote')}</span>
+        <span className="hd-note">{t('agentConsole.v2.aud01.verifyReadonlyNoteHuman')}</span>
       </div>
 
       <div className="chain01-pre">
@@ -239,7 +239,7 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false,
             </span>
             <div>
               <div className="h">{t('agentConsole.v2.aud01.verifyLoadingTitle')}</div>
-              <div className="s">{t('agentConsole.v2.aud01.verifyLoadingDesc')}</div>
+              <div className="s">{t('agentConsole.v2.aud01.verifyLoadingDescHuman')}</div>
             </div>
           </div>
         </div>
@@ -294,7 +294,7 @@ function VerifyNoAnchor({ t, result }: { t: TFunction; result: AuditVerifyResult
       </div>
       <div className="nums">
         <span className="big">0</span>
-        <span className="unit">{t('agentConsole.v2.aud01.verifyScannedUnit')}</span>
+        <span className="unit">{t('agentConsole.v2.aud01.verifyScannedUnitHuman')}</span>
       </div>
       <div className="tail">
         <div className="kv">

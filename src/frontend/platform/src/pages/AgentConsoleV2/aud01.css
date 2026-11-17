@@ -907,10 +907,11 @@
 
 /* ---------- 断点（§4.2）：1400 sticky 门槛 / 1024 单列 / 768 行卡 ---------- */
 @media (min-width: 1280px) and (max-width: 1399px) {
-  /* R2 (VG ④): at 1280 the 12-column table really scrolls sideways. Give the
-     band a viewport-bounded height so the sticky header rides at the top of
-     the visible area instead of falling under the 720 fold, and fade the
-     right edge so sideways scroll is visible without hunting for the bar. */
+  /* The 12-column table is 1282px wide here, so the wrapper is the scroller:
+     horizontal for the extra columns, vertical for the body — the header stays
+     inside the visible area (sticky) and the hint below says how to scroll.
+     R2 (VG ④): the right edge fades as well, so sideways scroll is discoverable
+     without hunting for the bar. */
   .agent-app .lk.aud01 .tblwrap {
     overflow: auto;
     max-height: calc(100vh - 240px);
@@ -921,6 +922,8 @@
     position: sticky;
     top: 0;
     z-index: 3;
+    background: hsl(var(--card));
+    box-shadow: inset 0 -1px 0 var(--hairline);
   }
   .agent-app .lk.aud01 .tblhint {
     display: inline-flex;

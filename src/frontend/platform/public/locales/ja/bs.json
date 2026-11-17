@@ -4299,6 +4299,7 @@
     "riskFailed": "本日失敗 {{n}}",
     "riskOverBudget": "予算超過",
     "noRisk": "リスクなし",
+    "runsNone": "本日の実行なし",
     "stActive": "在籍",
     "stOnboarding": "オンボーディング",
     "stPaused": "一時停止",
@@ -6285,6 +6286,14 @@
         "verifyS0Title": "アンカーがまだ無く、検証できません",
         "verifyS0Desc": "このテナントはまだ最初のチェックポイントを生成していません。データが健全という意味でも、問題があるという意味でもありません。検証の起点がまだ無いだけです。",
         "verifyScannedUnit": "件の critical イベントを走査",
+        "verifyScannedUnitHuman": "件の重要イベントを走査",
+        "bannerBodyHuman": "監査イベントは書き込み後は確定です。この画面に編集・削除・補記・巻き戻しの入口はなく、エクスポートもありません。エクスポートは別の操作として行われ、同じく監査に残ります。",
+        "verifyReadonlyNoteHuman": "読み取り専用の検証です。イベントは変更されず、結論はこの期間のみを対象とします",
+        "verifyLoadingDescHuman": "読み取り専用の検証を実行中です。イベントは変更されず、結果はこの期間のみを対象とします。",
+        "cursorNoteHuman": "1ページ {{n}} 件 · 合計は表示しません",
+        "nextTitleHuman": "次のページを読み込む",
+        "tblHintHuman": "横にスクロールしてすべての列を表示できます",
+        "lastPageNoteHuman": "このページは {{n}} 件で最後です",
         "verifyGateLabel": "緑の条件",
         "verifyS0Note": "検証が成功しても走査0件で基準点なしなら「合格」とはみなさず、パネルは中立色を維持します。",
         "verifyAnchorLabel": "アンカー",
@@ -6390,6 +6399,7 @@
         "actionGrantCreated": "権限の作成",
         "actionEmployeeVersionCreate": "従業員バージョンの新規作成",
         "actionEmployeeLifecycleUpdate": "ライフサイクル変更",
+        "actionEmployeeUpdate": "従業員情報の更新",
         "actionWorkstationBound": "ワークステーション紐付け",
         "actionMessageSend": "メッセージ送信",
         "actionApprovalDecided": "承認判断",
@@ -6928,6 +6938,7 @@
       "forbiddenDesc": "このアカウントにはスキル台帳を表示する権限がないか、ページが存在しません。存在を漏らさないため、どちらも同じ案内を表示します。",
       "backHome": "コンソールに戻る",
       "emptyTitle": "スキルはまだありません",
+      "emptyTitleV2": "スキルのバージョンはまだありません",
       "emptyHint": "従業員バージョンがスキルを参照すると、ここに表示されます。このコンソールに新規作成の入口はありません。",
       "deepMiss": "このスキルは今回の読み取り範囲に含まれていません。台帳に未登録か、リンクが古い可能性があります。",
       "deepBack": "すべてのスキルを表示",
@@ -7110,6 +7121,12 @@
           "unknown": "状態不明"
         },
         "taskFallback": "このタスク · 末尾 {{tail}}"
+      },
+      "emp01": {
+        "unassigned": "未割当",
+        "shortCode": "ショートコード",
+        "noMatch": "一致する従業員はいません",
+        "clearFilters": "フィルターを解除"
       }
     },
     "approvals": {

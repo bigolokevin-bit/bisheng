@@ -634,7 +634,7 @@ describe('AUD-01 S2 — readable identities in list rows', () => {
 // ------------------------------------------------ R1: type+short, plain chrome, live menu
 
 describe('AUD-01 R1 — business ids, plain-language chrome, live row entry', () => {
-  it('prints 「类型 · 短码」 for run / task / approval and keeps raw ids in title', async () => {
+  it('prints one mid-ellipsis short code for run / task / approval and keeps raw ids in title', async () => {
     const h = harness({ pages: [okList([event()])] });
     renderPage(h);
     await waitFor(() =>
@@ -642,7 +642,11 @@ describe('AUD-01 R1 — business ids, plain-language chrome, live row entry', ()
     );
     const row = screen.getByTestId('aud01-row-ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C');
     const text = row.textContent ?? '';
-    expect(text).toContain('运行 · rn_01M…GPWJ');
+    // Merged ground truth (main ea10dfa): the run cell prints the mid-ellipsis
+    // short code alone — 「运行 ·」 prefix lives on the type-labelled cells via
+    // typeShortLabel, and idDisplay is shortId-only in the merged sheet. Raw id
+    // stays in title (next two assertions).
+    expect(text).toContain('rn_01M7…GPWJ');
     expect(text).not.toContain('rn_01M7DEY8');
     expect(row.querySelector('[title="rn_01M7DEY86XMD8J2SJZES4TGPWJ"]')).not.toBeNull();
   });
@@ -874,13 +878,16 @@ describe('AUD-01 width contract — 1280 scrolls instead of clipping characters'
     expect(css).toMatch(/table\.tbl\s*\{[^}]*min-width:\s*1282px/);
   });
 
-  it('gives the wrapper horizontal scroll in the 1280–1399 band', () => {
+  it('gives the wrapper scroll and keeps the header sticky in the 1280–1399 band', () => {
     const band = between(
       '@media (min-width: 1280px) and (max-width: 1399px)',
       '@media (min-width: 1400px)',
     );
-    expect(band).toContain('overflow: auto');
-    expect(band).toContain('max-height: calc(100vh - 240px)');
+    // `overflow: auto` scrolls both axes; the header must stay inside the visible area.
+    expect(band).toMatch(/overflow(-x)?:\s*auto/);
+    expect(band).toContain('position: sticky');
+    expect(band).toContain('top: 0');
+    expect(band).toMatch(/max-height:\s*calc\(/);
     expect(band).toContain('.tblhint');
     // R2-④: header must ride inside the fold, and the paging contradiction
     // (note 「后面没有了」 + clickable 下一页) is closed in the same band.
@@ -901,5 +908,56 @@ describe('AUD-01 width contract — 1280 scrolls instead of clipping characters'
     expect(css).not.toMatch(/word-break:\s*break-all/);
     expect(css.match(/text-overflow:\s*ellipsis/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
     expect(css.match(/white-space:\s*nowrap/g)?.length ?? 0).toBeGreaterThanOrEqual(8);
+  });
+});
+
+// ---------------------------- VG four items (2026-11-17 closeout)
+
+describe('AUD-01 VG closeout — human words, honest paging, mid-ellipsis codes', () => {
+  const TK = 'tk_01M7DF8J5H7K9M1N3P5R7T9V1XZ';
+  const EV = 'ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C';
+
+  it('keeps engineering words off the screen (title only)', async () => {
+    const h = harness({
+      pages: [okList([event({ eventId: EV, action: 'employee.update', taskId: TK })])],
+    });
+    renderPage(h);
+    const row = await screen.findByTestId(`aud01-row-${EV}`);
+    const text = document.body.textContent ?? '';
+    expect(text).not.toContain('critical');
+    expect(text).not.toContain('（GET）');
+    expect(text).not.toContain('(GET)');
+    expect(text).not.toContain('employee.update');
+    expect(row).toBeTruthy();
+  });
+
+  it('names employee.update in Chinese and leaves the raw value in the title', async () => {
+    const h = harness({
+      pages: [okList([event({ eventId: EV, action: 'employee.update' })])],
+    });
+    renderPage(h);
+    const row = await screen.findByTestId(`aud01-row-${EV}`);
+    const label = row.querySelector('[title="employee.update"]');
+    expect(label?.textContent).toBe('员工信息更新');
+  });
+
+  it('truncates a long id in the middle and keeps the full value in the title', async () => {
+    const h = harness({ pages: [okList([event({ eventId: EV, taskId: TK })])] });
+    renderPage(h);
+    const row = await screen.findByTestId(`aud01-row-${EV}`);
+    expect(row.textContent).toContain('tk_01M7…V1XZ');
+    expect(row.querySelector(`[title="${TK}"]`)).not.toBeNull();
+  });
+
+  it('states the page size without machine words and never contradicts the button', async () => {
+    const h = harness({ pages: [okList([event({ eventId: EV })])] });
+    renderPage(h);
+    await screen.findByTestId(`aud01-row-${EV}`);
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('不显示总数');
+    expect(text).not.toContain('游标分页');
+    // a full last page must not claim it was short
+    expect(text).not.toContain('不足一整页');
+    expect(text).toContain('后面没有了');
   });
 });

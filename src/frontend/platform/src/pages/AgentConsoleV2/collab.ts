@@ -463,3 +463,68 @@ export function noteLabelKey(phase: string): string {
       return 'agentConsole.v2.collab.chain.noteLabel';
   }
 }
+// ---------------------------------------------------------------- filters (§FILT)
+
+export type StatusFilter = 'all' | DelegationStatus;
+export type WindowFilter = 'all' | '24h' | '7d' | '30d';
+
+export const WINDOW_MS: Record<Exclude<WindowFilter, 'all'>, number> = {
+  '24h': 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+  '30d': 30 * 24 * 60 * 60 * 1000,
+};
+
+export interface DelegationFilter {
+  status: StatusFilter;
+  window: WindowFilter;
+  /** Employee id on either side of the handover; '' means everyone. */
+  participant: string;
+}
+
+export const EMPTY_FILTER: DelegationFilter = { status: 'all', window: 'all', participant: '' };
+
+export function isFilterActive(filter: DelegationFilter): boolean {
+  return filter.status !== 'all' || filter.window !== 'all' || filter.participant !== '';
+}
+
+/**
+ * Client-side narrowing of the rows already read. Filters never re-query and
+ * never invent a count: the page still reports what it loaded, and a row with
+ * no timestamp can only survive the 「全部时间」 window (`—` is not 「old」).
+ */
+export function filterDelegations(
+  rows: DelegationRow[],
+  filter: DelegationFilter,
+  now: number = Date.now(),
+): DelegationRow[] {
+  return rows.filter((row) => {
+    if (filter.status !== 'all' && row.status !== filter.status) return false;
+    if (
+      filter.participant &&
+      row.fromEmployeeId !== filter.participant &&
+      row.toEmployeeId !== filter.participant
+    ) {
+      return false;
+    }
+    if (filter.window !== 'all') {
+      const raw = row.updatedAt ?? row.createdAt;
+      const ms = raw ? new Date(raw).getTime() : Number.NaN;
+      if (Number.isNaN(ms) || now - ms > WINDOW_MS[filter.window]) return false;
+    }
+    return true;
+  });
+}
+
+/** Backend USD only: `$18.00`; a missing value is `—`, never `$0.00`. */
+export function fmtUsd(value: number | null | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+  return `$${value.toFixed(2)}`;
+}
+
+/** Correlation (requestId) short code, 8 upper-case chars; falls back to the
+ *  delegation id so the row key is never blank (`—` when both are missing). */
+export function correlationCode(row: DelegationRow): string {
+  const raw = (row.requestId ?? row.delegationId ?? '').replace(/[^A-Za-z0-9]/g, '');
+  const code = raw.slice(0, 8).toUpperCase();
+  return code || '—';
+}
