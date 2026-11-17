@@ -43,6 +43,7 @@ const ShellEmployeesPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages"
 const ShellMatrixPage = lazy(() =>
   import("@/pages/AgentConsoleV2/shellPages").then((module) => ({ default: module.MatrixPage })),
 );
+const ShellSkillsPage = lazy(() => import("@/pages/AgentConsoleV2/SkillsPage"));
 // EMP-02 / TSK-03: the console's two real write screens.
 const ShellEmployeeCreatePage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.EmployeeCreateScreen })));
 const ShellTaskCreatePage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.TaskCreateScreen })));
@@ -168,6 +169,7 @@ const privateRouter = [
             { path: "employees/new", element: <ShellEmployeeCreatePage /> },
             { path: "employees/:id", element: <ShellEmployeeDetailPage /> },
             { path: "matrix", element: <ShellMatrixPage /> },
+            { path: "skills", element: <ShellSkillsPage /> },
             { path: "approvals", element: <ShellApprovalsPage /> },
             { path: "approvals/:id", element: <ShellApprovalDetailPage /> },
             { path: "tasks", element: <ShellTasksPage /> },

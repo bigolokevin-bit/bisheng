@@ -1,0 +1,208 @@
+/* SKILL-01 — read-only skill ledger (/agent/skills).
+ *
+ * Layout only: colours/typography come from the a2-* tokens so dark/light
+ * swap on the same DOM. The table scrolls INSIDE its card below 1280
+ * (a2-table-scroll idiom); the page itself never overflows and every value
+ * that can be long (skill id, fingerprint, owner id, employee id) wraps or
+ * ellipsizes instead of pushing a column out. */
+
+.agent-app .skl-head {
+  align-items: flex-start;
+}
+
+.agent-app .skl-head-main {
+  min-width: 0;
+}
+
+.agent-app .skl-asof {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+  flex: none;
+}
+
+.agent-app .skl-asof .a2-mono {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.agent-app .skl-state-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-app .skl-block {
+  display: block;
+}
+
+/* ---------- name cell ---------- */
+
+.agent-app .skl-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.agent-app .skl-name-main {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.agent-app .skl-id {
+  color: hsl(var(--muted-foreground));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- fingerprint / owner / references ---------- */
+
+.agent-app .skl-hash {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.agent-app .skl-hash-short {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-app .skl-copy {
+  padding: 0 6px;
+  font-size: 11px;
+  flex: none;
+  white-space: nowrap;
+}
+
+.agent-app .skl-owner {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.agent-app .skl-refs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.agent-app .skl-ref {
+  white-space: nowrap;
+  text-decoration: none;
+  color: hsl(var(--primary));
+}
+
+.agent-app span.skl-ref {
+  color: hsl(var(--foreground));
+}
+
+/* ---------- inline expansion (no new route) ---------- */
+
+.agent-app .skl-expand {
+  padding: 0 6px;
+}
+
+.agent-app .skl-exp {
+  padding: 10px 0 12px;
+}
+
+.agent-app .skl-exp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.agent-app .skl-exp-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.agent-app .skl-exp-v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.agent-app .skl-exp-wide {
+  grid-column: 1 / -1;
+}
+
+.agent-app .skl-break {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.agent-app .skl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The sideways-scroll hint only shows while the table actually scrolls
+ * (hidden at 1440, where all seven columns fit). Same idiom as TSK/RUN. */
+.agent-app .skl-scrollhint {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: hsl(var(--muted-foreground));
+}
+
+@media (max-width: 1279px) {
+  .agent-app .skl-scrollhint {
+    display: flex;
+  }
+}
+
+@media (max-width: 1023px) {
+  .agent-app .skl-exp-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .agent-app .skl-head {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .agent-app .skl-asof {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    text-align: left;
+  }
+
+  .agent-app .skl-exp-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
