@@ -674,7 +674,7 @@ export function TaskDetailPage({
                 <div className="a2t-tx">
                   {task.progressNote
                     ? task.progressNote
-                    : t('agentConsole.v2.tsk02.progressNone')}
+                    : '—'}
                 </div>
                 <div className="a2t-mt">
                   <LkIcon name="clock" size={13} />
