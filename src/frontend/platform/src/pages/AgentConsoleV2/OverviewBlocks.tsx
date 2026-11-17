@@ -22,6 +22,7 @@ import {
   type RunStatsBody,
 } from './v2Data';
 import { identityText } from './identity';
+import { fmtPercent } from './met01';
 
 export type UnknownRecord = { [key: string]: unknown };
 
@@ -593,7 +594,7 @@ export function CostBudgetBlock({
                   today={todayDay}
                   limit={limit}
                   ariaLabel={t('agentConsole.v2.ov.quotaPctFoot', {
-                    pct: pct != null ? `${pct.toFixed(1)}%` : '—',
+                    pct: pct != null ? fmtPercent(pct) : '—',
                     used: fmtUsd(used),
                     limit: fmtUsd(limit),
                   })}

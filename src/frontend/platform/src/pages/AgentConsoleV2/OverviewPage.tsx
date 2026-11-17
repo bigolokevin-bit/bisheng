@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink, useSearchParams } from 'react-router-dom';
 
 import { userContext } from '@/contexts/userContext';
+import { fmtPercent } from './met01';
 
 import {
   bucketSum,
@@ -765,7 +766,7 @@ export function OverviewPage() {
                   ? t('agentConsole.v2.ov.quotaPctFoot', {
                       pct:
                         sumItems(cost.data?.items) != null
-                          ? `${((sumItems(cost.data?.items) as number) / (quotaLimit(quotaRows) as number) * 100).toFixed(1)}%`
+                          ? fmtPercent((sumItems(cost.data?.items) as number) / (quotaLimit(quotaRows) as number) * 100)
                           : '—',
                       used: fmtUsd(sumItems(cost.data?.items)),
                       // target wording: 「USD 0.13 / 20.00」— the limit carries
