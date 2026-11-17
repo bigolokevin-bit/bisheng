@@ -224,7 +224,9 @@ describe('AUD-01 formatting (display vs truth)', () => {
 
   it('truncates ids visually only; the hash keeps its tail', () => {
     expect(shortId('rn_01M7DEY86XMD8J2SJZES4TGPWJ')).toBe('rn_01M7…GPWJ');
-    expect(shortId('ah_4d8e2f1a9b391ab7c5d2e0f8a1b63c42')).toBe('ah_4d8e…b63c42');
+    expect(shortId('ah_4d8e2f1a9b391ab7c5d2e0f8a1b63c42')).toBe('ah_4d8e…3c42');
+    expect(shortId('tk_01M7DF8J5H7K9M1N3P5R7T9V1XZ')).toBe('tk_01M7…V1XZ');
+    expect(shortId('ev_01M7DEY8ZQ4R7T2V8X0Y2A4B6C')).toBe('ev_01M7…4B6C');
     expect(shortId('short')).toBe('short');
     expect(shortId(undefined)).toBe('—');
   });

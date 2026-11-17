@@ -131,10 +131,17 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
         <td data-l={t('agentConsole.v2.aud01.colAction')}>
           <span className="cell2">
             {actionLabelKey(action) ? (
-              <span className="l">{t(`agentConsole.v2.aud01.${actionLabelKey(action)}`)}</span>
-            ) : null}
-            {/* Unknown actions are NOT machine-translated: raw value only. */}
-            <span className={actionLabelKey(action) ? 's' : 'l mono'}>{action}</span>
+              // Known actions read as human words; the contract value stays in
+              // the tooltip only (never a visible second line).
+              <span className="l" title={action}>
+                {t(`agentConsole.v2.aud01.${actionLabelKey(action)}`)}
+              </span>
+            ) : (
+              // Unknown actions are NOT machine-translated: raw value only.
+              <span className="l mono" title={action}>
+                {action}
+              </span>
+            )}
           </span>
         </td>
 
