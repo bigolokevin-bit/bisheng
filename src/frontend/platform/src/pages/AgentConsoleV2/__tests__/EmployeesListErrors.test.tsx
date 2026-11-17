@@ -141,11 +141,11 @@ describe('EMP-03 employee detail honesty', () => {
     guardNoRawKeys();
   });
 
-  it('shows a placeholder owner as a neutral dash and never calls approval-stats for it', async () => {
+  it('shows a placeholder owner as 未指派 and never calls approval-stats for it', async () => {
     detailBody = { ...detailBody, ownerUserId: 'pilot_owner_placeholder' };
     renderDetail();
     const owner = await screen.findByTestId('agent-v2-ed-owner');
-    expect(owner.textContent).toBe('—');
+    expect(owner.textContent).toBe('未指派');
     expect(screen.queryByTestId('agent-v2-ed-help-owner')).toBeNull();
     expect(urls.some((u) => u.includes('/api/approval-stats'))).toBe(false);
     guardNoRawKeys();

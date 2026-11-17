@@ -7224,6 +7224,12 @@
           "unknown": "状态未知"
         },
         "taskFallback": "这条任务 · 末 {{tail}}"
+      },
+      "emp01": {
+        "unassigned": "未指派",
+        "shortCode": "短码",
+        "noMatch": "没有匹配的员工",
+        "clearFilters": "清除筛选"
       }
     },
     "approvals": {

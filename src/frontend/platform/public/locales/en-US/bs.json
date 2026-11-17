@@ -7279,6 +7279,12 @@
           "unknown": "Unknown state"
         },
         "taskFallback": "this task · …{{tail}}"
+      },
+      "emp01": {
+        "unassigned": "Unassigned",
+        "shortCode": "Short code",
+        "noMatch": "No matching employees",
+        "clearFilters": "Clear filters"
       }
     },
     "approvals": {

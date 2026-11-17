@@ -148,7 +148,7 @@ describe('EMP-01 employee list', () => {
     const headers = Array.from(table.querySelectorAll('[role="columnheader"]')).map(
       (node) => node.textContent,
     );
-    expect(headers).toEqual(['名称', '编号', '岗位', '技能数', '今日运行', '月度预算', '动作']);
+    expect(headers).toEqual(['名称', '短码', '岗位', '技能数', '今日运行', '月度预算', '动作']);
   });
 
   it('prints a real name, the readable short code and the role', async () => {
@@ -184,11 +184,11 @@ describe('EMP-01 employee list', () => {
     expect(screen.getByTestId('agent-v2-emp-budget-emp_IJ90KL12').textContent).toBe('—');
   });
 
-  it('never renders the raw owner placeholder; an unassigned slot is a dash', async () => {
+  it('never renders the raw owner placeholder; an unassigned slot says 未指派', async () => {
     renderPage();
     await screen.findByTestId('agent-v2-emp-table');
     expect(screen.getByTestId('agent-v2-emp-owner-emp_AB12CD34').textContent).toContain('用户 #7');
-    expect(screen.getByTestId('agent-v2-emp-owner-emp_EF56GH78').textContent).toContain('—');
+    expect(screen.getByTestId('agent-v2-emp-owner-emp_EF56GH78').textContent).toContain('未指派');
     guardNoRawKeys();
   });
 

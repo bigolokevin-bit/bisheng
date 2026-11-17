@@ -317,7 +317,7 @@ export function EmployeesListPage() {
               onClick={clearFilters}
               data-testid="agent-v2-emp-clear"
             >
-              {t('agentConsole.v2.tsk.clear')}
+              {t('agentConsole.v2.emp01.clearFilters')}
             </button>
           ) : null}
         </div>
@@ -370,10 +370,10 @@ export function EmployeesListPage() {
       {result?.ok && items.length === 0 ? (
         filtered ? (
           <div className="a2-card emp-state" data-testid="agent-v2-employees-nomatch">
-            <h2 className="a2-h2">{t('agentConsole.v2.mtx.emptyTitle')}</h2>
+            <h2 className="a2-h2">{t('agentConsole.v2.emp01.noMatch')}</h2>
             <p className="a2-meta">{t('agentConsole.v2.tsk.filterSummary', { filters: filterSummary })}</p>
             <button type="button" className="a2-btn" onClick={clearFilters} data-testid="agent-v2-emp-nomatch-clear">
-              {t('agentConsole.v2.tsk.clear')}
+              {t('agentConsole.v2.emp01.clearFilters')}
             </button>
           </div>
         ) : (
@@ -391,7 +391,7 @@ export function EmployeesListPage() {
           <div className="emp-table" role="table" data-testid="agent-v2-emp-table">
             <div className="emp-tr emp-th" role="row">
               <span role="columnheader">{t('agentConsole.v2.colName')}</span>
-              <span role="columnheader">{t('agentConsole.v2.colId')}</span>
+              <span role="columnheader">{t('agentConsole.v2.emp01.shortCode')}</span>
               <span role="columnheader">{t('agentConsole.v2.ed.fieldRole')}</span>
               <span role="columnheader">{t('agentConsole.v2.mtx.skills')}</span>
               <span role="columnheader">{t('agentConsole.v2.mtx.runs')}</span>
@@ -419,7 +419,7 @@ export function EmployeesListPage() {
                       </span>
                     </span>
                   </span>
-                  <span className="emp-mono" role="cell" data-label={t('agentConsole.v2.colId')} data-testid={`agent-v2-emp-code-${row.employeeId}`} title={row.employeeId}>
+                  <span className="emp-mono" role="cell" data-label={t('agentConsole.v2.emp01.shortCode')} data-testid={`agent-v2-emp-code-${row.employeeId}`} title={row.employeeId}>
                     {short ? t('agentConsole.v2.id.employeeRef', { tail: short }) : '—'}
                   </span>
                   <span role="cell" data-label={t('agentConsole.v2.ed.fieldRole')}>
