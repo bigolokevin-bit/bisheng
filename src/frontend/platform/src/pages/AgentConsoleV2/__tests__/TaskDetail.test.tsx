@@ -300,11 +300,11 @@ describe('TSK-02 — progressNote three states and statusReason anomaly', () => 
     expect(body.textContent).toContain('11-17 10:04');
   });
 
-  it('E03: a null value reads 「暂无进展记录」 + updatedAt (never invented)', async () => {
+  it('E03: a null value reads 「—」 + updatedAt (never invented)', async () => {
     renderPage({ api: makeApi(okTask(makeTask({ progressNote: null }))) });
     await waitReady();
     const body = screen.getByTestId('agent-v2-task-progress-body');
-    expect(body.textContent).toContain('暂无进展记录');
+    expect(body.textContent).toContain('—');
     expect(body.textContent).toContain('11-17 10:04');
     expect(body.textContent).toContain('不靠模型回忆');
   });
@@ -327,7 +327,7 @@ describe('TSK-02 — progressNote three states and statusReason anomaly', () => 
     );
     // and it does not pretend there is progress
     expect(screen.getByTestId('agent-v2-task-progress-body').textContent).toContain(
-      '暂无进展记录',
+      '—',
     );
   });
 
