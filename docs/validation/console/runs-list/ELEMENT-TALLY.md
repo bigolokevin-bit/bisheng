@@ -38,3 +38,10 @@
 ## 合计
 
 元素 24 / 已核销 24 / 核销率 100% / 死控件 0。
+## 2026-11-17 Q2 复核（基座 3c61494）
+
+- 假 0：`?? 0` / `|| 0` 仅出现在时间差与 HTTP 状态码文案（`RunDetailPage` 的 lag/gap 秒数、`TasksListPage` 的 `errHttp` 码），数据值无兜底；成本 `formatCost(0)==='0'`、缺值 `—`，零值与缺失可区分。
+- 身份：运行行员工与详情字段走身份模块（`employeeLabelById` / `humanLabel`），无裸 `emp_…` / `human:1`。
+- 工程语言：ISO 串只用于查询参数与新鲜度戳，上屏经 `formatMoment`；无裸 JSON 字段名、`undefined`、`NaN`。
+- 四态：加载/正常/空/错齐；错误与 403 屏均带 `ReqId`（`agent-v2-runs-error-reqid` / `-forbidden-reqid` / `agent-v2-rd-error-reqid` / `-forbidden-reqid`），403/404 同体仅状态码不同。
+- 结论：本轮未发现需改代码的缺陷，如实记为「已核销无缺陷」。

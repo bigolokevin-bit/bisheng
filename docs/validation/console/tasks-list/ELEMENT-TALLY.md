@@ -42,3 +42,10 @@
 ## 合计
 
 元素 29 / 已核销 29 / 核销率 100% / 死控件 0。
+## 2026-11-17 Q2 复核（基座 3c61494）
+
+- 假 0：唯一 `?? 0` 是 `listRes?.status ?? 0`（HTTP 状态码文案，非数据值）；无成本/比率路径。
+- 身份：负责人与创建人均经 `actorView` → identity 模块（`employeeLabelById` / `humanLabel`），无裸 `emp_…` / `human:1`；未指派显「未指派」。
+- 工程语言：ISO 串仅用于窗口参数与新鲜度戳（上屏经 `formatMoment`），无裸 JSON 字段名、`undefined`、`NaN`。
+- 四态：加载/正常/空/错齐；错误与 403 屏均带 `ReqId`（`agent-v2-tsk-error-reqid` / `-banner-reqid`，详情 `-error`/`-forbidden`），403/404 同体仅状态码不同。
+- 结论：本轮未发现需改代码的缺陷，如实记为「已核销无缺陷」。
