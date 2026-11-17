@@ -308,7 +308,8 @@ export default function ChatPage({ api }: ChatPageProps = {}) {
               onRetry={retryThread}
               onBack={backToList}
             />
-            <ChatComposer
+            {deepMissing ? null : (
+              <ChatComposer
               key={selected ?? 'none'}
               api={client}
               sessionId={selected}
@@ -316,6 +317,7 @@ export default function ChatPage({ api }: ChatPageProps = {}) {
               onSent={handleSent}
               onUnreadable={retryThread}
             />
+            )}
           </section>
         </div>
       ) : null}

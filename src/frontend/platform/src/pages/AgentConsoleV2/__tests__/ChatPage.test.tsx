@@ -319,6 +319,37 @@ describe('L4p2 console chat page', () => {
     );
     expect(calls).not.toContain('ses_a1');
     expect(screen.queryAllByTestId('agent-v2-chat-msg')).toHaveLength(0);
+    // N1: this state must not offer a composer, so the user cannot walk into
+    // the same failure twice; the only exit is the neutral notice's back button.
+    expect(screen.queryByTestId('agent-v2-chat-input')).toBeNull();
+    expect(screen.queryByTestId('agent-v2-chat-send')).toBeNull();
+    expect(screen.getByTestId('agent-v2-chat-thread-missing-back')).toBeTruthy();
+  });
+
+  it('pins the R3 closeout: filled idle column, bordered copy button, no orphan rail avatar (static check)', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const dir = path.join(process.cwd(), 'src/pages/AgentConsoleV2');
+    const css = fs.readFileSync(path.join(dir, 'chat01.css'), 'utf8');
+    // D5: the empty-state shell owns the available height instead of the
+    // thread card collapsing to 0 and leaving the lower half of the page bare.
+    expect(css).toContain('.agent-app .cchat-shell.is-idle {');
+    expect(css).toContain('min-height: calc(100vh - 260px)');
+    expect(css).not.toMatch(
+      /\.agent-app \.cchat-shell\.is-idle \.cchat-thread\s*\{\s*min-height:\s*0\s*\}/,
+    );
+    // N4: this page does not import listkit.css, so the request-id copy button
+    // needs its own scoped border to read as pressable.
+    expect(css).toContain('.agent-app .cchat-page .rid-copy');
+    expect(css).toMatch(/\.agent-app \.cchat-page \.rid-copy\s*\{[^}]*border: 1px solid/);
+    // N2: the unlabelled circular avatar is gone from the rail and its styles.
+    const shell = fs.readFileSync(path.join(dir, 'Shell.tsx'), 'utf8');
+    expect(shell).not.toContain('agent-v2-rail-avatar');
+    expect(shell).not.toContain('a2s-me');
+    const shellCss = fs.readFileSync(path.join(dir, 'consoleShell.css'), 'utf8');
+    expect(shellCss).not.toContain('.a2s-me');
+    // The account is still reachable, labelled, in the top bar.
+    expect(shell).toContain('a2s-ume-nm');
   });
 
   it('keeps the responsive contract in the lane stylesheet (static check)', async () => {

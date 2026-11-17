@@ -376,14 +376,6 @@ export function AgentConsoleShell() {
           {L1_ENTRIES.filter((e) => !e.bottom).map(railEntry)}
           <span className="a2s-rail-sp" aria-hidden="true" />
           {L1_ENTRIES.filter((e) => e.bottom).map(railEntry)}
-          <span
-            className="a2s-me a2-mono"
-            data-testid="agent-v2-rail-avatar"
-            title={accountLabel}
-            aria-hidden="true"
-          >
-            {avatarChar(accountLabel) ?? <RailIcon name="user" size={13} />}
-          </span>
           <span className="a2s-railhint" aria-hidden="true">
             <RailIcon name="chevScroll" size={13} />
             {t('agentConsole.v2.shellRailHint')}
