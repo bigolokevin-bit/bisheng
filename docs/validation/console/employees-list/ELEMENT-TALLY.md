@@ -12,8 +12,8 @@
 | EMP-FILTER-02 | `/api/employees?lifecycleState=` | 正常/加载/错 | 读 | action:filter（默认在岗；URL 持久） | `lifecycle.active`、`lifecycle.paused`、`v2.emp.filterAll` | 默认 active、切 paused、全部省略参数 | 已核销（文案偏差：PRD「停用」= 现有 `lifecycle.paused`「已暂停」） |
 | EMP-TABLE-01 | `/api/employees?expand=version,workstations,knowledge,pending` | 正常/真空/筛选空/加载/错/401/403 | 读 | 行姓名 → `/agent/employees/:id` | `v2.colName`、`v2.emp01.shortCode`、`v2.colStatus`、`v2.emp.colWorkstation`、`v2.mtx.skills`、`v2.mtx.runs`、`v2.mtx.budgetMonthly` | 六列固定顺序、真实姓名、短码、预算三态、今日运行窗口 | 已核销（技能数列因 E11 无 `skillCount` 恒为 —） |
 | EMP-TABLE-02 | 行 `id` | 正常 | 读 | title 属性（不屏显） | `v2.id.employeeRef` | 屏显仅 `员工 · 8位大写`，无裸 `emp_` | 已核销 |
-| EMP-ROW-01 | 行 `employeeId` | 正常 | 会话权限（无来源） | `/agent/chat?employeeId=:id` | `chat.dialogue` | 行内对话 href 断言（`agent-v2-emp-chat-*`）；无权限位时不隐藏 | 已核销（依赖共享文件未改：`userContext` 无会话权限位） |
-| EMP-ACT-01 | — | 正常 | 新建 grant（无来源） | `/agent/employees/new` | `v2.emp.createEntry` | 页头主按钮 href 断言（`agent-v2-employees-create`）；无 grant 来源时不隐藏 | 已核销（依赖共享文件未改：无 grant 来源） |
+| EMP-ROW-01 | 行 `employeeId` | 正常 | 会话权限（无来源） | `/agent/chat?employeeId=:id` | `chat.dialogue` | 行内对话 href 断言（`agent-v2-emp-chat-*`）；无权限位时不隐藏 | 已核销（依赖共享文件未改：`src/contexts/userContext.tsx` 无会话权限位） |
+| EMP-ACT-01 | — | 正常 | 新建 grant（无来源） | `/agent/employees/new` | `v2.emp.createEntry` | 页头主按钮 href 断言（`agent-v2-employees-create`）；无 grant 来源时不隐藏 | 已核销（依赖共享文件未改：`src/contexts/userContext.tsx` 无新建 grant 来源） |
 | EMP-PAGE-01 | `nextCursor` | 正常/加载/错 | 读 | action:next（追加，无更多按钮消失） | `v2.mtx.loaded`、`v2.emp.nextPage` | 游标下一页、追加、末页按钮消失、失败重试 | 已核销 |
 | EMP-EMPTY-01 | 同上 | 真空 | 读 | `/agent/employees/new` | `v2.emp.emptyEmployees`、`v2.emp.createEntry` | 真空与筛选空分离 | 已核销 |
 | EMP-ERR-01 | 同上 | 401/403/5xx/网络 | 读 | 重试 / 重新登录 | `v2.emp.authExpired`、`v2.emp.noPermission`、`v2.ed.readFailedTitle`、`v2.retry` | 401、403 无重试、500 重试、网络态 | 已核销 |
@@ -30,7 +30,7 @@
 - 元素数：16
 - 已核销：16（含 2 项「依赖共享文件未改」：EMP-ROW-01 会话权限位、EMP-ACT-01 新建 grant 来源；1 项「仅公示」：EMP-DETAIL-06）
 - 待实现：0
-- 需共享文件：0（2 项权限来源未改，已在对应行标注）
+- 需共享文件：0（2 项依赖 `src/contexts/userContext.tsx` 的权限来源未改，已在对应行标注；本轮不擅自改共享件）
 - 核销率：16 / 16 = **100%**
 - 死控件数：**0**（所有可点元素均有真实路由或 action；停用/改预算未渲染为灰色按钮）
 ## Q2 诚实性复验（2026-11-17 夜）

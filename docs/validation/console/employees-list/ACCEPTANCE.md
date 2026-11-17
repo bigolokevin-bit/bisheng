@@ -67,3 +67,11 @@ BFF 路由（M1 现有名）：`GET /api/employees?keyword=&lifecycleState=&limi
 - 权限：401/403/404/405 curl 或 Network 截图
 - 偏差/未覆盖（2026-11-15 L4 更新，L0 卡 2211）：B3 expand 已透传并实测闭环（BFF 重启 pid 67576 后 enrichment 真实返回，详见 EVIDENCE.md enrichment 两节）；B4 totals/asOf 已合入但页面未接（维持）；C4 在线 403 已用 viewer01 实测（不再缺账号，凭据零回显）；排序未做；1280/768 浅色与本节深色套图分轮采集，mockup 样例数字为示意值非数据承诺。
 - 结论：**in-progress**（C0-B 未闭不得 passed；生产页必须调真实 API）
+
+## Q2 实现侧摘要（2026-11-18）
+
+- 元素核销：`ELEMENT-TALLY.md` **16/16 = 100%**；其中 2 行标「依赖共享文件未改」，1 行标「仅公示，零写入口」。
+- 行内对话与页头新建入口按现有数据展示，href 由 `agentConsoleV2Employees.test.tsx` 断言；权限位/新建 grant 来源依赖共享 `src/contexts/userContext.tsx`，本轮未改共享件，也不在客户端伪造权限判断。
+- 详情危险区（EMP-DETAIL-06）只公示「停用/改预算需写权限并记入审计」，零按钮；列表侧不渲染任何灰色停用/改预算控件。
+- 验证：`vitest run src/pages/AgentConsoleV2/__tests__` 42 files / 734 tests 全绿；构建见本轮回执（entry + sha + chunk 标记）。
+- 未验证：live 200 未取、未做浏览器像素复验。本摘要为实现侧自检，不替代 L6 独立验收。
