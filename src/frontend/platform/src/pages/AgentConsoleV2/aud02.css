@@ -1,0 +1,806 @@
+/*
+ * AUD-02 `/agent/audit/:eventId` — read-only audit event detail.
+ *
+ * Ported 1:1 from the locked reference aud02-target.html (C1 baseline,
+ * AUD02-TARGET-SPEC.md §4/§6) and scoped under `.agent-app .lk.aud02` so
+ * nothing leaks out of this page. Every rule resolves through the existing
+ * console token layer (agentConsoleV2.css) — no new colour, no new font, no
+ * new dependency; dark/light stay one DOM with a token swap.
+ *
+ * Shared vocabulary is NOT redefined here: `.card .b .lnk .pill .seg .cp
+ * .micro .mono .stage .skel .pfoot .phead` all come from listkit.css. This
+ * file adds only what the detail page introduces — the single-column 1080
+ * flow, the read-only banner, the section number, HFieldRow, the diff block,
+ * the hash-chain triple, the mounted panel divider and the footnote.
+ *
+ * Layout (§4.1): single column, max 1080, centered — the value of an audit
+ * page is a stable field order, so there is no right rail to re-sort it.
+ */
+
+/* ---------- 单列分区流 ---------- */
+.agent-app .lk.aud02 .flow {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.agent-app .lk.aud02 .flow > * {
+  min-width: 0;
+}
+.agent-app .lk.aud02 .pfoot {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* ---------- 元信息行 / 只读 banner ---------- */
+.agent-app .lk.aud02 .roband {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .roband b {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud02 .roband .sp {
+  flex: 1;
+}
+.agent-app .lk.aud02 .roband .mono {
+  font-size: 12px;
+}
+
+/* ---------- 返回条 / 页头 ---------- */
+.agent-app .lk.aud02 .backrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .phead .h1 {
+  font-size: 30px;
+  line-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .lk.aud02 .phead .h1 .tx {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agent-app .lk.aud02 .phead .idline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .phead .sp {
+  flex: 1;
+}
+.agent-app .lk.aud02 .acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 分区序号：把「顺序固定」画出来，不让它只是文档里的一句话 */
+.agent-app .lk.aud02 .zline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.agent-app .lk.aud02 .zno {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--hairline);
+  color: hsl(var(--micro-foreground));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--lk-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  flex: none;
+  letter-spacing: 0;
+}
+
+/* ---------- 卡头 / 卡脚 / 说明 ---------- */
+.agent-app .lk.aud02 .card-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .card-hd .t {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.agent-app .lk.aud02 .card-hd .sp {
+  flex: 1;
+}
+.agent-app .lk.aud02 .c {
+  font-family: var(--lk-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--micro-foreground));
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: hsl(var(--surface));
+  flex: none;
+}
+.agent-app .lk.aud02 .hd-note {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 17px;
+}
+.agent-app .lk.aud02 .hd-note.center {
+  text-align: center;
+}
+.agent-app .lk.aud02 .card-ft {
+  padding: 10px 20px 14px;
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 18px;
+}
+.agent-app .lk.aud02 .mount {
+  border-top: 1px solid var(--hairline);
+  margin-top: 2px;
+}
+
+/* ---------- HFieldRow（V2.9，母版 TSK-02） ---------- */
+.agent-app .lk.aud02 .hfs {
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .hf {
+  flex: 1 1 25%;
+  padding: 14px 20px;
+  position: relative;
+  min-width: 0;
+}
+.agent-app .lk.aud02 .hf::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15px;
+  bottom: 15px;
+  width: 1px;
+  background: var(--hairline);
+}
+.agent-app .lk.aud02 .hf:nth-child(4n + 1)::before {
+  display: none;
+}
+.agent-app .lk.aud02 .hf:nth-child(n + 5) {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .lk.aud02 .hf .l {
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .hf .v {
+  font-family: var(--lk-mono);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  word-break: break-all;
+  min-width: 0;
+}
+.agent-app .lk.aud02 .hf .v.t {
+  font-family: inherit;
+  font-weight: 400;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.agent-app .lk.aud02 .hf .v .u {
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  font-weight: 400;
+}
+.agent-app .lk.aud02 .hf .n {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  margin-top: 5px;
+  line-height: 16px;
+  word-break: normal;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .hf .n.skew {
+  color: hsl(var(--warning));
+  align-items: center;
+}
+.agent-app .lk.aud02 .hf .n .skeww {
+  color: hsl(var(--warning));
+  font-weight: 600;
+}
+.agent-app .lk.aud02 .hf .sub2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: hsl(var(--muted-foreground));
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .hf .sub2 .k {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud02 .hf .uname {
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+}
+.agent-app .lk.aud02 .hf.wide {
+  flex: 1 1 100%;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .lk.aud02 .hf.wide::before {
+  display: none;
+}
+
+/* 数据质量条：只用文字+警示色，不用颜色代替文字 */
+.agent-app .lk.aud02 .dq {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 16px;
+  margin-top: 6px;
+  color: hsl(var(--warning));
+}
+.agent-app .lk.aud02 .dq svg {
+  color: hsl(var(--warning));
+  margin-top: 1px;
+}
+
+/* 主体：listkit 的 .who 是表格版（nowrap + 20px 头像），这里是详情版 */
+.agent-app .lk.aud02 .hf .who {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+.agent-app .lk.aud02 .hf .who .ava {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--micro-foreground));
+  font-size: 11px;
+  flex: none;
+}
+.agent-app .lk.aud02 .hf .who .nm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+}
+
+/* 只复制身份的控件：图标即可，原值在 title 与剪贴板里 */
+.agent-app .lk.aud02 .cpbtn {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--micro-foreground));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex: none;
+  transition: background 0.12s, color 0.12s;
+}
+.agent-app .lk.aud02 .cpbtn:hover {
+  background: hsl(var(--surface-2));
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud02 .cpbtn.copied {
+  color: hsl(var(--success));
+}
+
+/* ---------- 变更：差异块 ---------- */
+.agent-app .lk.aud02 .dwrap {
+  margin: 2px 20px 8px;
+  padding: 2px 0;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  min-width: 0;
+}
+.agent-app .lk.aud02 .dl {
+  padding: 10px 16px 6px;
+  display: flex;
+  flex-direction: column;
+}
+.agent-app .lk.aud02 .drow {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-height: 28px;
+  padding: 6px 0 6px 10px;
+  border-left: 2px solid transparent;
+  font-size: 12.5px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .drow + .drow {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .lk.aud02 .drow.add {
+  border-left-color: hsl(var(--success));
+}
+.agent-app .lk.aud02 .drow.del {
+  border-left-color: hsl(var(--danger));
+}
+.agent-app .lk.aud02 .drow.chg {
+  border-left-color: hsl(var(--accent));
+}
+.agent-app .lk.aud02 .drow .sgn {
+  font-family: var(--lk-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  flex: none;
+  width: 12px;
+}
+.agent-app .lk.aud02 .drow.add .sgn {
+  color: hsl(var(--success));
+}
+.agent-app .lk.aud02 .drow.del .sgn {
+  color: hsl(var(--danger));
+}
+.agent-app .lk.aud02 .drow.chg .sgn {
+  color: hsl(var(--accent));
+}
+.agent-app .lk.aud02 .drow .dk {
+  font-family: var(--lk-mono);
+  font-size: 12px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+  flex: none;
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
+.agent-app .lk.aud02 .drow .dv {
+  font-family: var(--lk-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud02 .drow .old {
+  color: hsl(var(--micro-foreground));
+  text-decoration: line-through;
+}
+.agent-app .lk.aud02 .drow .arw {
+  color: hsl(var(--micro-foreground));
+  flex: none;
+}
+.agent-app .lk.aud02 .drow .tagx {
+  font-family: var(--lk-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  color: hsl(var(--micro-foreground));
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 1px 5px;
+  flex: none;
+}
+.agent-app .lk.aud02 .dempty {
+  font-size: 12.5px;
+  color: hsl(var(--micro-foreground));
+  line-height: 18px;
+  padding: 6px 0 2px;
+}
+.agent-app .lk.aud02 .jsonbox {
+  margin: 10px 16px 6px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-family: var(--lk-mono);
+  font-size: 12px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+  overflow: auto;
+  max-height: 320px;
+  white-space: pre;
+  tab-size: 2;
+  min-width: 0;
+}
+
+/* standard 级：不进链，换一块说明而不是画空哈希行 */
+.agent-app .lk.aud02 .nohash {
+  margin: 2px 20px 6px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-app .lk.aud02 .nohash p {
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  line-height: 18px;
+  margin: 0;
+}
+
+/* ---------- 关联行集 ---------- */
+.agent-app .lk.aud02 .rowlist {
+  padding: 4px 0 6px;
+}
+.agent-app .lk.aud02 .row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 20px;
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .row + .row {
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .lk.aud02 .row .k {
+  font-size: 12px;
+  color: hsl(var(--micro-foreground));
+  min-width: 88px;
+  flex: none;
+  padding-top: 1px;
+}
+.agent-app .lk.aud02 .row .v {
+  font-size: 13px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+.agent-app .lk.aud02 .row .v .n {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+  flex: 1 1 100%;
+  line-height: 16px;
+}
+.agent-app .lk.aud02 .row .v .txt {
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  line-height: 18px;
+}
+.agent-app .lk.aud02 .row .v .msgtext {
+  font-size: 12.5px;
+  color: hsl(var(--foreground));
+  line-height: 18px;
+}
+
+/* ---------- 哈希链定位（前序 → 本条 → 后序；DOM 三段而非 SVG） ---------- */
+.agent-app .lk.aud02 .chain3 {
+  display: flex;
+  align-items: stretch;
+  margin: 4px 20px 0;
+}
+.agent-app .lk.aud02 .cnode {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: hsl(var(--surface));
+}
+.agent-app .lk.aud02 .cnode .k {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--micro-foreground));
+  line-height: 14px;
+}
+.agent-app .lk.aud02 .cnode .v {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .lk.aud02 .cnode .n {
+  margin-top: 6px;
+  font-size: 11px;
+  color: hsl(var(--micro-foreground));
+  line-height: 16px;
+}
+.agent-app .lk.aud02 .cnode.cur {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+.agent-app .lk.aud02 .cnode.unk {
+  border-style: dashed;
+  background: transparent;
+}
+.agent-app .lk.aud02 .cnode .dim {
+  font-size: 12.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud02 .clink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  flex: none;
+  color: hsl(var(--micro-foreground));
+}
+/* 横排用右箭头；375 竖排时换成向下箭头（同一组件，不换 DOM 结构） */
+.agent-app .lk.aud02 .clink .i-r,
+.agent-app .lk.aud02 .clink .i-d {
+  display: inline-flex;
+}
+.agent-app .lk.aud02 .clink .i-d {
+  display: none;
+}
+
+/* ---------- 状态屏补充：卡内错误条 ---------- */
+.agent-app .lk.aud02 .errbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  flex-wrap: wrap;
+  text-align: left;
+  max-width: 520px;
+  position: relative;
+  margin-top: 4px;
+}
+.agent-app .lk.aud02 .errbar > svg {
+  color: hsl(var(--danger));
+  margin-top: 1px;
+}
+.agent-app .lk.aud02 .errbar .bx {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+.agent-app .lk.aud02 .errbar .k {
+  font-size: 11.5px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud02 .errbar .mono {
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud02 .skel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 20px;
+  border-top: 1px solid var(--hairline);
+}
+.agent-app .lk.aud02 .skel-row:first-of-type {
+  border-top: none;
+}
+
+/* ---------- 固定脚注（第 7 分区：一行，不带序号） ---------- */
+.agent-app .lk.aud02 .footline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: hsl(var(--surface));
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: hsl(var(--muted-foreground));
+  flex-wrap: wrap;
+}
+.agent-app .lk.aud02 .footline svg {
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .lk.aud02 .footline b {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+.agent-app .lk.aud02 .footline .sp {
+  flex: 1;
+}
+
+/* ============================================================
+   响应式（§4.2）：<1280 取消 1080 上限 → <768 判定格两列、
+   哈希链定位竖排、复制键常显、banner 转段落流 → <480 判定格单列
+   ============================================================ */
+@media (max-width: 1279px) {
+  .agent-app .lk.aud02 .flow {
+    max-width: 100%;
+  }
+  .agent-app .lk.aud02 .pfoot {
+    max-width: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .agent-app .lk.aud02 .phead .h1 {
+    font-size: 24px;
+    line-height: 32px;
+    gap: 9px;
+  }
+  .agent-app .lk.aud02 .card-hd {
+    padding: 14px;
+  }
+  .agent-app .lk.aud02 .card-ft {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  /* 元信息行：375 上分隔点会孤零零落成一行，隐藏掉，靠换行分组 */
+  .agent-app .lk.aud02 .fresh .faint {
+    display: none;
+  }
+  /* 只读 banner：改段落流，问号跟着句子走，不单独占一行 */
+  .agent-app .lk.aud02 .roband {
+    display: block;
+    padding: 10px 12px;
+    line-height: 19px;
+  }
+  .agent-app .lk.aud02 .roband > svg {
+    display: inline-block;
+    vertical-align: -3px;
+    margin-right: 6px;
+  }
+  .agent-app .lk.aud02 .roband .sp {
+    display: none;
+  }
+  .agent-app .lk.aud02 .roband .mono {
+    display: block;
+    margin-top: 6px;
+    font-size: 11.5px;
+  }
+  /* 判定格两列：竖分隔线在窄屏没有意义，改用横线分组 */
+  .agent-app .lk.aud02 .hf {
+    flex: 1 1 50%;
+    padding: 12px 14px;
+  }
+  .agent-app .lk.aud02 .hf::before {
+    display: none;
+  }
+  .agent-app .lk.aud02 .hf:nth-child(n + 1) {
+    border-top: 1px solid var(--hairline);
+  }
+  .agent-app .lk.aud02 .hf:nth-child(1),
+  .agent-app .lk.aud02 .hf:nth-child(2) {
+    border-top: none;
+  }
+  .agent-app .lk.aud02 .dwrap {
+    margin: 2px 14px 8px;
+  }
+  .agent-app .lk.aud02 .dl {
+    padding: 10px 12px 4px;
+  }
+  .agent-app .lk.aud02 .jsonbox {
+    margin: 8px 12px 4px;
+    font-size: 11.5px;
+    line-height: 18px;
+  }
+  .agent-app .lk.aud02 .nohash {
+    margin: 2px 14px 6px;
+    padding: 12px;
+  }
+  .agent-app .lk.aud02 .row {
+    padding: 10px 14px;
+  }
+  .agent-app .lk.aud02 .row .k {
+    min-width: 64px;
+  }
+  /* 哈希链定位竖排，连接件改成向下箭头 */
+  .agent-app .lk.aud02 .chain3 {
+    flex-direction: column;
+    margin: 4px 14px 0;
+  }
+  .agent-app .lk.aud02 .clink {
+    width: auto;
+    height: 26px;
+    justify-content: flex-start;
+    padding-left: 16px;
+  }
+  .agent-app .lk.aud02 .clink .i-r {
+    display: none;
+  }
+  .agent-app .lk.aud02 .clink .i-d {
+    display: inline-flex;
+  }
+  .agent-app .lk.aud02 .pfoot {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .agent-app .lk.aud02 .footline {
+    padding: 12px 14px;
+  }
+  .agent-app .lk.aud02 .errbar {
+    max-width: 100%;
+  }
+  /* 触屏无 hover：复制键从「绝对定位悬浮」改成静态常显，既可达又不撑出视口 */
+  .agent-app .lk.aud02 .cp {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .agent-app .lk.aud02 .cp .cc {
+    position: static;
+    transform: none;
+    display: inline-flex;
+    opacity: 1;
+    width: 24px;
+    height: 24px;
+    margin-left: 2px;
+    flex: none;
+  }
+  .agent-app .lk.aud02 .cp .tp {
+    left: auto;
+    right: 0;
+    transform: none;
+    max-width: 220px;
+    white-space: normal;
+    text-align: right;
+  }
+  .agent-app .lk.aud02 .skel-row {
+    padding: 0 14px;
+    height: 40px;
+  }
+}
+@media (max-width: 479px) {
+  /* 判定格单列：时间与编号都长，两列会折成碎行 */
+  .agent-app .lk.aud02 .hf {
+    flex: 1 1 100%;
+    border-top: 1px solid var(--hairline);
+  }
+  .agent-app .lk.aud02 .hf:nth-child(1) {
+    border-top: none;
+  }
+  .agent-app .lk.aud02 .row .k {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}

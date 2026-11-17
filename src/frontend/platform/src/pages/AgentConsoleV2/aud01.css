@@ -640,6 +640,20 @@
   cursor: pointer;
   white-space: nowrap;
 }
+/* AUD-02 open-detail entry: the menu item is a real link now (not disabled). */
+.agent-app .lk.aud01 .opmenu .opmenu-a {
+  text-align: left;
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: inherit;
+  white-space: nowrap;
+  text-decoration: none;
+  display: block;
+}
+.agent-app .lk.aud01 .opmenu .opmenu-a:hover {
+  background: var(--hover);
+}
 .agent-app .lk.aud01 .opmenu button:hover:not([disabled]) {
   background: var(--hover);
 }

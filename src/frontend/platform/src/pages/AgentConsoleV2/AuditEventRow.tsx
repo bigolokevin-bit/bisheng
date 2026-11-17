@@ -348,7 +348,7 @@ function OutcomeCell({ outcome, t }: { outcome: string; t: TFunction }) {
 }
 
 
-/** `⋯` row menu: copy the event id; the detail page (AUD-02) is not built. */
+/** `⋯` row menu: copy the event id, or open the AUD-02 detail page. */
 function RowMenu({ eventId, t }: { eventId: string; t: TFunction }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLSpanElement | null>(null);
@@ -396,15 +396,16 @@ function RowMenu({ eventId, t }: { eventId: string; t: TFunction }) {
           <button type="button" role="menuitem" onClick={copy} data-testid={`aud01-copy-event-${eventId}`}>
             {t('agentConsole.v2.aud01.copyEventId')}
           </button>
-          <button
-            type="button"
+          {/* AUD-02 is live: the detail is a real link now (S3's "not built
+              yet" reason is gone, same as the task jump). */}
+          <a
             role="menuitem"
-            disabled
-            aria-disabled="true"
-            title={t('agentConsole.v2.aud01.detailDisabled')}
+            className="opmenu-a"
+            href={`/agent/audit/${encodeURIComponent(eventId)}`}
+            data-testid={`aud01-open-detail-${eventId}`}
           >
             {t('agentConsole.v2.aud01.openDetail')}
-          </button>
+          </a>
         </span>
       ) : null}
     </span>

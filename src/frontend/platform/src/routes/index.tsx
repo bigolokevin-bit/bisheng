@@ -49,6 +49,7 @@ const ShellRunsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").the
 const ShellRunDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.RunDetailScreen })));
 const ShellMetricsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.MetricsPage })));
 const ShellAuditPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.AuditPage })));
+const ShellAuditDetailPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.AuditDetailScreen })));
 const ShellSettingsPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.SettingsPage })));
 const ShellNotFoundPage = lazy(() => import("@/pages/AgentConsoleV2/shellPages").then(module => ({ default: module.NotFoundPage })));
 const AppChatDetail = lazy(() => import("@/pages/LogPage/useAppLog/appChatDetail"));
@@ -167,6 +168,7 @@ const privateRouter = [
             { path: "runs/:runId", element: <ShellRunDetailPage /> },
             { path: "metrics", element: <ShellMetricsPage /> },
             { path: "audit", element: <ShellAuditPage /> },
+            { path: "audit/:eventId", element: <ShellAuditDetailPage /> },
             { path: "settings", element: <Navigate to="/agent/settings/tenant" replace /> },
             { path: "settings/:section", element: <ShellSettingsPage /> },
             { path: "*", element: <ShellNotFoundPage /> },

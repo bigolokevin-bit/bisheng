@@ -57,6 +57,22 @@ export const HELP_TERMS = [
   'taskAuditFilter',
   /** SET-01: a write switch that cannot be read is unknown, not "off". */
   'settingsWriteUnknown',
+  /** AUD-02: why a read-only detail page has no write action at all. */
+  'aud02Readonly',
+  /** AUD-02: the event id is the idempotency key (re-sends keep it). */
+  'eventIdKey',
+  /** AUD-02: tenant is shown in full because roles do not exist yet. */
+  'tenantFull',
+  /** AUD-02: responsible person vs actor, and the four responsibility states. */
+  'responsible',
+  /** AUD-02: a large object is referenced by key, never by content. */
+  'payloadRef',
+  /** AUD-02: `error.code` is a business class, not an internal error code. */
+  'errClass',
+  /** AUD-02: one hash cannot self-verify; the chain is checked per window. */
+  'hashChain',
+  /** AUD-02: an absent field drops its row; 「—」 means a value, not absence. */
+  'absentField',
 ] as const;
 
 export type HelpTerm = (typeof HELP_TERMS)[number];

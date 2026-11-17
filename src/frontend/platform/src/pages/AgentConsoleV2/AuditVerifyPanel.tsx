@@ -60,6 +60,12 @@ export interface AuditVerifyPanelProps {
    *   still loads A7 automatically and still renders S0–S4.
    */
   cta?: 'run' | 'link';
+  /**
+   * AUD-02 only: drop the internal endpoint code from the header. The detail
+   * page is user-facing and carries no machine codes; the panel body, premises
+   * and all five states stay word-for-word identical to AUD-01.
+   */
+  hideCode?: boolean;
 }
 
 export interface AuditVerifyStatus {
@@ -68,7 +74,7 @@ export interface AuditVerifyStatus {
   requestId: string | null;
 }
 
-export function AuditVerifyPanel({ api, onStatus, cta = 'run' }: AuditVerifyPanelProps) {
+export function AuditVerifyPanel({ api, onStatus, cta = 'run', hideCode = false }: AuditVerifyPanelProps) {
   const { t, i18n } = useTranslation();
   const [window, setWindow] = useState<VerifyWindow>(DEFAULT_VERIFY_WINDOW);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
@@ -130,7 +136,7 @@ export function AuditVerifyPanel({ api, onStatus, cta = 'run' }: AuditVerifyPane
           <LkIcon name="shieldCheck" size={18} />
           {t('agentConsole.v2.aud01.verifyTitle')}
         </span>
-        <span className="c mono">A7</span>
+        {hideCode ? null : <span className="c mono">A7</span>}
         <div className="sp" />
         <span className="hd-note">{t('agentConsole.v2.aud01.verifyReadonlyNote')}</span>
       </div>

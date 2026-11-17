@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink, useParams } from 'react-router-dom';
 
 import { ApprovalDetailPage } from './ApprovalDetailPage';
+import { AuditDetailPage } from './AuditDetailPage';
 import { AuditListPage } from './AuditListPage';
 import { ApprovalsListPage } from './ApprovalsListPage';
 import { EmployeeDetailPage } from './EmployeeDetailPage';
@@ -65,6 +66,21 @@ export function AuditPage() {
     <div className="a2s-page" data-testid="agent-v2-page-audit-shell">
       <AuditListPage consoleApi={consoleApi} />
     </div>
+  );
+}
+
+/* AUD-02: read-only audit event detail at `/agent/audit/:eventId`
+ * (aud02-target.html). Remounts per event id so jumping between two events
+ * starts from a clean read instead of showing the previous one's numbers. */
+export function AuditDetailScreen() {
+  const { consoleApi } = useShellApis();
+  const { eventId = '' } = useParams();
+  return (
+    <AuditDetailPage
+      key={eventId}
+      eventIdOverride={eventId}
+      consoleApi={consoleApi}
+    />
   );
 }
 
