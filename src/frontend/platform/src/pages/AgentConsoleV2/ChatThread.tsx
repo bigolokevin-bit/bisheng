@@ -11,6 +11,7 @@ import { fmtChatTime, hasText, messageSide } from './chat01';
 import { ChatFailureNote } from './ChatFailureNote';
 import { ReqId } from './listkit/ReqId';
 import { fmtId } from './v2Data';
+import { idTail } from './identity';
 
 export type ChatThreadState = 'idle' | 'loading' | 'ready' | 'error' | 'denied';
 
@@ -50,9 +51,15 @@ export function ChatThread({
             {title || t(`${ns}.untitled`)}
           </h2>
           <div className="cchat-thread-meta">
+            {/* R3b-1: the payload carries no employee name, so the meta shows
+                the label plus a 4-char tail and keeps the raw id in `title`.
+                Formatting only — no directory lookup, no extra request. */}
             {detail?.employeeId ? (
               <span className="a2-meta">
-                {t(`${ns}.employeeLabel`)} <span className="a2-mono">{fmtId(detail.employeeId)}</span>
+                {`${t(`${ns}.employeeLabel`)} · `}
+                <span className="a2-mono" title={detail.employeeId}>
+                  {idTail(detail.employeeId, 4) || '—'}
+                </span>
               </span>
             ) : null}
             {detail?.updatedAt ? (

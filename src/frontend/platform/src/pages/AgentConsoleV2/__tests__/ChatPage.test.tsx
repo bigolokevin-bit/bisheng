@@ -326,6 +326,28 @@ describe('L4p2 console chat page', () => {
     expect(screen.getByTestId('agent-v2-chat-thread-missing-back')).toBeTruthy();
   });
 
+  /* R3b-1 (QA card 72070db): the thread meta used to print the employee id
+   * verbatim — fmtId leaves anything <=12 chars alone, so `emp_st_0016` landed
+   * on screen. The payload carries no name field, so the row now shows the
+   * label plus a 4-char tail and keeps the raw id in `title`. Pure formatting:
+   * no directory lookup, no extra request. */
+  it('masks the employee id in the thread meta and asks for nothing extra', async () => {
+    const api = makeApi();
+    const listSpy = vi.spyOn(api, 'listSessions');
+    renderPage(api);
+    await screen.findByTestId('agent-v2-chat-thread-title');
+    const meta = document.querySelector('.cchat-thread-meta');
+    expect(meta).not.toBeNull();
+    const text = meta?.textContent ?? '';
+    expect(text).not.toMatch(/emp_[0-9A-Za-z]{8,}/);
+    expect(text).not.toContain('emp_');
+    expect(text).toContain('数字员工');
+    expect(text).toContain('·');
+    expect(meta?.querySelector('.a2-mono')?.getAttribute('title')).toBe('emp_x2');
+    expect(listSpy).toHaveBeenCalledTimes(1);
+    guardNoRawKeys();
+  });
+
   it('pins the R3 closeout: filled idle column, bordered copy button, no orphan rail avatar (static check)', async () => {
     const fs = await import('node:fs');
     const path = await import('node:path');

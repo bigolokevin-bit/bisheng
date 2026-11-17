@@ -348,25 +348,28 @@
 }
 /* ── CHAT-01 VG D4 / D5 ──────────────────────────────────────────────────
  * D4: the send button looked the same muted outline whether it was live or
- * not, and the small print sat under the readable floor. Enabled = filled
- * accent, disabled = a readable outline; card edges, the subtitle and the
+ * not, and the small print sat under the readable floor. Enabled keeps the
+ * shared solid primary fill (N5, QA R3b: the pale accent wash is what read
+ * weak in light mode, so the override is gone); disabled = a readable outline;
+ * card edges, the subtitle and the
  * empty-state note move up a notch in both themes, and the Beijing-time line
  * stops being smaller than body copy.
  * D5: when both columns are empty they take their content height and the
  * composer stops sticking to the bottom of a half-empty screen.
  * Only tokens this file already uses. */
-.agent-app .cchat-composer-foot .a2-btn.is-primary {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-  color: hsl(var(--foreground));
-}
-
-.agent-app .cchat-composer-foot .a2-btn.is-primary[disabled] {
+.agent-app .cchat-composer-foot .a2-btn.is-primary[disabled],
+.agent-app .cchat-composer-foot .a2-btn.is-primary[aria-disabled='true'] {
   background: transparent;
   border-color: var(--border);
   color: hsl(var(--muted-foreground));
   opacity: 1;
   cursor: not-allowed;
+}
+
+.agent-app .cchat-composer-foot .a2-btn.is-primary[disabled]:hover,
+.agent-app .cchat-composer-foot .a2-btn.is-primary[aria-disabled='true']:hover {
+  background: transparent;
+  opacity: 1;
 }
 
 .agent-app .cchat-list,

@@ -136,6 +136,7 @@ export function ChatComposer({ api, sessionId, disabled, onSent, onUnreadable }:
           className="a2-btn is-primary"
           onClick={() => void submit()}
           disabled={!canSend}
+          aria-disabled={!canSend}
           data-testid="agent-v2-chat-send"
         >
           {sending ? t(`${ns}.sending`) : t(`${ns}.send`)}
