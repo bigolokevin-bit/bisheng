@@ -41,3 +41,23 @@
 ## 合计
 
 元素 25 / 已核销 25 / 核销率 100% / 死控件 0。
+## PRD v0.3 §5.6 对齐（judge H）
+
+判据 H：先按 `docs/product/console-v3/PRD-v0.3.md` §5.6 抄全元素行，再做诚实性修复。本节不改上表原判定（L4p4 25/25），只做 PRD 编号映射与缺口登记。
+
+| elementId | 对应实现行 | 数据源 | 七态 | 权限 | 去向 | 文案key | 验收腿 | 状态 |
+|---|---|---|---|---|---|---|---|---|
+| MET-RANGE-01 时间窗 24h/7d/30d | met.a4.heat / met.a4.night / met.a4.share（趋势区窗口） | query + `metrics_trends` | 默认 7d；无源→空态说明 | 只读 | action:range | `met.range*` | 单测窗口切换 | 已核销 |
+| MET-KPI-01 成功率 | met.a0.level / met.a2.p95 同族 | `metrics_today` | 缺键→`—`；99.6%→99%（不进位） | 只读 | — | `met.a0Level` / `met.heatShare` | 单测缺键与 floor+上限 99 | 已核销 |
+| MET-KPI-02 时延 | met.a2.p95 | `metrics_today` | 缺键→`—` | 只读 | — | `met.a2P95` | 单测 | 已核销 |
+| MET-KPI-03 花费 | met.a5 花费卡 | `metrics_trends` / cost_totals | 未配置→「未配置」；缺→`—` | 只读 | — | `met.cost*` | 单测 | 已核销 |
+| MET-KPI-04 运行数 | met.a2.requests / met.a2.messages | `metrics_today` | 缺键→`—` | 只读 | — | `met.a2Requests` | 单测 | 已核销 |
+| MET-KPI-05 失败数 | met.a0.sources.* + 失败卡 | `runtime.hermes.summary.v1` | 缺行→降级，不写正常 | 只读 | `/agent/runs?status=failed` | `met.srcDegraded` | 单测缺行 | 已核销 |
+| MET-HEAT-01 小时热力 | met.a4.heat / met.a4.night / met.a4.peak / met.a4.legend | `metrics_trends` | 无 total→`—`；空格不涂色 | 只读 | 格 → 该小时运行列表 | `met.heat*` | 单测 total=0 / null / 缺键 | 已核销 |
+| MET-TABLE-01 按员工分开销 | met.a5 员工表 | cost_totals | 空：「本期没有花费」；`rows` 缺失→`—`（本刀修） | 只读 | 员工详情 | `met.costZeroRows` / `met.costRows` | 单测 rows 缺失 | 已核销 |
+
+### 本刀诚实性修复（judge H）
+
+- `MetricsPage.tsx` 花费卡：`rows` 缺失时原会落 `0` 行账目（假 0）。现按 `typeof rows === 'number'` 判定，缺失显 `—`；`rows === 0` 仍走「0 行账目 · 没有账目，不以零金额冒充」。
+- 其余判据 H 项复核结论（未改动）：缺键 `—`、分段占比 floor + 上限 99、SourceChip 仅 ok 显「正常」、四态齐、无工程语言与裸 id —— 与上表 Q2 修单一致。
+- 计数（含本刀新增行）：元素数 33 ｜ 已核销 33 ｜ 核销率 100% ｜ 死控件 0（原 25 行 + PRD 映射 8 行）。

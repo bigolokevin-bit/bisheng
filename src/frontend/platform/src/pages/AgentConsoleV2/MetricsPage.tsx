@@ -1847,13 +1847,19 @@ function UsageBlock({
                 <Pill cls={`${costPill.cls} xs`} dot={costStatus === 'upstream' || costStatus === 'mixed'} testid="agent-v2-met-cost-pill">
                   {t(costPill.key)}
                 </Pill>
-                <span className="hd-note">{t('agentConsole.v2.met.costRows', { count: cost.rows })}</span>
+                <span className="hd-note">
+                  {typeof cost.rows === 'number' ? t('agentConsole.v2.met.costRows', { count: cost.rows }) : '—'}
+                </span>
               </div>
             ) : (
               <div className="met-bigv" data-testid="agent-v2-met-cost-notpriced">
                 <Pill cls="nt dash">{t('agentConsole.v2.met.costUnknown')}</Pill>
                 <span className="hd-note">
-                  {cost?.rows === 0 ? t('agentConsole.v2.met.costZeroRows') : t('agentConsole.v2.met.costRows', { count: cost?.rows ?? 0 })}
+                  {cost?.rows === 0
+                    ? t('agentConsole.v2.met.costZeroRows')
+                    : typeof cost?.rows === 'number'
+                      ? t('agentConsole.v2.met.costRows', { count: cost.rows })
+                      : '—'}
                 </span>
               </div>
             )}
