@@ -22,6 +22,7 @@ import { TaskCreatePage } from './TaskCreatePage';
 import { TasksListPage } from './TasksListPage';
 import MatrixScreen from './MatrixPage';
 import SkillsScreen from './SkillsPage';
+import ChatScreen from './ChatPage';
 import { SettingsPage as SettingsScreen } from './SettingsPage';
 
 export function OverviewPage() {
@@ -148,6 +149,19 @@ export function SkillsPage() {
   return (
     <div className="a2s-page" data-testid="agent-v2-page-skills">
       <SkillsScreen />
+    </div>
+  );
+}
+
+/**
+ * CHAT-01 shell: console direct chat. The screen brings its own data leg
+ * (makeFetcher + the message POST), so no ShellApis are needed. The only
+ * write path on the page is the composer; session management stays elsewhere.
+ */
+export function ChatPage() {
+  return (
+    <div className="a2s-page" data-testid="agent-v2-page-chat">
+      <ChatScreen />
     </div>
   );
 }
