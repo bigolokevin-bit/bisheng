@@ -544,7 +544,7 @@ export function EmployeeDetailPage() {
       {/* EMP-DETAIL-06: the write area is disclosed, never drawn as a dead
           control. Disabling or re-budgeting needs a write grant and an audit
           event, neither of which this read-only page can obtain. */}
-      <div className="a2-card" data-testid="agent-v2-ed-danger-readonly">
+      <div className="a2-card" role="note" aria-label="危险操作" data-testid="agent-v2-ed-danger-readonly">
         <h2 className="a2-h2">危险操作</h2>
         <p className="a2-meta">
           停用员工、调整预算需要写权限并记入审计；本页只读，不提供按钮。
