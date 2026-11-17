@@ -36,7 +36,17 @@ import { AuditVerifyPanel } from './AuditVerifyPanel';
 import { HelpTip } from './HelpTip';
 import { useConsoleCrumbTail } from './Shell';
 import { CopyId, LkIcon, ReqId } from './listkit';
-import { actorIcon, diffRows, shortId, type DiffRow } from './aud01';
+import {
+  actorIcon,
+  actorText,
+  decisionEnum,
+  diffRows,
+  isEmployeeResource,
+  resourceWord,
+  shortId,
+  wireText,
+  type DiffRow,
+} from './aud01';
 import {
   REF_COPY_KEYS,
   REF_LABEL_KEYS,
@@ -451,6 +461,9 @@ function Head01({
   const outcome = outcomeLabel(event.outcome, t);
   const actionName = actionText(event.action, t);
   const schema = schemaLabel(event.schemaVersion);
+  const outcomeRaw = wireText(event.outcome);
+  const actionRaw = wireText(event.action);
+  const eventId = wireText(event.eventId);
 
   return (
     <div className="phead">
@@ -468,22 +481,22 @@ function Head01({
               {outcome.text}
             </span>
           ) : (
-            <span className="mono">{event.outcome}</span>
+            <span className="mono">{outcomeRaw}</span>
           )}
-          <span className="tx">{actionName ?? <span className="mono">{event.action}</span>}</span>
+          <span className="tx">{actionName ?? <span className="mono">{actionRaw}</span>}</span>
         </h1>
         <div className="idline">
           <span className="micro">{t('agentConsole.v2.aud02.eventIdLabel')}</span>
           <CopyId
-            value={event.eventId}
-            display={refShort(event.eventId)}
+            value={eventId}
+            display={refShort(eventId)}
             ariaLabel={t('agentConsole.v2.aud01.copyEventId')}
             copiedLabel={t('agentConsole.v2.aud01.copied')}
             testId="aud02-event-id"
           />
           <HelpTip term="eventIdKey" testId="aud02-help-eid" />
           <span className="c" data-testid="aud02-action-raw">
-            {event.action}
+            {actionRaw}
           </span>
           {schema ? (
             <span className="c">{t('agentConsole.v2.aud02.schemaChip', { v: schema })}</span>
@@ -534,10 +547,17 @@ function JudgeCard({
   const recorded = eventClock(event.recordedAt);
   const gap = arrivalGap(event);
   const skew = hasSkew(event);
-  const decision = hasValue(event.decision) ? decisionLabel(String(event.decision), t) : null;
+  const decision = hasValue(event.decision) ? decisionLabel(wireText(event.decision), t) : null;
   const outcome = outcomeLabel(event.outcome, t);
   const resp = responsibilityOf(event);
   const actorName = actorLabelOf(event.actor, names, t);
+  const decisionRaw = wireText(event.decision);
+  const outcomeRaw = wireText(event.outcome);
+  const resourceType = wireText(event.resource?.type);
+  const resourceId = wireText(event.resource?.id);
+  const employeeResource = isEmployeeResource(resourceType);
+  const ownerRef = wireText(event.resource?.ownerRef);
+  const scopeRef = wireText(event.resource?.scopeRef);
   const onBehalf = (event as unknown as Record<string, unknown>).onBehalfOf;
   const onBehalfRef = typeof onBehalf === 'string' ? onBehalf : '';
 
@@ -656,9 +676,9 @@ function JudgeCard({
           <div className="n">
             {!hasValue(event.decision)
               ? t('agentConsole.v2.aud02.decisionAbsentNote')
-              : event.decision === 'not_applicable'
+              : decisionEnum(decisionRaw) === 'not_applicable'
                 ? t('agentConsole.v2.aud02.decisionNaNote')
-                : t('agentConsole.v2.aud02.decisionNote', { raw: String(event.decision) })}
+                : t('agentConsole.v2.aud02.decisionNote', { raw: decisionRaw })}
           </div>
         </div>
 
@@ -672,10 +692,10 @@ function JudgeCard({
                 {outcome.text}
               </span>
             ) : (
-              <span className="mono">{event.outcome}</span>
+              <span className="mono">{outcomeRaw}</span>
             )}
           </div>
-          <div className="n">{t('agentConsole.v2.aud02.outcomeNote', { raw: event.outcome })}</div>
+          <div className="n">{t('agentConsole.v2.aud02.outcomeNote', { raw: outcomeRaw })}</div>
         </div>
 
         {/* 7 主体（代谁 as a sub-line; the row is absent when there is none） */}
@@ -693,7 +713,7 @@ function JudgeCard({
               <span className="nm">{actorName}</span>
             </span>
             <CopyButton
-              value={event.actor.id}
+              value={wireText(event.actor?.id)}
               label={t('agentConsole.v2.aud02.copyActor')}
               testId="aud02-copy-actor"
             />
@@ -763,20 +783,20 @@ function JudgeCard({
         <div className="hf wide" data-testid="aud02-f-resource">
           <div className="l micro">{t('agentConsole.v2.aud02.fResource')}</div>
           <div className="v">
-            <span className="micro">{sourceText(event.resource.type, t)}</span>
-            {event.resource.type === 'employee' ? (
+            <span className="micro">{resourceWord(resourceType, t)}</span>
+            {employeeResource ? (
               <>
                 <span className="mono" data-testid="aud02-resource-emp">
-                  {employeeText(event.resource.id, names, t)}
+                  {employeeText(resourceId, names, t)}
                 </span>
                 <CopyButton
-                  value={event.resource.id}
+                  value={resourceId}
                   label={t('agentConsole.v2.aud01.copyResource')}
                   testId="aud02-resource-copy"
                 />
                 <Link
                   className="lnk acc"
-                  to={`/agent/employees/${encodeURIComponent(event.resource.id)}`}
+                  to={`/agent/employees/${encodeURIComponent(resourceId)}`}
                   data-testid="aud02-employee-link"
                 >
                   {t('agentConsole.v2.aud02.viewEmployee')}
@@ -785,32 +805,32 @@ function JudgeCard({
               </>
             ) : (
               <CopyId
-                value={event.resource.id}
-                display={refShort(event.resource.id)}
+                value={resourceId}
+                display={refShort(resourceId)}
                 ariaLabel={t('agentConsole.v2.aud01.copyResource')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
                 testId="aud02-resource-id"
               />
             )}
           </div>
-          {event.resource.ownerRef || event.resource.scopeRef ? (
+          {ownerRef || scopeRef ? (
             <div className="sub2">
-              {event.resource.ownerRef ? (
+              {ownerRef ? (
                 <span>
                   <span className="k">{t('agentConsole.v2.aud02.ownerLabel')}</span>
-                  <span className="mono">{event.resource.ownerRef}</span>
+                  <span className="mono">{ownerRef}</span>
                 </span>
               ) : null}
-              {event.resource.scopeRef ? (
+              {scopeRef ? (
                 <span>
                   <span className="k">{t('agentConsole.v2.aud02.scopeLabel')}</span>
-                  <span className="mono">{event.resource.scopeRef}</span>
+                  <span className="mono">{scopeRef}</span>
                 </span>
               ) : null}
             </div>
           ) : null}
           <div className="n">
-            {event.resource.type === 'employee'
+            {employeeResource
               ? t('agentConsole.v2.aud02.resourceNote')
               : t('agentConsole.v2.aud02.resourceNoteOther')}
           </div>
@@ -1047,7 +1067,7 @@ function IntegrityCard({
             <div className="v">
               {hasValue(event.prevHash) ? (
                 <CopyId
-                  value={event.prevHash as string}
+                  value={wireText(event.prevHash)}
                   display={shortId(event.prevHash)}
                   ariaLabel={t('agentConsole.v2.aud01.copyPrevHash')}
                   copiedLabel={t('agentConsole.v2.aud01.copied')}
@@ -1076,7 +1096,7 @@ function IntegrityCard({
             <div className="v">
               {hasValue(event.hash) ? (
                 <CopyId
-                  value={event.hash as string}
+                  value={wireText(event.hash)}
                   display={shortId(event.hash)}
                   ariaLabel={t('agentConsole.v2.aud01.copyHash')}
                   copiedLabel={t('agentConsole.v2.aud01.copied')}
@@ -1199,7 +1219,7 @@ function ErrorCard({ t, event }: { t: TFunction; event: AuditEventDetail }) {
               <HelpTip term="errClass" testId="aud02-help-err" />
             </span>
             <span className="v">
-              <span className="mono">{event.error?.code}</span>
+              <span className="mono">{wireText(event.error?.code)}</span>
             </span>
           </div>
         ) : null}
@@ -1207,7 +1227,7 @@ function ErrorCard({ t, event }: { t: TFunction; event: AuditEventDetail }) {
           <div className="row" data-testid="aud02-error-message">
             <span className="k">{t('agentConsole.v2.aud02.errMessage')}</span>
             <span className="v">
-              <span className="msgtext">{event.error?.messageRedacted}</span>
+              <span className="msgtext">{wireText(event.error?.messageRedacted)}</span>
               <span className="n">{t('agentConsole.v2.aud02.errRedactedNote')}</span>
             </span>
           </div>
@@ -1239,7 +1259,7 @@ function CopyButton({ value, label, testId }: { value: string; label: string; te
   );
   const copy = () => {
     try {
-      void navigator.clipboard?.writeText(value);
+      void navigator.clipboard?.writeText(String(value));
     } catch {
       /* clipboard unavailable: the full value stays in the title */
     }
@@ -1271,13 +1291,9 @@ function actorLabelOf(
   names: Map<string, string>,
   t: TFunction,
 ): string {
-  const dn = (actor.displayName ?? '').trim();
-  if (dn) return dn;
-  if (actor.type === 'employee') return employeeText(actor.id, names, t);
-  if (actor.type === 'human') return humanText(actor.id, t);
-  if (actor.type === 'system') return t('agentConsole.v2.id.systemActor', { id: actor.id });
-  if (actor.type === 'service') return t('agentConsole.v2.id.serviceActor', { id: actor.id });
-  return actor.id;
+  // One identity path for both pages: case-insensitive type, wire coercion,
+  // never a bare `emp_…` / `human:…` token (S2 caliber).
+  return actorText(actor, names, t);
 }
 
 function DetailSkeleton({ t }: { t: TFunction }) {

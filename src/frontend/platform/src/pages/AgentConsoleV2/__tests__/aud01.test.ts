@@ -14,25 +14,35 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ACTOR_TYPES,
   BROKEN_IDS_LIMIT,
   CLOCK_SKEW_MS,
   DEFAULT_LIMIT,
   actionLabelKey,
+  actorText,
   classifyVerify,
   clockSkewMs,
+  decisionEnum,
   diffRows,
   dispatchSearch,
   formatLatency,
+  formatShanghaiMinute,
   formatSpan,
   formatUtcMinute,
   hasAnyAuditFilter,
+  isEmployeeResource,
   isVerifyGreen,
   listRange,
+  normalizeEnum,
   onBehalfDisplay,
+  outcomeEnum,
   readAuditQuery,
   requestParams,
+  resourceWord,
   shortId,
+  sourceWord,
   verifyRange,
+  wireText,
   type AuditQuery,
   type AuditVerifyResult,
 } from '../aud01';
@@ -237,5 +247,77 @@ describe('AUD-01 formatting (display vs truth)', () => {
     expect(parsed.cursor).toBe('abc');
     // out-of-range limit falls back to the default instead of being sent
     expect(readAuditQuery('?limit=9999').limit).toBe(DEFAULT_LIMIT);
+  });
+});
+
+// ---------------------------- wire-value hygiene (§1.7 C2/C3; the schemaVersion lesson)
+
+describe('AUD-01 wire hygiene — odd upstream shapes never throw', () => {
+  const t = (key: string) => key;
+
+  it('wireText coerces numbers and rejects everything else', () => {
+    expect(wireText(1)).toBe('1');
+    expect(wireText(0)).toBe('0');
+    expect(wireText('v1')).toBe('v1');
+    expect(wireText(null)).toBe('');
+    expect(wireText(undefined)).toBe('');
+    expect(wireText(Number.NaN)).toBe('');
+    expect(wireText({})).toBe('');
+    expect(wireText([])).toBe('');
+  });
+
+  it('known enums match case-insensitively; unlisted values stay verbatim', () => {
+    expect(normalizeEnum('EMPLOYEE', ACTOR_TYPES)).toBe('employee');
+    expect(normalizeEnum(' employee ', ACTOR_TYPES)).toBe('employee');
+    expect(normalizeEnum('ROBOT', ACTOR_TYPES)).toBe('ROBOT');
+    expect(sourceWord('CHANNEL', t)).toBe('agentConsole.v2.aud01.sourceChannel');
+    expect(sourceWord('channel', t)).toBe('agentConsole.v2.aud01.sourceChannel');
+    expect(sourceWord('mystery', t)).toBe('mystery');
+    expect(decisionEnum('APPROVED')).toBe('approved');
+    expect(decisionEnum('NOT_APPLICABLE')).toBe('not_applicable');
+    expect(outcomeEnum('SUCCESS')).toBe('success');
+    expect(outcomeEnum('weird')).toBe('weird');
+  });
+
+  it('resourceWord localizes known types and never invents one', () => {
+    expect(resourceWord('EMPLOYEE', t)).toBe('agentConsole.v2.id.res.employee');
+    expect(resourceWord('employee', t)).toBe('agentConsole.v2.id.res.employee');
+    expect(resourceWord('employee_custom', t)).toBe('employee_custom');
+    expect(resourceWord(42, t)).toBe('42');
+    expect(isEmployeeResource('EMPLOYEE')).toBe(true);
+    expect(isEmployeeResource('employee')).toBe(true);
+    expect(isEmployeeResource(' employee_version ')).toBe(false);
+    expect(isEmployeeResource(undefined)).toBe(false);
+  });
+
+  it('actorText keeps display names, localizes system subjects and survives numbers', () => {
+    const names = new Map<string, string>();
+    expect(actorText({ type: 'SYSTEM', id: 'employee-api' }, names, t)).toBe(
+      'agentConsole.v2.id.systemActor',
+    );
+    expect(actorText({ type: 'EMPLOYEE', id: 'emp_5B3C7A9D1E2F4068B5C3D7E9' }, names, t)).toBe(
+      'agentConsole.v2.id.employeeRef',
+    );
+    expect(actorText({ type: 'human', id: 'u_10001', displayName: '陈诚' }, names, t)).toBe('陈诚');
+    // a numeric displayName/id must never reach .trim()
+    expect(() =>
+      actorText(
+        {
+          type: 'human',
+          id: 10001 as unknown as string,
+          displayName: 7 as unknown as string,
+        },
+        names,
+        t,
+      ),
+    ).not.toThrow();
+    expect(actorText(null, names, t)).toBe('agentConsole.v2.id.unknown');
+  });
+
+  it('shortId and the Beijing formatter accept numbers and junk', () => {
+    expect(shortId(12345 as unknown as string)).toBe('12345');
+    expect(shortId(0 as unknown as string)).toBe('0');
+    expect(formatShanghaiMinute('2026-11-17T08:31:07.884Z')).toBe('2026-11-17 16:31');
+    expect(formatShanghaiMinute('not-a-date')).toBe('—');
   });
 });

@@ -17,18 +17,22 @@ import { HelpTip } from './HelpTip';
 import { CopyId } from './listkit';
 import { LkIcon } from './listkit/icons';
 import {
-  actorLabel,
   employeeResourceIdLabel,
   humanRefLabel,
   isPlaceholderIdentity,
-  resourceTypeLabel,
 } from './identity';
 import {
   actionLabelKey,
+  actorText,
   CLOCK_SKEW_MS,
   DECISION_KEYS,
+  decisionEnum,
+  isEmployeeResource,
   OUTCOME_KEYS,
-  SOURCE_LABEL_KEYS,
+  outcomeEnum,
+  resourceWord,
+  sourceWord,
+  wireText,
   actorIcon,
   clockSkewMs,
   decisionTone,
@@ -68,6 +72,21 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
   const latency = formatLatency(event.occurredAt, event.recordedAt);
   const skew = clockSkewMs(event.occurredAt, event.recordedAt);
 
+  // Wire values are coerced once: upstream may send numbers, uppercase enums
+  // or a `{type,id}` object where the contract says string. Nothing below
+  // calls a string method on a raw field.
+  const sourceSystem = wireText(event.sourceSystem);
+  const action = wireText(event.action);
+  const actorType = wireText(event.actor?.type);
+  const actorId = wireText(event.actor?.id);
+  const runId = wireText(event.runId);
+  const taskId = wireText(event.taskId);
+  const approvalId = wireText(event.approvalId);
+  const resourceType = wireText(event.resource?.type);
+  const resourceId = wireText(event.resource?.id);
+  const employeeResource = isEmployeeResource(resourceType);
+  const behalfRef = refText(event.onBehalfOf);
+
   const timeTitle = [
     `${t('agentConsole.v2.aud01.timeOccurred')} ${event.occurredAt}`,
     `${t('agentConsole.v2.aud01.timeRecorded')} ${event.recordedAt}`,
@@ -100,42 +119,42 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
 
         <td data-l={t('agentConsole.v2.aud01.colSource')}>
           <span className="cell2">
-            <span className="l" title={`sourceSystem=${event.sourceSystem}`}>
-              {sourceLabel(t, event.sourceSystem)}
+            <span className="l" title={`sourceSystem=${sourceSystem}`}>
+              {sourceLabel(t, sourceSystem)}
             </span>
           </span>
         </td>
 
         <td data-l={t('agentConsole.v2.aud01.colAction')}>
           <span className="cell2">
-            {actionLabelKey(event.action) ? (
-              <span className="l">{t(`agentConsole.v2.aud01.${actionLabelKey(event.action)}`)}</span>
+            {actionLabelKey(action) ? (
+              <span className="l">{t(`agentConsole.v2.aud01.${actionLabelKey(action)}`)}</span>
             ) : null}
             {/* Unknown actions are NOT machine-translated: raw value only. */}
-            <span className={actionLabelKey(event.action) ? 's' : 'l mono'}>{event.action}</span>
+            <span className={actionLabelKey(action) ? 's' : 'l mono'}>{action}</span>
           </span>
         </td>
 
         <td data-l={t('agentConsole.v2.aud01.colActor')}>
           <span
             className="who"
-            title={`actor.type=${event.actor.type} · ${event.actor.id}`}
+            title={`actor.type=${actorType} · ${actorId}`}
           >
             <span className="ava">
-              <LkIcon name={actorIcon(event.actor.type)} size={13} />
+              <LkIcon name={actorIcon(actorType)} size={13} />
             </span>
             {/* S2: readable identity — displayName, 用户 #N, 员工名/员工 · 短码
                 or 「系统 · employee-api」; the raw ref stays in the title only. */}
-            <span className="nm">{actorLabel(event.actor, names, t)}</span>
+            <span className="nm">{actorText(event.actor, names, t)}</span>
           </span>
         </td>
 
         <td data-l={t('agentConsole.v2.aud01.colBehalf')}>
-          {event.onBehalfOf ? (
-            <span className="behalf" title={`onBehalfOf: ${event.onBehalfOf}`}>
-              → {isPlaceholderIdentity(event.onBehalfOf)
+          {behalfRef.trim() ? (
+            <span className="behalf" title={`onBehalfOf: ${behalfRef}`}>
+              → {isPlaceholderIdentity(behalfRef)
                 ? t('agentConsole.v2.id.unknown')
-                : humanRefLabel(event.onBehalfOf, t)}
+                : humanRefLabel(behalfRef, t)}
             </span>
           ) : (
             <span className="faint">—</span>
@@ -151,16 +170,16 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
         </td>
 
         <td className="mono" data-l="run">
-          {event.runId ? (
+          {runId ? (
             <span className="idcell">
               {/* the id itself is the RUN-02 jump: one line, like the target */}
               <CopyId
-                value={event.runId}
-                display={shortId(event.runId)}
+                value={runId}
+                display={shortId(runId)}
                 ariaLabel={t('agentConsole.v2.aud01.copyRun')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
-                href={`/agent/runs/${encodeURIComponent(event.runId)}`}
-                linkLabel={t('agentConsole.v2.aud01.viewRunTitle', { id: event.runId })}
+                href={`/agent/runs/${encodeURIComponent(runId)}`}
+                linkLabel={t('agentConsole.v2.aud01.viewRunTitle', { id: runId })}
                 testId={`aud01-run-link-${event.eventId}`}
               />
             </span>
@@ -170,11 +189,11 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
         </td>
 
         <td className="mono" data-l={t('agentConsole.v2.aud01.colTask')}>
-          {event.taskId ? (
+          {taskId ? (
             <span className="idcell">
               <CopyId
-                value={event.taskId}
-                display={shortId(event.taskId)}
+                value={taskId}
+                display={shortId(taskId)}
                 ariaLabel={t('agentConsole.v2.aud01.copyTask')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -182,7 +201,7 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
                   employee jump; copy stays independent of the link). */}
               <a
                 className="jump"
-                href={`/agent/tasks/${encodeURIComponent(event.taskId)}`}
+                href={`/agent/tasks/${encodeURIComponent(taskId)}`}
                 data-testid={`aud01-task-jump-${event.eventId}`}
               >
                 {t('agentConsole.v2.aud01.viewTask')}
@@ -195,11 +214,11 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
         </td>
 
         <td data-l={t('agentConsole.v2.aud01.colApproval')}>
-          {event.approvalId ? (
+          {approvalId ? (
             <span className="idcell">
               <CopyId
-                value={event.approvalId}
-                display={shortId(event.approvalId)}
+                value={approvalId}
+                display={shortId(approvalId)}
                 ariaLabel={t('agentConsole.v2.aud01.copyApproval')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -215,10 +234,10 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
           <span
             className="rescell"
             title={
-              event.resource.ownerRef || event.resource.scopeRef
+              event.resource?.ownerRef || event.resource?.scopeRef
                 ? [
-                    event.resource.ownerRef ? `ownerRef: ${event.resource.ownerRef}` : null,
-                    event.resource.scopeRef ? `scopeRef: ${event.resource.scopeRef}` : null,
+                    event.resource.ownerRef ? `ownerRef: ${wireText(event.resource.ownerRef)}` : null,
+                    event.resource.scopeRef ? `scopeRef: ${wireText(event.resource.scopeRef)}` : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')
@@ -228,21 +247,21 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
             {/* S2: type word is localized (EMPLOYEE → 员工) and employee
                 resources print the name or 「员工 · 短码」 — the CopyId keeps
                 the full `emp_…` id in title + copy (visual truncation rule). */}
-            <span className="rt">{resourceTypeLabel(event.resource.type, t)}</span>
+            <span className="rt">{resourceWord(resourceType, t)}</span>
             <CopyId
-              value={event.resource.id}
+              value={resourceId}
               display={
-                event.resource.type === 'employee'
-                  ? employeeResourceIdLabel(event.resource.id, names, t)
-                  : shortId(event.resource.id)
+                employeeResource
+                  ? employeeResourceIdLabel(resourceId, names, t)
+                  : shortId(resourceId)
               }
               ariaLabel={t('agentConsole.v2.aud01.copyResource')}
               copiedLabel={t('agentConsole.v2.aud01.copied')}
             />
-            {event.resource.type === 'employee' ? (
+            {employeeResource ? (
               <a
                 className="jump"
-                href={`/agent/employees/${encodeURIComponent(event.resource.id)}`}
+                href={`/agent/employees/${encodeURIComponent(resourceId)}`}
                 data-testid={`aud01-employee-link-${event.eventId}`}
               >
                 {t('agentConsole.v2.aud01.viewEmployee')}
@@ -287,17 +306,20 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
 }
 
 function sourceLabel(t: TFunction, source: string): string {
-  const key = SOURCE_LABEL_KEYS[source];
-  if (key === undefined) {
-    // Unlisted enums render verbatim — never invented, never guessed.
-    console.error('[AUD-01] unknown sourceSystem:', source);
-    return source;
+  // Unlisted enums render verbatim — never invented, never guessed.
+  return sourceWord(source, t);
+}
+
+/** Wire id that may arrive as a `{type,id}` object (the human ref shape). */
+function refText(value: unknown): string {
+  if (value && typeof value === 'object') {
+    return wireText((value as { id?: unknown }).id);
   }
-  return t(`agentConsole.v2.aud01.${key}`);
+  return wireText(value);
 }
 
 function DecisionCell({ decision, t }: { decision?: string; t: TFunction }) {
-  if (decision === undefined) {
+  if (decision === undefined || wireText(decision).trim() === '') {
     // Key absent = the event carries no decision field (NOT not_applicable).
     return (
       <span className="faint" title={t('agentConsole.v2.aud01.decisionAbsentTitle')}>
@@ -305,28 +327,29 @@ function DecisionCell({ decision, t }: { decision?: string; t: TFunction }) {
       </span>
     );
   }
-  if (decision === 'not_applicable') {
+  const value = decisionEnum(decision);
+  if (value === 'not_applicable') {
     return (
       <span className="faint" title={t('agentConsole.v2.aud01.decisionNaTitle')}>
         —
       </span>
     );
   }
-  const key = DECISION_KEYS[decision];
+  const key = DECISION_KEYS[value];
   if (key === undefined) {
-    console.error('[AUD-01] unknown decision:', decision);
-    return <span className="mono">{decision}</span>;
+    // Unlisted enum: the raw token is the honest reading (no invented word).
+    return <span className="mono">{wireText(decision)}</span>;
   }
   const titleKey =
-    decision === 'require_approval'
+    value === 'require_approval'
       ? 'decisionRequireApprovalTitle'
-      : decision === 'approved'
+      : value === 'approved'
         ? 'decisionApprovedTitle'
-        : decision === 'deny'
+        : value === 'deny'
           ? 'decisionDenyTitle'
           : undefined;
   return (
-    <span className={`pill ${decisionTone(decision)}`} title={titleKey ? t(`agentConsole.v2.aud01.${titleKey}`) : undefined}>
+    <span className={`pill ${decisionTone(value)}`} title={titleKey ? t(`agentConsole.v2.aud01.${titleKey}`) : undefined}>
       <span className="dot" aria-hidden="true" />
       {t(`agentConsole.v2.aud01.${key}`)}
     </span>
@@ -334,13 +357,13 @@ function DecisionCell({ decision, t }: { decision?: string; t: TFunction }) {
 }
 
 function OutcomeCell({ outcome, t }: { outcome: string; t: TFunction }) {
-  const key = OUTCOME_KEYS[outcome];
+  const value = outcomeEnum(outcome);
+  const key = OUTCOME_KEYS[value];
   if (key === undefined) {
-    console.error('[AUD-01] unknown outcome:', outcome);
-    return <span className="mono">{outcome}</span>;
+    return <span className="mono">{wireText(outcome)}</span>;
   }
   return (
-    <span className={`pill ${outcomeTone(outcome)}`}>
+    <span className={`pill ${outcomeTone(value)}`}>
       <span className="dot" aria-hidden="true" />
       {t(`agentConsole.v2.aud01.${key}`)}
     </span>
@@ -464,6 +487,13 @@ function DiffLine({ row, t }: { row: DiffRow; t: TFunction }) {
 function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
   const diff = diffRows(event.before, event.after);
   const hasDiff = event.before !== undefined || event.after !== undefined;
+  const hash = wireText(event.hash);
+  const prevHash = wireText(event.prevHash);
+  const approvalRef = wireText(event.approvalId);
+  const correlationRef = wireText(event.correlationId);
+  const policyRef = wireText(event.policyDecisionId);
+  const errorCode = wireText(event.error?.code);
+  const errorMessage = wireText(event.error?.messageRedacted);
 
   return (
     <div className="expbox">
@@ -499,10 +529,10 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
         <div className="integ">
           <div className="kv">
             <span className="k">{t('agentConsole.v2.aud01.integHashLabel')}</span>
-            {event.hash ? (
+            {hash ? (
               <CopyId
-                value={event.hash}
-                display={shortId(event.hash)}
+                value={hash}
+                display={shortId(hash)}
                 ariaLabel={t('agentConsole.v2.aud01.copyHash')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -512,10 +542,10 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
           </div>
           <div className="kv">
             <span className="k">{t('agentConsole.v2.aud01.integPrevLabel')}</span>
-            {event.prevHash ? (
+            {prevHash ? (
               <CopyId
-                value={event.prevHash}
-                display={shortId(event.prevHash)}
+                value={prevHash}
+                display={shortId(prevHash)}
                 ariaLabel={t('agentConsole.v2.aud01.copyPrevHash')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
@@ -524,25 +554,25 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
             )}
           </div>
           <div className="integ exp">{t('agentConsole.v2.aud01.noPerEventVerify')}</div>
-          {!event.hash ? (
+          {!hash ? (
             <div className="integ exp">{t('agentConsole.v2.aud01.noHashNote')}</div>
           ) : null}
           <div className="kv">
             <span className="k">{t('agentConsole.v2.aud01.integSchemaLabel')}</span>
-            <span className="mono">{event.schemaVersion || '—'}</span>
+            <span className="mono">{wireText(event.schemaVersion) || '—'}</span>
           </div>
           {event.error ? (
             <>
-              {event.error.code ? (
+              {errorCode ? (
                 <div className="kv">
                   <span className="k">{t('agentConsole.v2.aud01.errorCode')}</span>
-                  <span className="mono">{event.error.code}</span>
+                  <span className="mono">{errorCode}</span>
                 </div>
               ) : null}
-              {event.error.messageRedacted ? (
+              {errorMessage ? (
                 <div className="kv">
                   <span className="k">{t('agentConsole.v2.aud01.errorMessage')}</span>
-                  <span className="errtext">{event.error.messageRedacted}</span>
+                  <span className="errtext">{errorMessage}</span>
                 </div>
               ) : null}
               <div className="integ exp">{t('agentConsole.v2.aud01.errorRedactedNote')}</div>
@@ -551,39 +581,39 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
         </div>
 
         <div className="rel">
-          {event.approvalId ? (
+          {approvalRef ? (
             <div className="kv">
               <span className="k">{t('agentConsole.v2.aud01.relApproval')}</span>
               <CopyId
-                value={event.approvalId}
-                display={shortId(event.approvalId)}
+                value={approvalRef}
+                display={shortId(approvalRef)}
                 ariaLabel={t('agentConsole.v2.aud01.copyApproval')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
-              <a className="jump" href={`/agent/approvals/${encodeURIComponent(event.approvalId)}`}>
+              <a className="jump" href={`/agent/approvals/${encodeURIComponent(approvalRef)}`}>
                 {t('agentConsole.v2.aud01.viewApproval')}
                 <LkIcon name="chevR" size={13} />
               </a>
             </div>
           ) : null}
-          {event.correlationId ? (
+          {correlationRef ? (
             <div className="kv">
               <span className="k">{t('agentConsole.v2.aud01.relCorrelation')}</span>
               <CopyId
-                value={event.correlationId}
-                display={shortId(event.correlationId)}
+                value={correlationRef}
+                display={shortId(correlationRef)}
                 ariaLabel={t('agentConsole.v2.aud01.copyCorrelation')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />
               <span className="hd-note">{t('agentConsole.v2.aud01.relCorrelationNote')}</span>
             </div>
           ) : null}
-          {event.policyDecisionId ? (
+          {policyRef ? (
             <div className="kv">
               <span className="k">{t('agentConsole.v2.aud01.relPolicy')}</span>
               <CopyId
-                value={event.policyDecisionId}
-                display={shortId(event.policyDecisionId)}
+                value={policyRef}
+                display={shortId(policyRef)}
                 ariaLabel={t('agentConsole.v2.aud01.copyPolicy')}
                 copiedLabel={t('agentConsole.v2.aud01.copied')}
               />

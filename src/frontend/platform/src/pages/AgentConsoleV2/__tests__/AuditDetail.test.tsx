@@ -829,3 +829,77 @@ describe('AUD-02 — numeric schemaVersion tolerance (BFF A4 returns a number)',
     await waitFor(() => expect(api.getEvent).toHaveBeenCalledTimes(2));
   });
 });
+
+// ------------------------------------------- L4p4 identity + type closeout
+
+describe('AUD-02 identity closeout — machine casing, tenant and honest links', () => {
+  it('renders uppercase enums as Chinese words', async () => {
+    const api = makeApi({
+      ok: true,
+      event: event({
+        sourceSystem: 'CHANNEL',
+        decision: 'APPROVED',
+        outcome: 'SUCCESS',
+        resource: { type: 'EMPLOYEE', id: EMP },
+      }),
+    });
+    renderPage({ api });
+    await waitReady();
+    const body = screen.getByTestId('aud02-detail').textContent ?? '';
+    expect(body).toContain('渠道');
+    expect(body).toContain('已批准');
+    expect(body).toContain('成功');
+    expect(body).toContain('员工');
+    // the machine word for the resource type must never reach the screen
+    expect(body).not.toContain('EMPLOYEE');
+  });
+
+  it('keeps the tenant as a labelled mono value, full length, never trimmed', async () => {
+    const api = makeApi({ ok: true, event: event({ tenantId: 't_seakoi_pilot_extended' }) });
+    renderPage({ api });
+    await waitReady();
+    const tenant = screen.getByTestId('aud02-tenant');
+    expect(tenant.textContent).toBe('t_seakoi_pilot_extended');
+    expect(tenant.className.split(/\s+/)).toContain('v');
+    expect(tenant.getAttribute('title')).toBe('t_seakoi_pilot_extended');
+    const cell = tenant.closest('.hf');
+    expect(cell).not.toBeNull();
+    expect(cell?.textContent).toContain('租户');
+  });
+
+  it('shows the task jump only for a real task id', async () => {
+    const api = makeApi({ ok: true, event: event({ taskId: undefined }) });
+    renderPage({ api });
+    await waitReady();
+    expect(screen.queryByTestId('aud02-link-taskId')).toBeNull();
+    expect(screen.queryByTestId('aud02-ref-taskId')).toBeNull();
+    cleanup();
+
+    const blank = makeApi({ ok: true, event: event({ taskId: '   ' }) });
+    renderPage({ api: blank });
+    await waitReady();
+    expect(screen.queryByTestId('aud02-link-taskId')).toBeNull();
+    expect(screen.queryByTestId('aud02-ref-taskId')).toBeNull();
+  });
+
+  it('says 未提供 when a 404 arrives without a request id', async () => {
+    const api = makeApi({ ok: false, status: 404 });
+    renderPage({ api });
+    await screen.findByTestId('aud02-forbidden');
+    expect(screen.getByTestId('aud02-status-code').textContent).toContain('404');
+    expect(screen.getByTestId('aud02-forbidden-reqid').textContent).toContain('未提供');
+    expect(screen.getByTestId('aud02-forbidden-retry')).toBeTruthy();
+  });
+
+  it('survives a numeric actor id without throwing', async () => {
+    const api = makeApi({
+      ok: true,
+      event: event({
+        actor: { type: 'employee', id: 42 as unknown as string, displayName: undefined },
+      }),
+    });
+    renderPage({ api });
+    await waitReady();
+    expect(screen.getByTestId('aud02-f-actor').textContent).toContain('员工');
+  });
+});
