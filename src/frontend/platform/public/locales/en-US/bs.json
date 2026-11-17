@@ -4749,7 +4749,7 @@
 
         "emp02Perm": {
           "title": "Permission is not decided on this page",
-          "body": "Whether you can create is decided by the service from your signed-in identity. This page does not draw a button that looks clickable and only errors once pressed: without permission the whole page becomes an explanation instead of flashing a form first."
+          "body": "Whether you can create is decided by the service from your signed-in identity. Without permission this page turns into an explanation that points to the next step."
         },
         "emp02Replay": {
           "title": "A repeated send is not a failure",
@@ -5217,7 +5217,7 @@
         "sub": "Start with a name and a job title. Duties, workstation and knowledge scope are not set here — those go through approval and are added afterwards.",
         "back": "Back to employees",
         "cardTitle": "Basics",
-        "cardChip": "4 fields · 2 required",
+        "cardChip": "5 fields · 3 required",
         "cardNote": "Creating as {{name}}",
         "cardNoteAnon": "Creating as the signed-in user",
         "nameLabel": "Name",
@@ -5250,7 +5250,7 @@
         "sumTitleEmpty": "job title is empty",
         "sumTitleBlank": "job title is only spaces",
         "failUnavailable": "Save did not go through: the service did not respond. Everything you typed is still here — press save once more.",
-        "failInvalid": "Nothing was saved: one part of the form does not meet the requirement. Fix what the list above points at, then submit again.",
+        "failInvalid": "Save did not go through: this content did not pass the check. Please review every field once more, then submit again.",
         "retry": "Retry",
         "authTitle": "Your session has expired",
         "authDesc": "You are signed out. Sign in again to continue creating the employee. What you typed here will not be kept.",
@@ -5258,17 +5258,15 @@
         "forbiddenTitle": "You cannot create employees here right now",
         "forbiddenDesc": "This account does not have permission to create employees, or this address is no longer available. Both cases get the same explanation, so the page never reveals who has the permission.",
         "forbiddenBack": "Back to employees",
-        "forbiddenNote": "Nothing you did broke anything. Go back to the employee list and try later, or from another entry point.",
+        "forbiddenNote": "Nothing you did broke anything. Go back to the employee list, or ask an administrator to grant employee-creation permission.",
         "loadErrorTitle": "This page did not load",
         "loadErrorDesc": "The service did not respond. Try again, or go back to the employee list.",
         "loadingAria": "Page loading",
-        "loadingNote": "Getting the form ready — almost there.",
         "escWarn": "You have unsaved content. Press Esc again to discard it.",
         "leaveLead": "Discard what you typed?",
         "leaveRest": "Nothing you entered will be kept.",
         "leaveDiscard": "Discard and leave",
         "leaveKeep": "Keep editing",
-        "noIdentityNote": "Your sign-in identity cannot be read yet, so the employee cannot be created. Sign in again and retry.",
         "previewTitle": "What it will look like",
         "previewNote": "Follows your input",
         "previewNameEmpty": "Unnamed",
@@ -5309,7 +5307,6 @@
         "conflictReopen": "Reopen the create page",
         "techSummary": "Technical details (for support)",
         "techRequest": "Request ID",
-        "techStatusForbidden": "Status 403 · or 404 (identical wording, only the code differs)",
         "techStatusConflict": "Status 409 · submission conflict: same submission token, different content",
         "pfootSource": "This is one of the few places in the console that writes: save really creates the employee",
         "pfootCaliber": "Rule: created as a draft · does not answer anyone until duties and a workstation are added · the creation is audited",
@@ -5321,9 +5318,13 @@
         "errDutyBlank": "Spaces alone do not count. Please say which work it owns.",
         "sumDutyBlank": "the job description is only spaces",
         "sumDutyEmpty": "the job description is empty",
-        "techStatusService": "Status {{status}} · the service did not answer this time",
         "techStatusNoCode": "Status not given · the connection returned no response",
-        "techNotProvided": "not given"
+        "techNotProvided": "not given",
+        "techStatusCode": "Status {{status}}",
+        "failSafeHint": "Saving again will not create a second employee: the same submission only ever builds one.",
+        "hdNoteKept": "Everything you typed is still here",
+        "hdNoteFix": "{{count}} fields still need attention",
+        "hdNoteBusy": "Submitting — stay on this page"
       },
       "tsk03": {
         "crumb": "New task",

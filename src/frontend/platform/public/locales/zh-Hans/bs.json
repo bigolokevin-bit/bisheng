@@ -4694,7 +4694,7 @@
 
         "emp02Perm": {
           "title": "权限不在这一页判断",
-          "body": "能不能建，由服务端按你的登录身份判定。这一页不做「看起来能点、点了才报错」的假按钮：没有权限时整页换成说明，不会先闪一下表单。"
+          "body": "能不能建，由服务端按你的登录身份判定。没有权限时，这一页会换成一段说明，并给出下一步的入口。"
         },
         "emp02Replay": {
           "title": "重复发送不算失败",
@@ -5162,7 +5162,7 @@
         "sub": "先给它一个名字和岗位。职权、工位与知识范围不在这页配——那几样要走审批，建好之后再补。",
         "back": "返回员工列表",
         "cardTitle": "基本信息",
-        "cardChip": "4 项 · 2 必填",
+        "cardChip": "5 项 · 3 必填",
         "cardNote": "以 {{name}} 的身份创建",
         "cardNoteAnon": "以当前登录人的身份创建",
         "nameLabel": "姓名",
@@ -5195,7 +5195,7 @@
         "sumTitleEmpty": "岗位是空的",
         "sumTitleBlank": "岗位只有空格",
         "failUnavailable": "保存没成功：服务这次没有响应。你填的内容都还在，可以直接再点一次保存。",
-        "failInvalid": "这次没有保存：内容有一处不合要求。按上面的提示改好后再提交一次。",
+        "failInvalid": "保存没成功：这次的内容没有通过检查。请再核对一遍每一项的填写，然后重新提交。",
         "retry": "重试",
         "authTitle": "登录已失效",
         "authDesc": "登录状态已经失效，重新登录后就能继续建立员工。刚才填的内容不会被保存。",
@@ -5203,17 +5203,15 @@
         "forbiddenTitle": "你暂时不能在这里新建员工",
         "forbiddenDesc": "当前账号没有新建员工的权限，或者这个地址已经不可用。这两种情况我们给同一段说明——这样不会泄露别人有没有这个权限。",
         "forbiddenBack": "返回员工列表",
-        "forbiddenNote": "你没有误操作的风险。返回员工列表，稍后再试或换一个入口。",
+        "forbiddenNote": "你没有误操作的风险。可以返回员工列表，或联系管理员开通新建员工的权限。",
         "loadErrorTitle": "这一页没有加载出来",
         "loadErrorDesc": "服务这次没有响应。可以再试一次，或者回到员工列表。",
         "loadingAria": "页面加载中",
-        "loadingNote": "页面正在准备表单，很快就好。",
         "escWarn": "有没保存的内容，再按一次 Esc 放弃",
         "leaveLead": "要放弃这次填写吗？",
         "leaveRest": "已经填的内容不会留下。",
         "leaveDiscard": "放弃并返回",
         "leaveKeep": "继续填写",
-        "noIdentityNote": "还读不到你的登录身份，所以暂时不能建立员工。重新登录后再试。",
         "previewTitle": "建好之后长这样",
         "previewNote": "随输入变化",
         "previewNameEmpty": "未命名",
@@ -5254,7 +5252,6 @@
         "conflictReopen": "重新打开新建页",
         "techSummary": "技术信息（报障时提供）",
         "techRequest": "请求编号",
-        "techStatusForbidden": "状态 403 · 或 404（逐字相同，只有码不同）",
         "techStatusConflict": "状态 409 · 提交冲突：同一份提交凭证对应了不同内容",
         "pfootSource": "这一页是控制台里少数可以写入的地方：保存会真的建立员工",
         "pfootCaliber": "口径：建好后为草稿 · 补齐职权与工位前不对外答话 · 建立动作入审计",
@@ -5266,9 +5263,13 @@
         "errDutyBlank": "只有空格不算填了，请写清楚它负责哪一段活。",
         "sumDutyBlank": "职责说明只有空格",
         "sumDutyEmpty": "职责说明是空的",
-        "techStatusService": "状态 {{status}} · 服务这次没有响应",
         "techStatusNoCode": "状态 未提供 · 连接没有拿到响应",
-        "techNotProvided": "未提供"
+        "techNotProvided": "未提供",
+        "techStatusCode": "状态 {{status}}",
+        "failSafeHint": "再点一次保存不会建出两位员工：同一份提交重复发送只会建一位。",
+        "hdNoteKept": "已填内容都还在",
+        "hdNoteFix": "还有 {{count}} 项要改",
+        "hdNoteBusy": "正在提交，先别离开这一页"
       },
       "tsk03": {
         "crumb": "新建任务",
