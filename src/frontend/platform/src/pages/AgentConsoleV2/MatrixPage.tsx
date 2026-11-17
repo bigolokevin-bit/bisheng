@@ -24,9 +24,9 @@ import { makeFetcher, fmtUsd, type ApiRes, type Fetcher } from './v2Data';
 import {
   LIFECYCLE_KEY,
   LIFECYCLE_TONE,
-  isBudgetConfigured,
   normalizeRow,
   riskSignalCount,
+  versionShort,
   type MatrixEmployeeRow,
   type MatrixListBody,
 } from './matrix';
@@ -37,6 +37,20 @@ export default function MatrixPage() {
   const [res, setRes] = useState<ApiRes<MatrixListBody> | null>(null);
   const [loading, setLoading] = useState(true);
   const [nonce, setNonce] = useState(0);
+
+  /* Deep link ?focus=<employeeId>: mark and bring the matching card into view.
+   * The URL is never rewritten and an unknown/malformed value just matches
+   * nothing — it must never turn into an error screen (MATRIX-R3 ⑤). */
+  const focusId = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return (new URLSearchParams(window.location.search).get('focus') ?? '').trim();
+  }, []);
+
+  useEffect(() => {
+    if (!focusId) return;
+    const el = document.querySelector('[data-testid="agent-v2-mtx-row"][data-focus="true"]');
+    el?.scrollIntoView?.({ block: 'center' });
+  }, [focusId, nonce]);
 
   useEffect(() => {
     let alive = true;
@@ -60,6 +74,19 @@ export default function MatrixPage() {
 
   const isTimeout = res != null && !res.ok && res.status === 0 && res.code === 'console.timeout';
   const isQueryError = res != null && !res.ok && res.status === 401;
+
+  /* Same-name cards carry a short code so two people never look identical.
+     Declared before the early returns: a hook after them changes the call
+     order between renders and crashes the page (React invalid hook call). */
+  const nameCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const key = (row.name ?? '').trim();
+      if (!key) continue;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  }, [rows]);
 
   /* ---- loading ---- */
   if (loading) {
@@ -154,11 +181,20 @@ export default function MatrixPage() {
           const toneCls =
             tone === 'ok' ? ' is-ok' : tone === 'warn' ? ' is-warn' : tone === 'danger' ? ' is-danger' : '';
           const ch = avatarChar(r.name);
-          const configured = isBudgetConfigured(r.budget);
           const runs = r.todayRuns;
           const riskN = riskSignalCount(r.risk);
+          const focused = focusId !== '' && r.employeeId === focusId;
+          const nameKey = (r.name ?? '').trim();
+          const duplicated = nameKey !== '' && (nameCounts.get(nameKey) ?? 0) > 1;
+          const disambig = duplicated ? versionShort(r.versionRef) || r.employeeId.slice(-8) : '';
           return (
-            <div className="a2-card" data-testid="agent-v2-mtx-row" key={r.employeeId}>
+            <div
+              className="a2-card"
+              data-testid="agent-v2-mtx-row"
+              data-focus={focused ? 'true' : undefined}
+              style={focused ? { outline: '2px solid var(--accent-border, #8a8f98)', outlineOffset: 2 } : undefined}
+              key={r.employeeId}
+            >
               <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="a2-who-avatar" aria-hidden="true" data-testid="agent-v2-mtx-ava">
                   {ch ?? <Icon name="inbox" size={12} />}
@@ -172,6 +208,15 @@ export default function MatrixPage() {
                 >
                   {r.name && !ch ? r.name : ch ? r.name : t('agentConsole.v2.mtx.unnamed')}
                 </NavLink>
+                {disambig ? (
+                  <span
+                    className="a2-mono"
+                    data-testid="agent-v2-mtx-disambig"
+                    title={r.versionRef ?? r.employeeId}
+                  >
+                    {disambig}
+                  </span>
+                ) : null}
                 <span className="a2-sp" />
                 {lcKey ? (
                   <span className={`a2-pill${toneCls}`} data-testid="agent-v2-mtx-status">
@@ -188,34 +233,46 @@ export default function MatrixPage() {
                 )}
               </p>
               <p className="a2-meta" data-testid="agent-v2-mtx-version">
+                {t('agentConsole.v2.mtx.version')}{' '}
                 {r.versionRef ? (
-                  <>
-                    {t('agentConsole.v2.mtx.version')} <span className="a2-mono">{r.versionRef}</span>
-                  </>
+                  <span className="a2-mono" title={r.versionRef}>
+                    {versionShort(r.versionRef)}
+                  </span>
                 ) : (
-                  <>
-                    {t('agentConsole.v2.mtx.version')} —
-                  </>
+                  <span className="a2-mono">—</span>
                 )}
               </p>
               <p className="a2-meta" data-testid="agent-v2-mtx-skills">
                 {t('agentConsole.v2.mtx.skills')}{' '}
                 <span className="a2-mono">{r.skillCount != null ? r.skillCount : '—'}</span>
               </p>
-              <p className="a2-meta" data-testid="agent-v2-mtx-budget">
-                {t('agentConsole.v2.mtx.budgetMonthly')}{' '}
-                {r.budget == null ? (
-                  <span className="a2-mono">—</span>
-                ) : configured ? (
-                  r.budget.monthlyCostUsd != null ? (
-                    <span className="a2-mono">{fmtUsd(r.budget.monthlyCostUsd)}</span>
-                  ) : (
-                    /* configured budget but this field unset → 未配置, never USD 0.00 (a57232b stance) */
-                    t('agentConsole.v2.mtx.budgetUnset')
-                  )
-                ) : (
-                  t('agentConsole.v2.mtx.budgetUnset')
-                )}
+              <p className="a2-meta" data-testid="agent-v2-mtx-budget" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <span>
+                  {t('agentConsole.v2.mtx.budgetMonthly')}{' '}
+                  <span className="a2-mono" data-testid="agent-v2-mtx-budget-monthly">
+                    {r.budget?.monthlyCostUsd != null ? fmtUsd(r.budget.monthlyCostUsd) : '—'}
+                  </span>
+                </span>
+                <span>
+                  {t('agentConsole.v2.mtx.budgetDaily')}{' '}
+                  <span className="a2-mono" data-testid="agent-v2-mtx-budget-daily">
+                    {r.budget?.dailyTokens != null ? String(r.budget.dailyTokens) : '—'}
+                  </span>
+                </span>
+                <span>
+                  {t('agentConsole.v2.mtx.budgetPerRun')}{' '}
+                  <span className="a2-mono" data-testid="agent-v2-mtx-budget-perrun">
+                    {r.budget?.perRunMaxUsd != null ? fmtUsd(r.budget.perRunMaxUsd) : '—'}
+                  </span>
+                </span>
+                {r.budget != null &&
+                (r.budget.dailyTokens == null ||
+                  r.budget.monthlyCostUsd == null ||
+                  r.budget.perRunMaxUsd == null) ? (
+                  <span className="a2-mono" data-testid="agent-v2-mtx-budget-partial">
+                    {t('agentConsole.v2.mtx.budgetUnset')}
+                  </span>
+                ) : null}
               </p>
               <p className="a2-meta" data-testid="agent-v2-mtx-runs">
                 {t('agentConsole.v2.mtx.runs')}{' '}
@@ -232,6 +289,7 @@ export default function MatrixPage() {
                 </span>
               </p>
               <p className="a2-meta" data-testid="agent-v2-mtx-risk">
+                {t('agentConsole.v2.mtx.risk')}{' '}
                 {r.risk == null ? (
                   <span className="a2-mono">—</span>
                 ) : riskN === 0 ? (
@@ -253,6 +311,22 @@ export default function MatrixPage() {
                     )}
                   </span>
                 )}
+              </p>
+              <p className="a2-meta" data-testid="agent-v2-mtx-jumps" style={{ display: 'flex', gap: 12 }}>
+                <NavLink
+                  to={`/agent/runs?employee=${encodeURIComponent(r.employeeId)}`}
+                  data-testid="agent-v2-mtx-jump-runs"
+                  style={{ textDecoration: 'underline' }}
+                >
+                  {t('agentConsole.v2.mtx.linkRuns')}
+                </NavLink>
+                <NavLink
+                  to={`/agent/audit?employee=${encodeURIComponent(r.employeeId)}`}
+                  data-testid="agent-v2-mtx-jump-audit"
+                  style={{ textDecoration: 'underline' }}
+                >
+                  {t('agentConsole.v2.mtx.linkAudit')}
+                </NavLink>
               </p>
             </div>
           );

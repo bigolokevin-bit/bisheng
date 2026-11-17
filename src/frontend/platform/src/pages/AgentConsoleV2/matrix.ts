@@ -125,6 +125,20 @@ export function normalizeRow(raw: unknown): MatrixEmployeeRow {
   };
 }
 
+/**
+ * 8-char display code for a position/version reference.
+ *
+ * The upstream id is a 31-char `empv_…` string; the locked design wants the
+ * 8-char code on screen and the raw value only in `title` (MATRIX-R3 F1).
+ * Values that are not version ids (e.g. 'v3') are returned unchanged.
+ */
+export function versionShort(ref: string | undefined | null): string {
+  const text = typeof ref === 'string' ? ref.trim() : '';
+  if (!text) return '';
+  const body = text.replace(/^empv[_-]?/i, '');
+  return body.length > 8 ? body.slice(0, 8) : body;
+}
+
 /** Count of risk signals present on a row (0 = no risk). */
 export function riskSignalCount(risk: MatrixRisk | null | undefined): number {
   if (!risk) return 0;

@@ -4305,7 +4305,12 @@
     "stPaused": "一時停止",
     "stOffboarding": "オフボーディング",
     "stDraft": "下書き",
-    "stArchived": "アーカイブ"
+    "stArchived": "アーカイブ",
+    "budgetDaily": "日次トークン",
+    "budgetPerRun": "1回上限",
+    "risk": "リスク",
+    "linkRuns": "実行履歴",
+    "linkAudit": "監査記録"
   },
 "run02": {
         "title": "実行詳細",
