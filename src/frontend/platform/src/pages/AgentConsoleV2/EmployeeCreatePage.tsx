@@ -212,7 +212,7 @@ export function EmployeeCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof 
       name: values.name.trim(),
       title: values.title.trim(),
     };
-    if (currentUid) body.owner_user_id = currentUid;
+    if (currentUid) body.ownerUserId = currentUid;
     if (values.note.trim()) body.note = values.note.trim();
 
     const outcome = await submitWrite<unknown>({ path: '/api/employees', body, key, env: writeEnv });

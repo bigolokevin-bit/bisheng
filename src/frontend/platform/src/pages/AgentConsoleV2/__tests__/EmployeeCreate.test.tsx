@@ -184,7 +184,7 @@ describe('EMP-02 employee create', () => {
       name: '小柯',
       title: '订单售后专员',
       note: '先接售后工单',
-      owner_user_id: '1',
+      ownerUserId: '1',
     });
 
     expect(screen.getByTestId('agent-v2-emp-c-result-title').textContent).toBe('员工已建立');
@@ -336,6 +336,24 @@ describe('EMP-02 employee create', () => {
 
     release?.();
     await screen.findByTestId('agent-v2-emp-c-result');
+  });
+
+  it('sends ownerUserId on the wire, never the snake_case owner key', async () => {
+    /* Regression guard for the EMP-02 400. The page used to post owner_user_id;
+     * the domain answered employee.invalid_initial_version / "ownerUserId is
+     * required" while a direct domain call with ownerUserId returned 200 and a
+     * real employee. The body key is part of the contract surface, so it is
+     * pinned here on the captured request rather than only in the page source. */
+    renderPage();
+    fill('小柯', '订单售后专员', '先接售后工单');
+    fireEvent.click(screen.getByTestId('agent-v2-emp-c-save'));
+    await screen.findByTestId('agent-v2-emp-c-result');
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0].url).toBe('/agent-api/api/employees');
+    expect(posts[0].body).toHaveProperty('ownerUserId', '1');
+    expect(Object.keys(posts[0].body)).not.toContain('owner_user_id');
+    expect(JSON.stringify(posts[0].body)).not.toContain('owner_user_id');
   });
 
   it('renders no engineering language, no amount and no raw status in body copy', async () => {
