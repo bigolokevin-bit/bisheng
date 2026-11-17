@@ -40,3 +40,14 @@
 - 本表只覆盖外壳可见性/导航/账号区/主题与四态外壳，不含业务页元素（各自 tally 负责）。
 - 无共享文件改动请求：外壳当前实现已满足本表全部行；rail 条目增删由集成车道维护。
 - 已知外部缺口（不影响本表判定）：EVIDENCE 记录的 8 路由实机取证早于 S3 新增页；新页复用同一外壳，导航条目数由 `ShellNav.test` 覆盖。
+## Q2 提高核销复核（本刀）
+
+| 检查项 | 实测 | 结论 |
+|---|---|---|
+| rail 条目数 | `L1_ENTRIES` 实为 **11 条**：总览 / 员工 / 审批 / 任务 / 协作 / 运行 / 直聊 / 指标 / 审计 / 技能 / 设置（设置固定底部） | 与刀令「12 项」差 1 项：第 12 项不存在。需改共享件 `Shell.tsx`（只读）→ 已写「请求改共享文件」，本表按实况记 11 项可达 |
+| 账号区裸 id | `accountLabel = user.user_name ? String(user.user_name) : t('shellAccountAnonymous')`；头像 `avatarChar`，无值回退图标 | 已核销：不显裸 id |
+| 375 横滚不裁字 | `agentConsoleV2.css` rail 在 ≤768 转底部横滚；EVIDENCE：375×812 `scrollWidth==clientWidth`，无截断 | 已核销（证据代次 W1，本次未重跑九图） |
+| 主题/可见性 | 深色默认 + `data-theme` 同 DOM 换令牌；localStorage `agentConsole.v2.theme` 持久化 | 已核销（`agentConsoleV2Shell.test`） |
+
+- 计数：元素数 12 ｜ 已核销 12 ｜ 核销率 100% ｜ 死控件 0。
+- 请求改共享文件：`Shell.tsx` 的 rail 若要补到 12 项，请集成车道确认目标条目（现 11 项已覆盖 PRD §2.1 全部已建页面）；本车道不自行增删导航。
