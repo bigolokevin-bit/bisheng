@@ -253,7 +253,7 @@ describe('SKILL-01 read-only skill governance', () => {
     renderPage();
     await screen.findByTestId('agent-v2-skills-empty');
     expect(screen.queryAllByTestId('agent-v2-skills-row')).toHaveLength(0);
-    expect(screen.getByTestId('agent-v2-skills-empty').textContent).toContain('暂无技能');
+    expect(screen.getByTestId('agent-v2-skills-empty').textContent).toContain('还没有技能版本');
     expect(screen.getByTestId('agent-v2-skills-empty').textContent).toContain('不提供新建入口');
     expect(screen.getByTestId('agent-v2-skills-asof').textContent).toBe('11-17 14:30');
     guardNoRawKeys();

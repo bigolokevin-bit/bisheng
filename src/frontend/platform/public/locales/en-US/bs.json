@@ -7097,6 +7097,7 @@
       "forbiddenDesc": "This account cannot view the skill ledger, or the page does not exist. To avoid disclosure, both cases show this same message.",
       "backHome": "Back to console",
       "emptyTitle": "No skills yet",
+      "emptyTitleV2": "No skill versions yet",
       "emptyHint": "Skills appear here once an employee version references them. This console offers no create entry.",
       "deepMiss": "This skill is not part of this read. It may not be in the ledger yet, or the link is out of date.",
       "deepBack": "View all skills",

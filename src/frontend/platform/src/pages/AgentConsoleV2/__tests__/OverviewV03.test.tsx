@@ -283,6 +283,9 @@ describe('OV-01 PRD §5.1 additions', () => {
     );
     expect(css).toContain('@media (max-width: 900px)');
     expect(css).toContain('@media (max-width: 420px)');
+    // C1-V9: 375 keeps the 2×2 KPI grid; clipping is fixed inside the card.
+    expect(css).toContain('.ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }');
+    expect(css).toContain('font-size: 24px');
     expect(css).toContain('grid-template-columns: minmax(0, 1fr)');
     expect(css).toContain('.ov-rtbl { min-width: 620px; }');
   });
