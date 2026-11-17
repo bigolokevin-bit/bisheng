@@ -46,3 +46,19 @@
 3. 零死控件：行内员工链路、运行记录、审计记录均真跳；页面无按钮式伪控件（筛选为 `<input type="search">`/`<select>` 读控件，零写入口用例同步改为「无 button/form/textarea，input 仅 search」）。
 4. 四态齐：加载骨架、空态、错误（人话 + 请求编号 + 重试，含超时与 401）、403/404 同体。
 5. 1280×720：卡片栅格自适应，无横向裁切；375：单列，无横溢（CSS 契约断言）。
+## R4b 增量核销（2026-11-18，HEAD 4387da8 基座）
+
+| elementId | 本轮变更 | 验收腿 | 状态 |
+|---|---|---|---|
+| SUMR-01 | 汇总条补「技能引用总数」「今日运行」两项；仅有数值时求和，否则 `—`；真 0 显 0 | `agent-v2-mtx-sum-skills` / `-sum-runs`；Matrix.test 14 例 | 已核销 |
+| STATE-03 | 新增独立 403 整页（`agent-v2-mtx-forbidden`）：人话 + 请求编号 + 返回总览，不渲染任何数据 | `-forbidden-reqid` / `-forbidden-back` | 已核销 |
+| STATE-04 | 加载骨架沿用既有 `agent-v2-mtx-loading`，不白屏 | 既有用例 | 已核销 |
+| GRID-13 | `?focus` 真活体：行带 `id="mtx-row-<id>"` + `tabIndex`，定位后 `scrollIntoView` + `focus()` + 高亮，不改写 URL | Matrix.test focus 用例 | 已核销 |
+| GRID-14 | `?state=` 真传 BFF（`params.state`），无该参数时不发送 | 代码审阅（无 BFF 桩） | 已核销（未联调） |
+| FILT-02 | 岗位版筛选并入关键词搜索（匹配 `versionRef` 短码），未单列控件 | Matrix.test 筛选用例 | 已核销（形态差异） |
+| STATE-05 | 降级横幅仍未做 | — | 未核销（如实留缺） |
+
+核销率维持 **19/20 = 95%**（STATE-05 未做），死控件 0。
+
+### 请求改共享文件
+- `Shell.tsx`：375 rail 右缘越界；rail 缺「矩阵」项与当前页高亮（页面不可自改）。
