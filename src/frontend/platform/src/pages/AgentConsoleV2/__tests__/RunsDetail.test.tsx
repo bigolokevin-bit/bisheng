@@ -558,7 +558,7 @@ describe('RUN-02 — no-event and failure states', () => {
 
     const stage = await screen.findByTestId('agent-v2-rd-error');
     expect(stage.textContent).toContain('运行详情没能加载出来');
-    expect(stage.textContent).toContain('HTTP 500');
+    expect(screen.getByTestId('agent-v2-rd-error').textContent).not.toContain('HTTP');
     expect(stage.textContent).toContain('没有展示上一次的缓存数据');
     expect(document.body.textContent).not.toContain('502 upstream');
 
@@ -588,7 +588,7 @@ describe('RUN-02 — no-event and failure states', () => {
       </MemoryRouter>,
     );
     const missingStage = await screen.findByTestId('agent-v2-rd-error');
-    expect(missingStage.textContent).toContain('HTTP 400');
+    expect(missingStage.textContent).toContain('地址里的运行编号不完整');
     expect(missingStage.textContent).toContain('地址里的运行编号不完整');
     expect(offline.getRunDetail).not.toHaveBeenCalled();
   });
