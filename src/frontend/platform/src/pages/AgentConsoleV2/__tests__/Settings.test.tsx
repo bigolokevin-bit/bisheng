@@ -231,7 +231,7 @@ describe('SET-01 chain panel', () => {
     renderPage('tenant');
     const panel = await screen.findByTestId('aud01-verify');
     expect(panel.textContent).toContain('完整性链校验');
-    expect(panel.textContent).toContain('A7');
+    expect(panel.textContent).not.toContain('A7');
 
     // the window row points at the audit centre instead of running the check
     const goto = within(panel).getByTestId('aud01-verify-goto-audit');
@@ -362,17 +362,19 @@ describe('SET-01 group states', () => {
   it('replaces the whole group on 403 instead of rendering field skeletons', async () => {
     renderPage('tenant', { audit: makeAudit(403) });
     const stage = await screen.findByTestId('agent-v2-set-tenant-forbidden');
-    expect(stage.textContent).toContain('你没有查看此组设置的权限');
+    expect(stage.textContent).toContain('这一组暂时不可读');
     expect(stage.textContent).not.toContain('HTTP');
     expect(stage.textContent).toContain('请求编号');
     expect(screen.queryByTestId('agent-v2-set-writes')).toBeNull();
     expect(screen.queryByTestId('agent-v2-set-identity')).toBeNull();
   });
 
-  it('renders the 404 negative with the same body and only the code differing', async () => {
+  it('renders 404 with the same body as 403', async () => {
     renderPage('tenant', { audit: makeAudit(404) });
     const stage = await screen.findByTestId('agent-v2-set-tenant-unsupported');
-    expect(stage.textContent).toContain('这项自检能力尚未提供');
+    expect(stage.textContent).toContain('这一组暂时不可读');
+    expect(stage.textContent).toContain('没有权限');
+    expect(stage.textContent).toContain('还不存在');
     expect(stage.textContent).not.toContain('HTTP');
     expect(stage.textContent).not.toContain('CR-M2-02');
     expect(stage.textContent).toContain('请求编号');
@@ -417,5 +419,49 @@ describe('SET-01 sanitized projection', () => {
     const text = page.textContent ?? '';
     expect(text).toContain('不在本页上屏');
     expect(text).not.toMatch(/t_seakoi|tenant_id|CONSOLE_[A-Z_]+=|sk-[a-z0-9]{8}/i);
+  });
+});
+// ---------------------------------------------------------------- Q2 honesty
+
+describe('SET-01 honest missing values and engineering-free copy', () => {
+  it('renders tenant name and session cache as unknown/not-provided, never invented', async () => {
+    renderPage('tenant');
+    await screen.findByTestId('agent-v2-set-identity');
+    expect(screen.getByTestId('agent-v2-set-f-tenant-name').textContent).toContain('无端点');
+    expect(screen.getByTestId('agent-v2-set-f-session-ttl').textContent).toContain('未知');
+    expect(screen.getByTestId('agent-v2-set-f-build').textContent).toContain('未知');
+  });
+
+  it('shows decision rules without bare field names or enum literals', async () => {
+    renderPage('policy');
+    const card = await screen.findByTestId('agent-v2-set-judge');
+    expect(card.textContent).toContain('请求人权限校验');
+    expect(card.textContent).toContain('30 秒');
+    expect(card.textContent).toContain('150ms');
+    expect(card.textContent).toContain('90 天');
+    const page = screen.getByTestId('agent-v2-settings');
+    expect(page.textContent).not.toMatch(/GAP-|CR-M2|ADR-|HTTP|fail-closed|\ballow\b|raw_ref|append-only|\bENV\b|\/api\//i);
+  });
+
+  it('keeps the whole page free of engineering tokens in every section', async () => {
+    const sections: SectionId[] = ['tenant', 'models', 'policy', 'integrations', 'data', 'danger'];
+    for (const section of sections) {
+      cleanup();
+      renderPage(section);
+      const page = await screen.findByTestId('agent-v2-settings');
+      await screen.findByTestId(
+        {
+          tenant: 'agent-v2-set-writes',
+          models: 'agent-v2-set-runtime',
+          policy: 'agent-v2-set-policy',
+          integrations: 'agent-v2-set-upstream',
+          data: 'agent-v2-set-data',
+          danger: 'agent-v2-set-danger',
+        }[section],
+      );
+      expect(page.textContent).not.toMatch(
+        /GAP-|CR-M2|ADR-|HTTP|\/api\/|human:\d|tenant_id|fail-closed|\ballow\b|raw_ref|append-only|\bENV\b/i,
+      );
+    }
   });
 });

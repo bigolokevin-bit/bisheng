@@ -350,41 +350,20 @@ export function GroupGate({
   }
 
   if (phase === 'forbidden' || phase === 'unsupported') {
-    const forbidden = phase === 'forbidden';
     return (
-      <div className="card stage" data-testid={`${testIdPrefix}-${forbidden ? 'forbidden' : 'unsupported'}`}>
+      <div className="card stage" data-testid={`${testIdPrefix}-${phase === 'forbidden' ? 'forbidden' : 'unsupported'}`}>
         <span className="ic" aria-hidden="true">
-          <SetIcon name={forbidden ? 'lock' : 'slash'} size={20} />
+          <SetIcon name="lock" size={20} />
         </span>
-        <div className="t">
-          {t(
-            forbidden
-              ? 'agentConsole.v2.set01.forbiddenTitle'
-              : 'agentConsole.v2.set01.notProvidedTitle',
-          )}
-        </div>
+        <div className="t">{t('agentConsole.v2.set01.groupDeniedTitle')}</div>
         <div className="s">
-          {forbidden
-            ? `当前账号未获授权访问「${label}」。这一组整体替换为说明，不会先渲染字段骨架再消失。请由管理员开通后刷新。`
-            : '这项只读自检在当前环境尚未接入；页面不展示字段骨架，也不猜测数据。'}
+          {t('agentConsole.v2.set01.groupDeniedBody')}
           <ReqId requestId={requestId} testId={`${testIdPrefix}-reqid`} />
         </div>
         <div className="acts2">
-          {forbidden && onRetry ? (
-            <button
-              type="button"
-              className="b out"
-              data-testid={`${testIdPrefix}-forbidden-retry`}
-              onClick={onRetry}
-            >
-              <SetIcon name="refresh" size={16} />
-              {t('agentConsole.v2.set01.forbiddenRetry')}
-            </button>
-          ) : (
-            <Link className="b out" to="/agent/settings/tenant">
-              {t('agentConsole.v2.set01.notProvidedBack')}
-            </Link>
-          )}
+          <Link className="b out" to="/agent/settings/tenant">
+            {t('agentConsole.v2.set01.notProvidedBack')}
+          </Link>
         </div>
       </div>
     );

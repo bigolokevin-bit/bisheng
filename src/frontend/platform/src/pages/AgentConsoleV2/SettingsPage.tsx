@@ -363,7 +363,7 @@ function TenantGroup({
   return (
     <>
       {/* A7 — the AUD-01 component, same wording, mounted a second time (E05) */}
-      <AuditVerifyPanel key={panelKey} api={audit} onStatus={onStatus} cta="link" />
+      <AuditVerifyPanel key={panelKey} api={audit} onStatus={onStatus} cta="link" hideCode />
 
       <SetCard
         icon="user"
@@ -412,6 +412,30 @@ function TenantGroup({
             wide
             note={t(`${NS}.nBuild`)}
             testId="agent-v2-set-f-build"
+          >
+            <span className="pill nt">
+              <span className="dot" aria-hidden="true" />
+              {t(`${NS}.unknownFull`)}
+            </span>
+          </Field>
+
+          <Field
+            label={t(`${NS}.fTenantName`)}
+            sans
+            note={t(`${NS}.nTenantName`)}
+            testId="agent-v2-set-f-tenant-name"
+          >
+            <span className="pill nt">
+              <span className="dot" aria-hidden="true" />
+              {t(`${NS}.noEndpoint`)}
+            </span>
+          </Field>
+
+          <Field
+            label={t(`${NS}.fSessionTtl`)}
+            sans
+            note={t(`${NS}.nSessionTtl`)}
+            testId="agent-v2-set-f-session-ttl"
           >
             <span className="pill nt">
               <span className="dot" aria-hidden="true" />
@@ -618,6 +642,27 @@ function PolicyGroup({ t }: { t: TFunction }) {
           </Field>
         </div>
       </SetCard>
+
+      <SetCard
+        icon="shield"
+        title={t(`${NS}.judgeTitle`)}
+        testId="agent-v2-set-judge"
+      >
+        <div className="a2r-hfs">
+          <Field label={t(`${NS}.judgeProvider`)} sans testId="agent-v2-set-f-judge-provider">
+            {t(`${NS}.judgeProviderV`)}
+          </Field>
+          <Field label={t(`${NS}.judgeCache`)} sans testId="agent-v2-set-f-judge-cache">
+            {t(`${NS}.judgeCacheV`)}
+          </Field>
+          <Field label={t(`${NS}.judgeLatency`)} sans testId="agent-v2-set-f-judge-latency">
+            {t(`${NS}.judgeLatencyV`)}
+          </Field>
+          <Field label={t(`${NS}.judgeSnapshot`)} sans testId="agent-v2-set-f-judge-snapshot">
+            {t(`${NS}.judgeSnapshotV`)}
+          </Field>
+        </div>
+      </SetCard>
     </>
   );
 }
@@ -658,7 +703,7 @@ function IntegrationsGroup({
         testId="agent-v2-set-upstream"
       >
         <div className="a2r-hfs">
-          <Field label={t(`${NS}.fBisheng`)} sans sans testId="agent-v2-set-f-bisheng">
+          <Field label={t(`${NS}.fBisheng`)} sans testId="agent-v2-set-f-bisheng">
             <span className="pill nt">
               <span className="dot" aria-hidden="true" />
               {t(`${NS}.unknownFull`)}
