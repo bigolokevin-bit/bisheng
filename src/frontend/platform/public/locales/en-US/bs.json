@@ -7020,6 +7020,135 @@
         "footSourcePost": " + Bisheng session (read-only)",
         "footCaliber": "Caliber: unknown ≠ off · sanitized shows only booleans and connectivity classes · rules and readings kept apart · no total · degraded is never 0",
         "footZeroWrite": "Zero write entry on this page: no write or dangerous action is rendered"
+      },
+      "collab": {
+        "title": "Collaboration",
+        "subtitle": "Everything employees hand to each other — the request, the takeover, the hand-back and the close — lives on this page. Choose View on a row and the whole of that delegation opens below.",
+        "fresh": {
+          "at": "Read at",
+          "none": "not read yet",
+          "source": "source: delegation records",
+          "manual": "no auto-refresh"
+        },
+        "banner": {
+          "body": "Only four actions write on this page: accept, reject, hand over, complete. Everything else is a read — delegations are not started here, and task status is not changed here.",
+          "tail": "four actions · the rest is read-only"
+        },
+        "foot": {
+          "left": "Delegation relations, the handover chain and budget ownership live here; the task itself stays on the task page.",
+          "right": "read-only · nothing is modified"
+        },
+        "actions": {
+          "reload": "Read again",
+          "retry": "Try again",
+          "refresh": "Refresh",
+          "backToTasks": "Back to tasks"
+        },
+        "state": {
+          "loading": {
+            "title": "Reading the collaboration records",
+            "note": "The skeleton holds no names, stages or times — those would be guesses. Ten seconds at most, then the page says so."
+          },
+          "empty": {
+            "title": "Nothing has been handed over yet",
+            "body": "Records appear here once one employee gives a piece of work to another. Nobody has delegated or taken anything on yet."
+          },
+          "denied": {
+            "title": "You cannot see these records",
+            "body": "Either this page does not exist, or your account has no permission to view collaboration. Both cases get the same sentence — the page never answers which."
+          },
+          "error": {
+            "title": "These records could not be read",
+            "body": "The read did not succeed, possibly because the service is busy. Nothing was changed by that read, and no older content was put in its place.",
+            "timeout": "This read did not finish: ten seconds passed without an answer. Nothing was changed; you can try again."
+          }
+        },
+        "list": {
+          "title": "Delegations between employees",
+          "note": "Newest action first · employee-to-employee delegations only; work assigned to an employee from elsewhere lives in the task list",
+          "col": {
+            "task": "Task",
+            "from": "From",
+            "to": "To",
+            "budget": "Budget owner",
+            "status": "Stage",
+            "updated": "Updated",
+            "action": "Action"
+          },
+          "budgetOwner": "Charged to the requester: {{name}}",
+          "taskTail": "this task · …{{tail}}",
+          "timeMissing": "not provided",
+          "view": "View",
+          "foot": "Budget ownership is always the requester, never the receiver — this column does not repeat From, it pins down whose allowance pays. There is no total count: rows that were not read are never counted as none."
+        },
+        "detail": {
+          "mark": "Co",
+          "title": "Request and handover",
+          "note": "One piece of work moved from one person to another; the task ending in {{tail}} is that piece.",
+          "fromTag": "Requester",
+          "toTag": "Receiver",
+          "fromSub": "the work left from here, and the budget is charged here",
+          "toSub": "this step is waiting on this side",
+          "budgetOwner": "Budget owned by {{name}}",
+          "budgetUsed": "{{pct}}% used",
+          "budgetCap": "the cap sits on {{name}}'s account",
+          "budgetUnpriced": "not priced",
+          "budgetUnconfigured": "not configured",
+          "budgetNoLedger": "nothing has been charged, so there is no amount to show",
+          "budgetNote": "This work spends the requester's allowance; handing it over or back does not move it, and the receiver is never charged. Only the share is shown, never an amount.",
+          "stageRail": "Where this delegation stands",
+          "terminal": "Final state: {{status}}.",
+          "terminalTail": "It cannot be moved back or handed over again; rearranging is a new delegation.",
+          "axisNote": "Task status and delegation stage are not one axis: after accepting, the task is still open, and a handover only changes who owns it. Only a rejection cancels the task, and only completion closes both with a progress note."
+        },
+        "write": {
+          "closed": "Writes are not open in this environment yet (backend wiring in progress)"
+        },
+        "chain": {
+          "title": "Handover chain",
+          "loading": "Reading the handover chain",
+          "emptyBody": "No action has been read on this chain yet. Nothing is guessed: the page will not add a record that looks real.",
+          "error": "The handover chain could not be read. This step only reads; nothing was changed.",
+          "denied": "This chain is either not yours to see or no longer within your scope.",
+          "chargedLine": "A charge was recorded on the requester's account",
+          "chargedMerged": "The day and month ledgers each add a row; shown as one, without amounts. {{count}} rows",
+          "charged": "Charge",
+          "other": "Other action",
+          "noteLabel": "Note",
+          "resultLabel": "Result",
+          "reasonLabel": "Reason",
+          "notYet": "not yet",
+          "never": "will not happen"
+        },
+        "audit": {
+          "mark": "Au",
+          "title": "Audit associations",
+          "note": "Each step of one delegation leaves its own audit record, tied together as one matter; titles, notes and amounts never enter the audit.",
+          "task": "Related task",
+          "delegation": "This delegation",
+          "request": "Request number",
+          "missing": "not provided",
+          "copyTask": "Copy task number",
+          "copyDelegation": "Copy this delegation's number",
+          "copyRequest": "Copy request number",
+          "copied": "Copied",
+          "body": "Read-only: the audit is not changed here and history is not filled in retroactively. Audit bodies live on the audit page.",
+          "foot": "Numbers appear only where checking needs them; technical identifiers are not laid out on the page."
+        },
+        "person": {
+          "unknown": "unnamed",
+          "noActor": "not recorded"
+        },
+        "status": {
+          "requested": "Requested",
+          "accepted": "Accepted",
+          "handedOff": "Handing over",
+          "completed": "Completed",
+          "rejected": "Rejected",
+          "expired": "Expired",
+          "unknown": "Unknown state"
+        },
+        "taskFallback": "this task · …{{tail}}"
       }
     },
     "approvals": {
