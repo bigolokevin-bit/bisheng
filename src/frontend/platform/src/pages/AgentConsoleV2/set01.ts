@@ -261,9 +261,12 @@ export interface DangerRowDef {
   whyKey: string;
   /** Plain "去处" sentence when there is no in-product destination. */
   goKey: string;
-  /** Optional in-product / external link label + target. */
+  /** Optional link label + target. `external` renders it as a new-tab link
+   *  with the ↗ marker (reference draws `target=_blank rel=noopener` + i-ext);
+   *  in-product destinations stay plain links without the marker. */
   linkLabelKey?: string;
   linkTo?: string;
+  external?: boolean;
   /** Text after the link (kept separate so the link text stays clean). */
   goSuffixKey?: string;
 }
@@ -308,6 +311,7 @@ export const DANGER_ROWS: readonly DangerRowDef[] = [
     goKey: `${NS}.dModelGo`,
     linkLabelKey: `${NS}.dModelLink`,
     linkTo: '/model/management',
+    external: true,
   },
 ];
 

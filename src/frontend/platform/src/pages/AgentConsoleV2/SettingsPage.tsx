@@ -368,7 +368,7 @@ function TenantGroup({
   return (
     <>
       {/* A7 — the AUD-01 component, same wording, mounted a second time (E05) */}
-      <AuditVerifyPanel key={panelKey} api={audit} onStatus={onStatus} />
+      <AuditVerifyPanel key={panelKey} api={audit} onStatus={onStatus} cta="link" />
 
       <SetCard
         icon="user"
@@ -805,13 +805,28 @@ function DangerGroup({ t }: { t: TFunction }) {
               <div className="go">
                 <span>{t(row.goKey)}</span>
                 {row.linkLabelKey && row.linkTo ? (
-                  <>
-                    <Link className="lnk acc" to={row.linkTo}>
+                  row.external ? (
+                    <a
+                      className="lnk acc"
+                      href={row.linkTo}
+                      target="_blank"
+                      rel="noopener"
+                      data-testid={`agent-v2-set-danger-link-${row.id}`}
+                    >
+                      {t(row.linkLabelKey)}
+                      <SetIcon name="ext" size={13} />
+                    </a>
+                  ) : (
+                    <Link
+                      className="lnk acc"
+                      to={row.linkTo}
+                      data-testid={`agent-v2-set-danger-link-${row.id}`}
+                    >
                       {t(row.linkLabelKey)}
                     </Link>
-                    {row.goSuffixKey ? <span>{t(row.goSuffixKey)}</span> : null}
-                  </>
+                  )
                 ) : null}
+                {row.goSuffixKey ? <span>{t(row.goSuffixKey)}</span> : null}
               </div>
             </SetRow>
           ))}

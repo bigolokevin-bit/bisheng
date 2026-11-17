@@ -6045,6 +6045,7 @@
         "verifyWindow24h": "近 24 小时",
         "verifyWindow7d": "近 7 天",
         "verifyWindow30d": "近 30 天",
+        "verifyGotoAudit": "去审计中心",
         "verifyRun": "校验本窗口",
         "verifyRunTitle": "按当前窗口发起一次 A7 只读校验",
         "verifyLoadingTitle": "正在校验本窗口",

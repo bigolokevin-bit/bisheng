@@ -144,6 +144,14 @@ const PATHS: Record<string, ReactNode> = {
       <path d="M15 2v2M9 2v2M15 20v2M9 20v2M2 15h2M2 9h2M20 15h2M20 9h2" />
     </>
   ),
+  /** Audit-history glyph (reference i-hist) — SET-01「去审计中心」 link. */
+  hist: (
+    <>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
+    </>
+  ),
   more: (
     <>
       <circle cx="12" cy="12" r="1" />

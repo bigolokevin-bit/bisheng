@@ -5928,6 +5928,7 @@
         "verifyWindow24h": "直近 24 時間",
         "verifyWindow7d": "直近 7 日",
         "verifyWindow30d": "直近 30 日",
+        "verifyGotoAudit": "監査センターへ",
         "verifyRun": "このウィンドウを検証",
         "verifyRunTitle": "現在のウィンドウで A7 の読み取り専用検証を 1 回実行します",
         "verifyLoadingTitle": "このウィンドウを検証しています",

@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 import { HelpTip } from './HelpTip';
 import { CopyId } from './listkit';
@@ -50,6 +51,14 @@ export interface AuditVerifyPanelProps {
    * request. Omitted by AUD-01, where the panel owns its state entirely.
    */
   onStatus?: (status: AuditVerifyStatus) => void;
+  /**
+   * What the window row offers on its right.
+   * - 'run'  (default, AUD-01): the in-panel 「校验本窗口」 action.
+   * - 'link' (SET-01): the check belongs to the audit centre, so the row
+   *   points there instead (reference set01-target.html §1.4). The panel
+   *   still loads A7 automatically and still renders S0–S4.
+   */
+  cta?: 'run' | 'link';
 }
 
 export interface AuditVerifyStatus {
@@ -58,7 +67,7 @@ export interface AuditVerifyStatus {
   requestId: string | null;
 }
 
-export function AuditVerifyPanel({ api, onStatus }: AuditVerifyPanelProps) {
+export function AuditVerifyPanel({ api, onStatus, cta = 'run' }: AuditVerifyPanelProps) {
   const { t, i18n } = useTranslation();
   const [window, setWindow] = useState<VerifyWindow>(DEFAULT_VERIFY_WINDOW);
   const [phase, setPhase] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
@@ -168,18 +177,31 @@ export function AuditVerifyPanel({ api, onStatus }: AuditVerifyPanelProps) {
           {formatUtcMinute(range.from)} → {formatUtcMinute(range.to)}
         </span>
         <div className="sp" />
-        <button
-          type="button"
-          className="b sm out"
-          data-testid="aud01-verify-run"
-          aria-busy={phase === 'loading'}
-          disabled={phase === 'loading'}
-          title={t('agentConsole.v2.aud01.verifyRunTitle')}
-          onClick={() => run(window)}
-        >
-          <LkIcon name="shieldCheck" size={16} />
-          {t('agentConsole.v2.aud01.verifyRun')}
-        </button>
+        {cta === 'link' ? (
+          /* SET-01: no run control here — the check is an audit-centre action;
+           * this row only points there (same window seg, same auto-load). */
+          <Link
+            className="lnk acc"
+            to="/agent/audit"
+            data-testid="aud01-verify-goto-audit"
+          >
+            <LkIcon name="hist" size={13} />
+            {t('agentConsole.v2.aud01.verifyGotoAudit')}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className="b sm out"
+            data-testid="aud01-verify-run"
+            aria-busy={phase === 'loading'}
+            disabled={phase === 'loading'}
+            title={t('agentConsole.v2.aud01.verifyRunTitle')}
+            onClick={() => run(window)}
+          >
+            <LkIcon name="shieldCheck" size={16} />
+            {t('agentConsole.v2.aud01.verifyRun')}
+          </button>
+        )}
       </div>
 
       <div className="rule" />

@@ -6100,6 +6100,7 @@
         "verifyWindow24h": "last 24 hours",
         "verifyWindow7d": "last 7 days",
         "verifyWindow30d": "last 30 days",
+        "verifyGotoAudit": "Go to audit centre",
         "verifyRun": "Check this window",
         "verifyRunTitle": "Run one read-only A7 check for the current window",
         "verifyLoadingTitle": "Checking this window",

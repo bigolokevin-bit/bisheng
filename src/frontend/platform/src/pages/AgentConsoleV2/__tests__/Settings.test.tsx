@@ -232,6 +232,14 @@ describe('SET-01 chain panel', () => {
     expect(panel.textContent).toContain('完整性链校验');
     expect(panel.textContent).toContain('A7');
 
+    // the window row points at the audit centre instead of running the check
+    const goto = within(panel).getByTestId('aud01-verify-goto-audit');
+    expect(goto.getAttribute('href')).toBe('/agent/audit');
+    expect(goto.textContent).toContain('去审计中心');
+    expect(within(panel).queryByTestId('aud01-verify-run')).toBeNull();
+    // the window seg and the auto-loaded result stay
+    expect(within(panel).getByTestId('aud01-vw-24h')).toBeTruthy();
+
     // scanned=0 with no anchor is S0 — neutral, never green
     const s0 = await screen.findByTestId('aud01-verify-s0');
     expect(s0.textContent).toContain('尚无锚点');
@@ -259,12 +267,21 @@ describe('SET-01 danger group', () => {
     );
     expect(dangerClickables).toHaveLength(0);
     expect(card.querySelectorAll('button,input,select,textarea')).toHaveLength(0);
-    // the only link is a real in-product destination, not a fake action
+    // the only links are real destinations, not fake actions
     const links = within(card).getAllByRole('link');
     expect(links.map((a) => a.getAttribute('href'))).toEqual([
       '/agent/employees',
       '/model/management',
     ]);
+    // in-product link stays in-product; the Bisheng surface opens in a new tab
+    // and carries the visible ↗ marker (reference i-ext)
+    const employeeLink = within(card).getByTestId('agent-v2-set-danger-link-employeeArchive');
+    expect(employeeLink.getAttribute('target')).toBeNull();
+    expect(employeeLink.querySelector('svg')).toBeNull();
+    const modelLink = within(card).getByTestId('agent-v2-set-danger-link-modelReset');
+    expect(modelLink.getAttribute('target')).toBe('_blank');
+    expect(modelLink.getAttribute('rel')).toBe('noopener');
+    expect(modelLink.querySelector('svg')).not.toBeNull();
   });
 
   it('states the boundary before the list', async () => {

@@ -130,6 +130,9 @@
   font-size: 12px;
   color: hsl(var(--muted-foreground));
 }
+.agent-app .lk.aud01 .chain01-win .lnk.acc {
+  color: hsl(var(--accent));
+}
 .agent-app .lk.aud01 .seg.sm button {
   height: 24px;
   padding: 0 8px;
