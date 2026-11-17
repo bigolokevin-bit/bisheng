@@ -217,7 +217,7 @@ export function writeErrorKey(status: number, code?: string): string {
   const ns = 'agentConsole.v2.collab.write.error';
   if (status === 0) return code === 'console.timeout' ? `${ns}.timeout` : `${ns}.network`;
   if (status === 401) return `${ns}.unauthorized`;
-  if (status === 403) return `${ns}.denied`;
+  if (status === 403) return `${ns}.noMandate`;
   if (status === 404) return `${ns}.notFound`;
   if (status === 409 || code === 'delegation.illegal_transition') return `${ns}.conflict`;
   if (status === 400) return `${ns}.invalid`;
@@ -643,4 +643,70 @@ export function correlationCode(row: DelegationRow): string {
   const raw = (row.requestId ?? row.delegationId ?? '').replace(/[^A-Za-z0-9]/g, '');
   const code = raw.slice(0, 8).toUpperCase();
   return code || '—';
+}
+
+// ---------------------------------------------------------------- deep links
+
+const STATUS_FILTER_VALUES: ReadonlyArray<StatusFilter> = [
+  'all',
+  'requested',
+  'accepted',
+  'handed_off',
+  'completed',
+  'rejected',
+  'expired',
+];
+
+const WINDOW_FILTER_VALUES: ReadonlyArray<WindowFilter> = ['all', '24h', '7d', '30d'];
+
+export interface CollabQuery {
+  filter: DelegationFilter;
+  /** `param=value` pairs the page did not understand; shown neutrally, never fatal. */
+  unknown: string[];
+}
+
+/**
+ * The URL is the single source of truth for the three filter legs (§FILT-01..03).
+ * Unknown or malformed values degrade to the default and are reported back, so a
+ * stale bookmark can never crash the page.
+ */
+export function readCollabQuery(search: string): CollabQuery {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  const unknown: string[] = [];
+
+  const rawStatus = params.get('status');
+  let status: StatusFilter = 'all';
+  if (rawStatus) {
+    if ((STATUS_FILTER_VALUES as ReadonlyArray<string>).includes(rawStatus)) {
+      status = rawStatus as StatusFilter;
+    } else {
+      unknown.push(`status=${rawStatus}`);
+    }
+  }
+
+  const rawWindow = params.get('window');
+  let window: WindowFilter = 'all';
+  if (rawWindow) {
+    if ((WINDOW_FILTER_VALUES as ReadonlyArray<string>).includes(rawWindow)) {
+      window = rawWindow as WindowFilter;
+    } else {
+      unknown.push(`window=${rawWindow}`);
+    }
+  }
+
+  const rawParticipant = (params.get('participant') ?? '').trim();
+  const participant = /^[A-Za-z0-9_:-]{1,64}$/.test(rawParticipant) ? rawParticipant : '';
+  if (rawParticipant && !participant) unknown.push(`participant=${rawParticipant}`);
+
+  return { filter: { status, window, participant }, unknown };
+}
+
+/** Canonical query string: defaults are omitted, order stays stable. */
+export function writeCollabQuery(filter: DelegationFilter): string {
+  const params = new URLSearchParams();
+  if (filter.status !== 'all') params.set('status', filter.status);
+  if (filter.window !== 'all') params.set('window', filter.window);
+  if (filter.participant) params.set('participant', filter.participant);
+  const query = params.toString();
+  return query ? `?${query}` : '';
 }

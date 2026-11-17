@@ -51,6 +51,7 @@ import type {
   DelegationListShape,
   DelegationRow,
 } from '../collab';
+import { EMPTY_FILTER, readCollabQuery, writeCollabQuery } from '../collab';
 
 // ---------------------------------------------------------------- fixtures
 
@@ -449,5 +450,61 @@ describe('COL-01 write actions wired to the BFF proxies', () => {
     fireEvent.click(screen.getByTestId('collab-write-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('collab-auth-banner')).toBeTruthy());
+  });
+});
+
+describe('COL-01 deep links (§FILT-01..03)', () => {
+  it('reads and writes the three legs canonically', () => {
+    expect(readCollabQuery('?status=requested&window=24h&participant=emp_1').filter).toEqual({
+      status: 'requested',
+      window: '24h',
+      participant: 'emp_1',
+    });
+    expect(readCollabQuery('status=accepted&window=90d').filter).toEqual({
+      status: 'accepted',
+      window: 'all',
+      participant: '',
+    });
+    expect(readCollabQuery('status=accepted&window=90d').unknown).toEqual(['window=90d']);
+    expect(writeCollabQuery(EMPTY_FILTER)).toBe('');
+    expect(writeCollabQuery({ status: 'handed_off', window: '7d', participant: '' })).toBe(
+      '?status=handed_off&window=7d',
+    );
+  });
+
+  it('opens straight into the filtered view from a deep link', async () => {
+    const api = makeApi({
+      list: ok({
+        items: [row({ status: 'requested' }), row({ delegationId: 'dl_other', status: 'completed' })],
+      }),
+    });
+    render(
+      <MemoryRouter initialEntries={['/agent/collab?status=requested']}>
+        <CollabPage api={api} consoleApi={consoleApi as never} />
+      </MemoryRouter>,
+    );
+    await settled();
+    await waitFor(() => expect(screen.getByText(TITLE)).toBeTruthy());
+
+    expect(screen.getByTestId('collab-filter-status')).toHaveProperty('value', 'requested');
+    expect(screen.getByTestId('collab-row-dl_01M7DG4KX2Z4B6D0001')).toBeTruthy();
+    expect(screen.queryByTestId('collab-row-dl_other')).toBeNull();
+  });
+
+  it('explains a delegating 403 without a raw code or a retry button', async () => {
+    const api = makeApi({
+      list: ok({ items: [row({ status: 'accepted' })] }),
+      write: { ok: false, status: 403, data: null, code: 'delegation.denied' },
+    });
+    renderPage(api);
+    await settled();
+    fireEvent.click(await screen.findByTestId('collab-action-handoff'));
+    fireEvent.click(screen.getByTestId('collab-write-confirm'));
+
+    await waitFor(() => expect(screen.getByTestId('collab-write-error')).toBeTruthy());
+    const error = screen.getByTestId('collab-write-error');
+    expect(error.textContent).toContain('当前账号没有向该员工委派的职责。');
+    expect(error.textContent).not.toContain('delegation.denied');
+    expect(within(error).queryByRole('button')).toBeNull();
   });
 });

@@ -1056,3 +1056,49 @@
     justify-content: flex-end;
   }
 }
+
+/* ---- R2 residuals: deep-link note, request id wrapping, narrow tables */
+.agent-app .lk.collab .cfnote {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+.agent-app .lk.collab .ibox .werr .rid,
+.agent-app .lk.collab .chain-err .rid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.agent-app .lk.collab .ibox .werr .rid .mono,
+.agent-app .lk.collab .chain-err .rid .mono {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.agent-app .lk.collab .ctbl {
+  width: 100%;
+  table-layout: fixed;
+}
+
+@media (max-width: 1279px) {
+  .agent-app .lk.collab .ctbl {
+    min-width: 0;
+  }
+  .agent-app .lk.collab .ctbl th,
+  .agent-app .lk.collab .ctbl td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 767px) {
+  .agent-app .lk.collab .ibox .acts2 {
+    flex-wrap: wrap;
+  }
+  .agent-app .lk.collab .ibox .acts2 .b {
+    flex: 1 1 auto;
+  }
+}
