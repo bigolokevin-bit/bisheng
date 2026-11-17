@@ -954,3 +954,105 @@
   .agent-app .lk.collab .cfilt .fsel { width: 100%; }
   .agent-app .lk.collab .cfilt select { max-width: none; flex: 1; }
 }
+
+/* ---- write actions (BFF proxies wired) */
+.agent-app .lk.collab .wauth {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid hsl(var(--warning));
+  border-radius: var(--r-md, 10px);
+  background: var(--warning-soft);
+  color: hsl(var(--foreground));
+  font-size: 12.5px;
+}
+
+.agent-app .lk.collab .abox {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0 2px;
+  border-top: 1px solid var(--hairline);
+}
+
+.agent-app .lk.collab .abox .turn {
+  flex: 1 1 220px;
+  margin: 0;
+  min-width: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 12.5px;
+}
+
+.agent-app .lk.collab .abtns {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.agent-app .lk.collab .ibox {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid hsl(var(--accent-border));
+  border-radius: var(--r-md, 10px);
+  background: var(--surface-2);
+}
+
+.agent-app .lk.collab .ibox .ith {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.agent-app .lk.collab .ibox .ibd {
+  margin: 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.agent-app .lk.collab .ibox .lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
+}
+
+.agent-app .lk.collab .ibox .ta {
+  width: 100%;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 8px);
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  font: inherit;
+  font-size: 13px;
+}
+
+.agent-app .lk.collab .ibox .acts2 {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.agent-app .lk.collab .ibox .werr {
+  margin: 0;
+  color: hsl(var(--danger));
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 767px) {
+  .agent-app .lk.collab .abtns {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+}

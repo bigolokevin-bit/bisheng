@@ -84,9 +84,26 @@ export interface CollabApiResult<T> {
   requestId?: string;
 }
 
+/** The four contract actions; `handoff`/`complete` are addressed by delegation
+ *  id on the BFF proxy (the proxy maps it to the task endpoint). */
+export type DelegationAction = 'accept' | 'reject' | 'handoff' | 'complete';
+
+export interface DelegationWriteBody {
+  /** reject only; required by the page (the contract allows it optional). */
+  reason?: string;
+  /** complete only; required by the contract. */
+  progressNote?: string;
+}
+
 export interface CollabApi {
   listDelegations(cursor?: string): Promise<CollabApiResult<DelegationListShape>>;
   getChain(delegationId: string): Promise<CollabApiResult<ChainShape>>;
+  submitDelegationAction(
+    action: DelegationAction,
+    delegationId: string,
+    body: DelegationWriteBody,
+    requestId: string,
+  ): Promise<CollabApiResult<unknown>>;
 }
 
 export interface HttpCollabApiOptions {
@@ -95,9 +112,83 @@ export interface HttpCollabApiOptions {
   getToken?: () => string | null;
 }
 
+const WRITE_TIMEOUT_MS = 10_000;
+
+function resolveToken(getToken?: () => string | null): string | null {
+  if (getToken) return getToken();
+  try {
+    return localStorage.getItem('ws_token');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Writes cannot reuse `makeFetcher` (GET only). Same trace contract:
+ * `X-Console-Request-Id` in, JSON body out, 10s budget, and `X-Request-Id`
+ * carrying the page's one-per-submission key so a retry stays traceable.
+ */
+async function postJson(
+  base: string,
+  path: string,
+  body: unknown,
+  options: { getToken?: () => string | null; requestId: string },
+): Promise<CollabApiResult<unknown>> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), WRITE_TIMEOUT_MS);
+  try {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      'X-Request-Id': options.requestId,
+    };
+    const token = resolveToken(options.getToken);
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${base}${path}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body ?? {}),
+      signal: controller.signal,
+    });
+    const requestId = response.headers.get('X-Console-Request-Id') ?? undefined;
+    const text = await response.text().catch(() => '');
+    let parsed: unknown = null;
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = null;
+      }
+    }
+    const record = (parsed ?? {}) as { code?: unknown; message?: unknown };
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        data: null,
+        code: typeof record.code === 'string' ? record.code : `agent.http.${response.status}`,
+        message: typeof record.message === 'string' ? record.message : undefined,
+        requestId,
+      };
+    }
+    return { ok: true, status: response.status, data: parsed, requestId };
+  } catch (error) {
+    const aborted = (error as { name?: string } | null)?.name === 'AbortError';
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      code: aborted ? 'console.timeout' : 'console.network',
+    };
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 /** The BFF owns `/agent-api`; every path keeps its own `/api/` segment. */
 export function createHttpCollabApi(options: HttpCollabApiOptions = {}): CollabApi {
-  const fetcher = makeFetcher(options.base ?? '/agent-api', options.getToken);
+  const base = options.base ?? '/agent-api';
+  const fetcher = makeFetcher(base, options.getToken);
   return {
     listDelegations: (cursor?: string) =>
       fetcher<DelegationListShape>(
@@ -105,7 +196,32 @@ export function createHttpCollabApi(options: HttpCollabApiOptions = {}): CollabA
       ),
     getChain: (delegationId) =>
       fetcher<ChainShape>(`/api/delegations/${encodeURIComponent(delegationId)}/chain`),
+    submitDelegationAction: (action, delegationId, body, requestId) =>
+      postJson(base, `/api/delegations/${encodeURIComponent(delegationId)}/${action}`, body, {
+        getToken: options.getToken,
+        requestId,
+      }),
   };
+}
+
+/** Which action the current stage allows (DELEGATION §2); requests allow two. */
+export function nextActions(status: string): DelegationAction[] {
+  if (status === 'requested') return ['accept', 'reject'];
+  if (status === 'accepted') return ['handoff'];
+  if (status === 'handed_off') return ['complete'];
+  return [];
+}
+
+/** Human sentence key for a failed write; the raw code never reaches the body. */
+export function writeErrorKey(status: number, code?: string): string {
+  const ns = 'agentConsole.v2.collab.write.error';
+  if (status === 0) return code === 'console.timeout' ? `${ns}.timeout` : `${ns}.network`;
+  if (status === 401) return `${ns}.unauthorized`;
+  if (status === 403) return `${ns}.denied`;
+  if (status === 404) return `${ns}.notFound`;
+  if (status === 409 || code === 'delegation.illegal_transition') return `${ns}.conflict`;
+  if (status === 400) return `${ns}.invalid`;
+  return `${ns}.server`;
 }
 
 // ---------------------------------------------------------------- status

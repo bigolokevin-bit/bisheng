@@ -13,7 +13,7 @@
  * on this page writes: the four write actions are one static sentence until
  * the backend is wired (spec §2, E06).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -37,12 +37,15 @@ import {
   filterDelegations,
   fmtUsd,
   isFilterActive,
+  nextActions,
+  writeErrorKey,
   statusLabelKey,
   type ChainRow,
   type DelegationFilter,
   type StatusFilter,
   type WindowFilter,
   type CollabApi,
+  type DelegationAction,
   type DelegationRow,
   type EmployeeDirectory,
 } from './collab';
@@ -56,7 +59,6 @@ import {
   StatusPill,
   TerminalLine,
   Timeline,
-  WriteNote,
   timelineRows,
 } from './collabKit';
 import { fmtId } from './v2Data';
@@ -104,6 +106,7 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
   const [reloadToken, setReloadToken] = useState(0);
   const [more, setMore] = useState<MoreState>('idle');
   const [chainToken, setChainToken] = useState(0);
+  const [authLost, setAuthLost] = useState(false);
   const [filters, setFilters] = useState<DelegationFilter>(EMPTY_FILTER);
 
   // Directory names: degraded silently — 「员工 · 末4位」 is the honest fallback.
@@ -230,6 +233,11 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
 
   const retryList = useCallback(() => setReloadToken((n) => n + 1), []);
   const retryChain = useCallback(() => setChainToken((n) => n + 1), []);
+  // A write succeeded: re-read list + chain from the server, never patch locally.
+  const refreshAfterWrite = useCallback(() => {
+    setReloadToken((n) => n + 1);
+    setChainToken((n) => n + 1);
+  }, []);
 
   // Cursor paging: append only, never re-sort into a different first row, so a
   // selected delegation cannot jump under the reader's cursor.
@@ -280,6 +288,12 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
           ) : null
         }
       />
+      {authLost ? (
+        <div className="wauth" role="status" data-testid="collab-auth-banner">
+          <LkIcon name="alert" />
+          <span>{t(`${NS}.write.error.session`)}</span>
+        </div>
+      ) : null}
       <ReadonlyBanner t={t} />
 
       {list.kind === 'loading' ? (
@@ -376,6 +390,9 @@ export function CollabPage({ api, consoleApi, initialSelectedId }: CollabPagePro
               names={names}
               chain={chain}
               onRetryChain={retryChain}
+              api={collabApi}
+              onMutated={refreshAfterWrite}
+              onAuthLost={() => setAuthLost(true)}
               t={t}
             />
           ) : null}
@@ -649,6 +666,9 @@ function DelegationPanel({
   names,
   chain,
   onRetryChain,
+  api,
+  onMutated,
+  onAuthLost,
   t,
 }: {
   row: DelegationRow;
@@ -656,6 +676,9 @@ function DelegationPanel({
   names: Map<string, string>;
   chain: ChainState;
   onRetryChain: () => void;
+  api: CollabApi;
+  onMutated: () => void;
+  onAuthLost: () => void;
   t: TFunction;
 }) {
   const from = personName(row.fromEmployeeId, names, t);
@@ -734,11 +757,177 @@ function DelegationPanel({
         </div>
 
         <TerminalLine status={row.status} t={t} />
-        <WriteNote t={t} />
+        {nextActions(row.status).length > 0 ? (
+          <WriteActions
+            row={row}
+            api={api}
+            onMutated={onMutated}
+            onAuthLost={onAuthLost}
+            t={t}
+          />
+        ) : (
+          <p className="wnote" data-testid="collab-write-note">
+            <LkIcon name="lock" />
+            <span>{t(`${NS}.write.terminal`)}</span>
+          </p>
+        )}
       </div>
 
       <div className="card-ft">{t(`${NS}.detail.axisNote`)}</div>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------- write actions
+
+function newRequestId(): string {
+  const random = globalThis.crypto as Crypto | undefined;
+  if (random && typeof random.randomUUID === 'function') return random.randomUUID();
+  return `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const ACTION_ORDER: DelegationAction[] = ['reject', 'accept', 'handoff', 'complete'];
+
+function WriteActions({
+  row,
+  api,
+  onMutated,
+  onAuthLost,
+  t,
+}: {
+  row: DelegationRow;
+  api: CollabApi;
+  onMutated: () => void;
+  onAuthLost: () => void;
+  t: TFunction;
+}) {
+  const actions = nextActions(row.status);
+  const [open, setOpen] = useState<DelegationAction | null>(null);
+  const [reason, setReason] = useState('');
+  const [progress, setProgress] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<{ key: string; requestId?: string } | null>(null);
+  const requestIdRef = useRef<string | null>(null);
+
+  if (!actions.length) return null;
+
+  const needsReason = open === 'reject';
+  const needsProgress = open === 'complete';
+  const valid = needsReason ? reason.trim().length > 0 : needsProgress ? progress.trim().length > 0 : true;
+
+  const close = () => {
+    if (busy) return;
+    setOpen(null);
+    setReason('');
+    setProgress('');
+    setFailure(null);
+  };
+
+  const submit = async () => {
+    if (!open || !valid || busy) return;
+    setBusy(true);
+    setFailure(null);
+    // One key per submission attempt chain; a retry reuses it, success drops it.
+    const requestId = requestIdRef.current ?? newRequestId();
+    requestIdRef.current = requestId;
+    const body = open === 'reject'
+      ? { reason: reason.trim() }
+      : open === 'complete'
+        ? { progressNote: progress.trim() }
+        : {};
+    const result = await api.submitDelegationAction(open, row.delegationId, body, requestId);
+    setBusy(false);
+    if (result.ok) {
+      requestIdRef.current = null;
+      setOpen(null);
+      setReason('');
+      setProgress('');
+      onMutated();
+      return;
+    }
+    if (result.status === 401) onAuthLost();
+    setFailure({ key: writeErrorKey(result.status, result.code), requestId: result.requestId });
+  };
+
+  return (
+    <div className="abox" data-testid="collab-write-actions">
+      <p className="turn">{t(`${NS}.write.turn.${actions[0]}`)}</p>
+      <div className="abtns">
+        {ACTION_ORDER.filter((action) => actions.includes(action)).map((action) => (
+          <button
+            key={action}
+            type="button"
+            className={`b sm ${action === 'reject' ? 'out' : 'pri'}`}
+            onClick={() => {
+              setOpen(action);
+              setReason('');
+              setProgress('');
+              setFailure(null);
+            }}
+            aria-expanded={open === action}
+            data-testid={`collab-action-${action}`}
+          >
+            {t(`${NS}.write.action.${action}`)}
+          </button>
+        ))}
+      </div>
+
+      {open ? (
+        <div className="ibox" role="group" aria-label={t(`${NS}.write.confirmTitle.${open}`)} data-testid="collab-write-box">
+          <p className="ith">{t(`${NS}.write.confirmTitle.${open}`)}</p>
+          <p className="ibd">{t(`${NS}.write.consequence.${open}`)}</p>
+          {needsReason ? (
+            <label className="lbl">
+              <span>{t(`${NS}.write.reasonLabel`)}</span>
+              <textarea
+                className="ta"
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder={t(`${NS}.write.reasonPlaceholder`)}
+                rows={3}
+                disabled={busy}
+                data-testid="collab-write-reason"
+              />
+            </label>
+          ) : null}
+          {needsProgress ? (
+            <label className="lbl">
+              <span>{t(`${NS}.write.progressLabel`)}</span>
+              <textarea
+                className="ta"
+                value={progress}
+                onChange={(event) => setProgress(event.target.value)}
+                placeholder={t(`${NS}.write.progressPlaceholder`)}
+                rows={3}
+                disabled={busy}
+                data-testid="collab-write-progress"
+              />
+            </label>
+          ) : null}
+          <div className="acts2">
+            <button type="button" className="b out sm" onClick={close} disabled={busy} data-testid="collab-write-cancel">
+              {t(`${NS}.write.cancel`)}
+            </button>
+            <button
+              type="button"
+              className={`b sm ${open === 'reject' ? 'dgr' : 'pri'}`}
+              onClick={submit}
+              disabled={busy || !valid}
+              aria-busy={busy}
+              data-testid="collab-write-confirm"
+            >
+              {busy ? t(`${NS}.write.busy`) : t(`${NS}.write.confirm`)}
+            </button>
+          </div>
+          {failure ? (
+            <p className="werr" role="status" data-testid="collab-write-error">
+              {t(failure.key)}
+              <ReqId requestId={failure.requestId} testId="collab-write-req" />
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
