@@ -753,6 +753,12 @@
   color: hsl(var(--foreground));
   line-height: 17px;
 }
+/* EMP-02 R4 (E09): the failed banner carries the technical fold itself, and it
+ * takes its own line inside the bar instead of squeezing next to 重试. */
+.agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .errbar .tech {
+  width: 100%;
+  margin-top: 2px;
+}
 
 /* ---------- 状态屏补充 ---------- */
 .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .stage .vn {
