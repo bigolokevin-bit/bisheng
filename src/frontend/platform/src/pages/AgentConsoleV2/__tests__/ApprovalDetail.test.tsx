@@ -217,12 +217,12 @@ describe('APR-02 — page footer & shell breadcrumb', () => {
     renderDetail();
     await screen.findByTestId('agent-v2-apd-ops');
     const foot = screen.getByTestId('agent-v2-apd-footer');
-    expect(foot.textContent).toContain('数据源：AP3 审批详情（唯一）· 明细投影 CR-043 · 决策经 BFF 白名单写路径（二次确认）');
-    expect(foot.textContent).toContain('时间北京时间');
-    expect(foot.textContent).toContain('剩余时间只认服务端 remainingSeconds');
-    expect(foot.textContent).toContain('缺失显示 —/不可得');
-    expect(foot.textContent).toContain('不造 0');
-    expect(foot.textContent).toContain('无总数');
+    expect(foot.textContent).toContain('数据源：审批服务 · 只读详情 · 决策需二次确认');
+    expect(foot.textContent).toContain('口径：时间均为北京时间');
+    expect(foot.textContent).toContain('剩余时间以服务端为准');
+    expect(foot.textContent).toContain('缺失显示 —');
+    expect(foot.textContent).not.toContain('remainingSeconds');
+    expect(foot.textContent).not.toContain('HTTP');
     // S3: the dead ⌘K global-search hint is gone from the footer.
     expect(foot.textContent).not.toContain('⌘K');
   });
@@ -305,9 +305,10 @@ describe('APR-02 — D-1 binding present-only', () => {
     const binding = await screen.findByTestId('agent-v2-apd-binding');
     expect(binding.textContent).toContain('关联运行');
     expect(binding.textContent).toContain('消息摘要');
-    expect(binding.textContent).toContain('md_5e8b1f4a7c0d3e6f9a2b5c8d1e4f7a0b');
+    expect(binding.textContent).toContain('md_5e8…7a0b');
+    expect(screen.getAllByTitle('md_5e8b1f4a7c0d3e6f9a2b5c8d1e4f7a0b').length).toBeGreaterThan(0);
     // O1: the caliber statement stays present on message_send too.
-    expect(binding.textContent).toContain('present-only：响应没有的键不显示、不造值');
+    expect(binding.textContent).toContain('只显示审批单实际返回的内容');
     expect(binding.textContent).not.toContain('消息发送单另含运行引用与消息摘要');
     expect(binding.textContent).not.toContain('生效时间');
     expect(screen.getByTitle('rn_01M7DF41FG124YHW9PR66CJ7HW')).toBeTruthy();
@@ -342,12 +343,11 @@ describe('APR-02 — D-1 binding present-only', () => {
     // opening one explains the term and hides no data (popover is not interactive)
     fireEvent.click(screen.getByTestId('agent-v2-apd-help-target-hash'));
     const pop = screen.getByRole('tooltip');
-    expect(pop.textContent).toContain('targetHash');
-    expect(pop.textContent).toContain('哈希');
-    // the value itself is still on screen
-    expect(screen.getByTestId('agent-v2-apd-binding').textContent).toContain(
-      'th_8b2e5f1a9c4d7e0b3f6a1d8c5e2b9f47'
-    );
+    expect(pop.textContent).toContain('绑定指纹');
+    expect(pop.textContent).toContain('变更目标');
+    // the value itself is still on screen (short form; full value in the title)
+    expect(screen.getByTestId('agent-v2-apd-binding').textContent).toContain('th_8b2…9f47');
+    expect(screen.getAllByTitle('th_8b2e5f1a9c4d7e0b3f6a1d8c5e2b9f47').length).toBeGreaterThan(0);
     fireEvent.keyDown(screen.getByTestId('agent-v2-apd-help-target-hash'), { key: 'Escape' });
     expect(screen.queryByRole('tooltip')).toBeNull();
   });
@@ -367,19 +367,26 @@ describe('APR-02 — D-2 empty/unknown id 404 same body as 403', () => {
     renderDetail('/agent/approvals/ap_UNKNOWN');
     const card = await screen.findByTestId('agent-v2-apd-notfound');
     expect(card.textContent).toContain('您还看不到这单审批');
-    expect(card.textContent).toContain('HTTP 404');
+    expect(card.textContent).not.toContain('HTTP');
     expect(card.textContent).not.toContain('approval.not_found');
+    expect(card.textContent).toContain('请求编号');
+    expect(card.textContent).toContain('req_apr02');
+    // 404 cannot be fixed by retrying: only the back path remains
+    expect(screen.queryByTestId('agent-v2-apd-retry')).toBeNull();
   });
 
-  it('403 uses the SAME body, only the HTTP code differs', async () => {
+  it('403 uses the SAME body as 404', async () => {
     detailStatus = 403;
     renderDetail();
     const card = await screen.findByTestId('agent-v2-apd-forbidden');
     expect(card.textContent).toContain('您还看不到这单审批');
-    expect(card.textContent).toContain('HTTP 403');
+    expect(card.textContent).not.toContain('HTTP');
     expect(card.textContent).not.toContain('console.forbidden');
-    // same title + same desc template as 404 (only code interpolated)
+    // same title + same desc as 404, not a code-specific template
     expect(card.querySelector('.a2d-st')?.textContent).toBe('您还看不到这单审批');
+    expect(card.querySelector('.a2d-ss')?.textContent).toBe(
+      '审批不存在、属于其他租户，或当前账号没有查看权限。为安全起见，这几种情况不做区分；如需查看，请您的管理员确认账号权限后刷新本页。',
+    );
   });
 
   it('empty id renders the 404 body without any fetch', async () => {
@@ -442,7 +449,7 @@ describe('APR-02 — change-detail four branches', () => {
   it('version + detail → six keys, before→after, versions snapshot, source note', async () => {
     renderDetail();
     const card = await screen.findByTestId('agent-v2-apd-detail');
-    expect(card.textContent).toContain('明细来源：resource+versions');
+    expect(card.textContent).toContain('明细来源：服务端投影；已通过绑定校验');
     expect(card.textContent).toContain('当前生效');
     expect(card.textContent).toContain('批准后新建');
     expect(card.textContent).toContain('v2');
@@ -455,7 +462,8 @@ describe('APR-02 — change-detail four branches', () => {
     // the proposed v3 lives in the before→after box above.
     expect(card.textContent).toContain('历史');
     expect(card.textContent).toContain('当前生效');
-    expect(card.textContent).toContain(FROMV);
+    expect(card.textContent).not.toContain(FROMV);
+    expect(card.querySelector(`[title="${FROMV}"]`)).toBeTruthy();
   });
 
   it('version without detail → 变更明细不可得 (no fabrication)', async () => {
@@ -541,11 +549,11 @@ describe('APR-03 — write gate off by default (build switch) + leak guard', () 
     renderDetail();
     await screen.findByTestId('agent-v2-apd-meta');
     const text = document.body.textContent ?? '';
-    for (const leak of ['undefined', 'NaN', '[object Object]', '待接入', 'approval.', 'policy.', 'employee.version.create', 'employee_version_create', '共', 'total']) {
+    for (const leak of ['undefined', 'NaN', '[object Object]', '待接入', 'approval.', 'policy.', 'employee.version.create', 'employee_version_create', '共', 'total', 'HTTP', 'AP3', 'CR-043', 'BFF', 'remainingSeconds', 'targetHash', 'messageDigest', 'present-only', 'human:', 'pilot_owner_placeholder']) {
       expect(text).not.toContain(leak);
     }
-    // raw values live in titles only
-    expect(screen.getByTitle('changeKind=employee_version_create · action=employee.version.create')).toBeTruthy();
+    // raw values live in titles only; no field-name prefixes on screen
+    expect(screen.getByTitle('employee_version_create · employee.version.create')).toBeTruthy();
     // localized labels on screen
     expect(text).toContain('员工版本变更');
     expect(text).toContain('待审批');
@@ -553,7 +561,32 @@ describe('APR-03 — write gate off by default (build switch) + leak guard', () 
     expect(text).toContain('业务动作');
     expect(text).toContain('任意一位可决');
     expect(text).toContain('24 小时');
-    expect(text).toContain('sha256:p07grant'); // short digest verbatim, not padded
+    expect(text).toContain('sha256…rant'); // short digest, full value in title
+  });
+
+  it('unknown enums degrade to human labels; raw values stay in titles', async () => {
+    detailBody = approval({
+      status: 'weird_status',
+      riskLevel: 'critical',
+      type: 'weird_type',
+      binding: { subjectType: 'space', subjectId: EMP, changeKind: 'weird_kind', targetHash: 'th_x' },
+      detail: undefined,
+    });
+    renderDetail();
+    await screen.findByTestId('agent-v2-apd-meta');
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('其他变更');
+    expect(text).toContain('未评级');
+    expect(text).toContain('其他类型');
+    expect(text).toContain('其他对象');
+    expect(text).not.toContain('weird_kind');
+    expect(text).not.toContain('weird_status');
+    expect(text).not.toContain('weird_type');
+    expect(text).not.toContain('critical');
+    expect(text).not.toContain('space');
+    expect(screen.getAllByTitle('weird_kind').length).toBeGreaterThan(0);
+    expect(screen.getByTitle('weird_status')).toBeTruthy();
+    expect(screen.getByTitle('critical')).toBeTruthy();
   });
 
   it('copy id is keyboard reachable and copies the full value', async () => {
@@ -583,16 +616,19 @@ describe('APR-02 — four states & retry', () => {
     renderDetail();
     const card = await screen.findByTestId('agent-v2-apd-emptybody');
     expect(card.textContent).toContain('审批内容为空');
-    expect(card.textContent).toContain('HTTP 200');
+    expect(card.textContent).toContain('服务端返回了空内容');
+    expect(card.textContent).not.toContain('HTTP');
   });
 
-  it('500 → localized error + HTTP code (no machine code), retry recovers', async () => {
+  it('500 → localized error (no HTTP code), request id, retry recovers', async () => {
     detailStatus = 500;
     renderDetail();
     const card = await screen.findByTestId('agent-v2-apd-error');
     expect(card.textContent).toContain('审批详情没能加载出来');
-    expect(card.textContent).toContain('HTTP 500');
+    expect(card.textContent).not.toContain('HTTP');
     expect(card.textContent).not.toContain('approval.service_unavailable');
+    expect(card.textContent).toContain('请求编号');
+    expect(card.textContent).toContain('req_apr02');
     // retry now succeeds
     detailStatus = 200;
     fireEvent.click(screen.getByTestId('agent-v2-apd-retry'));
@@ -626,7 +662,7 @@ describe('APR-03 — decision write path (build switch on)', () => {
   it('approve → confirm posts exactly {verdict} to the whitelist route and refreshes', async () => {
     await openDialog('agent-v2-apd-approve');
     expect(screen.getByTestId('agent-v2-decision-title').textContent).toContain('批准');
-    expect(screen.getByTestId('agent-v2-decision-target').textContent).toBe(A1);
+    expect(screen.getByTestId('agent-v2-decision-target').textContent).toBe('ap_9D21…F2E3');
     expect(screen.getByTestId('agent-v2-decision-risk').textContent).toContain('不可撤回');
 
     fireEvent.click(screen.getByTestId('agent-v2-decision-confirm'));
@@ -733,28 +769,28 @@ describe('APR-03 — decision write path (build switch on)', () => {
     expect(decisionCalls()).toHaveLength(0);
   });
 
-  it('405 console.read_only → localized copy, HTTP status only, dialog stays open', async () => {
+  it('405 console.read_only → localized copy, no HTTP code, dialog stays open', async () => {
     writeStatus = 405;
     writeBody = { code: 'console.read_only', message: 'stub' };
     await openDialog('agent-v2-apd-approve');
     fireEvent.click(screen.getByTestId('agent-v2-decision-confirm'));
     const err = await screen.findByTestId('agent-v2-decision-error');
     expect(err.textContent).toContain('本环境未开放在线决策');
-    expect(err.textContent).toContain('HTTP 405');
+    expect(err.textContent).not.toContain('HTTP');
     expect(err.textContent).not.toContain('console.read_only');
     // no optimistic update: the dialog is still there with the failure
     expect(screen.getByTestId('agent-v2-decision-dialog')).toBeTruthy();
     expect(urls.filter((u) => u.includes('/api/approval?')).length).toBe(1);
   });
 
-  it('403 → localized permission copy without the machine code', async () => {
+  it('403 → localized permission copy without the machine code or HTTP code', async () => {
     writeStatus = 403;
     writeBody = { code: 'console.forbidden', message: 'stub' };
     await openDialog('agent-v2-apd-reject');
     fireEvent.click(screen.getByTestId('agent-v2-decision-confirm'));
     const err = await screen.findByTestId('agent-v2-decision-error');
     expect(err.textContent).toContain('服务端拒绝了本次决策');
-    expect(err.textContent).toContain('HTTP 403');
+    expect(err.textContent).not.toContain('HTTP');
     expect(err.textContent).not.toContain('console.forbidden');
   });
 
@@ -765,7 +801,7 @@ describe('APR-03 — decision write path (build switch on)', () => {
     fireEvent.click(screen.getByTestId('agent-v2-decision-confirm'));
     const err = await screen.findByTestId('agent-v2-decision-error');
     expect(err.textContent).toContain('这单审批当前不可决策');
-    expect(err.textContent).toContain('HTTP 404');
+    expect(err.textContent).not.toContain('HTTP');
     expect(err.textContent).not.toContain('approval.unavailable');
     expect(err.textContent).not.toContain('approval.');
   });

@@ -10,7 +10,7 @@
  * (expiresAt = tooltip); terminal 0 reads 「已结束」 (D-4). Unknown/cross-tenant
  * ids share ONE 404/403 body (D-2); binding effectiveFrom/runId/messageDigest
  * are present-only (D-1). Machine codes stay in titles; errors show localized
- * copy + HTTP status only. */
+ * copy + a copyable request id; no HTTP status or field name reaches the view. */
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -221,6 +221,7 @@ export function ApprovalDetailPage() {
     retryLabel: string,
     testid: string,
     reqLine?: ReactNode,
+    withRetry = true,
   ) => (
     <div className="a2s-page" data-testid="agent-v2-approval-detail">
       <div className="a2d-backrow">{backBtn}</div>
@@ -229,10 +230,12 @@ export function ApprovalDetailPage() {
         <div className="a2d-st">{title}</div>
         <div className="a2d-ss">{desc}</div>
         <div className="a2d-acts2">
-          <button type="button" className="a2d-btn out" onClick={retry} data-testid="agent-v2-apd-retry">
-            <I>{IRefresh}</I>
-            {retryLabel}
-          </button>
+          {withRetry ? (
+            <button type="button" className="a2d-btn out" onClick={retry} data-testid="agent-v2-apd-retry">
+              <I>{IRefresh}</I>
+              {retryLabel}
+            </button>
+          ) : null}
           <button type="button" className="a2d-gh" onClick={goBack}>
             <I className="a2d-i a2d-i14">{IChevL}</I>
             {apd('back')}
@@ -248,10 +251,11 @@ export function ApprovalDetailPage() {
     return stage(
       ILock,
       apd('hiddenTitle'),
-      apd('hiddenDesc', { code: view.code }),
+      apd('hiddenDesc'),
       apd('refreshTry'),
       view.code === 404 ? 'agent-v2-apd-notfound' : 'agent-v2-apd-forbidden',
       <ReqId requestId={view.rid} testId="agent-v2-apd-hidden-reqid" />,
+      false,
     );
   }
   if (view.kind === 'empty') {
@@ -268,7 +272,7 @@ export function ApprovalDetailPage() {
     return stage(
       IInbox,
       apd('errorTitle'),
-      view.timeout ? apd('errorTimeoutDesc') : apd('errorDesc', { code: view.status }),
+      view.timeout ? apd('errorTimeoutDesc') : apd('errorDesc'),
       apd('reload'),
       'agent-v2-apd-error',
       <ReqId requestId={view.rid} testId="agent-v2-apd-error-reqid" />,
@@ -281,18 +285,21 @@ export function ApprovalDetailPage() {
   const kind = binding.changeKind ?? '';
   const isTerminal = TERMINAL.includes(row.status);
   const statusKey = STATUS_KEYS[row.status];
-  const statusLabel = statusKey ? apd(`status.${statusKey}`) : row.status;
+  const statusLabel = statusKey ? apd(`status.${statusKey}`) : '—';
   const statusTone = STATUS_TONE[row.status] ?? '';
   const kindKnown = Boolean(KIND_KEYS[kind]);
   if (!kindKnown && kind && !warnedKinds.current.has(kind)) {
     warnedKinds.current.add(kind);
-    console.warn('[apr02] unknown changeKind enum, rendering raw value:', kind);
+    console.warn('[apr02] unknown changeKind enum, raw value kept in title only:', kind);
   }
-  const kindLabel = kindKnown ? apd(`kind.${KIND_KEYS[kind]}`) : kind || '—';
+  const kindLabel = kindKnown ? apd(`kind.${KIND_KEYS[kind]}`) : kind ? apd('kindOther') : '—';
   const riskTone =
     row.riskLevel === 'high' ? 'hsl(var(--danger))' : row.riskLevel === 'medium' ? 'hsl(var(--warning))' : 'hsl(var(--micro-foreground))';
-  const riskLabel = apdDef(`risk.${row.riskLevel}`, row.riskLevel);
-  const typeLabel = apdDef(`type.${row.type}`, row.type);
+  const riskLabel =
+    row.riskLevel === 'low' || row.riskLevel === 'medium' || row.riskLevel === 'high'
+      ? apd(`risk.${row.riskLevel}`)
+      : apd('riskUnknown');
+  const typeLabel = row.type === 'business_action' || row.type === 'confirm' ? apd(`type.${row.type}`) : apd('typeUnknown');
 
   const serverRemaining = typeof row.remainingSeconds === 'number' && Number.isFinite(row.remainingSeconds) ? row.remainingSeconds : null;
   const elapsed = Math.max(0, Math.floor((now - view.receivedAt) / 1000));
@@ -388,7 +395,7 @@ export function ApprovalDetailPage() {
               <div className="a2d-box">
                 <span className="a2d-a">{isTerminal ? apd('beforeTerminal') : apd('beforeCurrent')}</span>
                 <span className="a2d-b">v{fromNo}</span>
-                <span className="a2d-c a2-mono" title={`fromVersionId=${change.fromVersionId}`}>{fmtId(change.fromVersionId)}</span>
+                <span className="a2d-c a2-mono" title={change.fromVersionId}>{fmtId(change.fromVersionId)}</span>
               </div>
               <I className="a2d-i a2d-arr">{IArrowR}</I>
               <div className="a2d-box to">
@@ -401,21 +408,20 @@ export function ApprovalDetailPage() {
               <tbody>
                 <tr>
                   <td className="k">{apd('kEmployee')}</td>
-                  <td className="a2-mono" title={`changeDetail.employeeId=${change.employeeId}`}>
-                    {change.employeeId}
-                    {employeeName ? <span className="a2d-vtag">{employeeName}</span> : null}
+                  <td title={change.employeeId}>
+                    {employeeName ?? employeeLabelById(change.employeeId, undefined, t)}
                   </td>
                 </tr>
                 <tr>
                   <td className="k">{apd('kFromVersion')}</td>
-                  <td className="a2-mono" title={`changeDetail.fromVersionId=${change.fromVersionId}`}>
-                    {change.fromVersionId}
-                    <span className="a2d-vtag">v{fromNo}</span>
+                  <td title={change.fromVersionId}>
+                    <span className="a2-mono">v{fromNo}</span>
+                    <span className="a2d-vtag">{fmtId(change.fromVersionId)}</span>
                   </td>
                 </tr>
                 <tr>
                   <td className="k">{apd('kToVersion')}</td>
-                  <td className="a2-mono" title={`changeDetail.toVersionNo=${change.toVersionNo}`}>{change.toVersionNo}</td>
+                  <td title={String(change.toVersionNo)}>{change.toVersionNo}</td>
                 </tr>
                 <tr>
                   <td className="k">{apd('kAdded')}</td>
@@ -436,13 +442,13 @@ export function ApprovalDetailPage() {
                 </tr>
                 <tr>
                   <td className="k">{apd('kRemoved')}</td>
-                  <td title={`changeDetail.removedGrantIds=${JSON.stringify(removed)}`}>
-                    {removed.length === 0 ? apd('none') : <span className="a2-mono">{removed.join(', ')}</span>}
+                  <td title={removed.join(', ')}>
+                    {removed.length === 0 ? apd('none') : <span className="a2-mono">{removed.map((x) => fmtId(x)).join('、')}</span>}
                   </td>
                 </tr>
                 <tr>
                   <td className="k">{apd('kEffective')}</td>
-                  <td className="a2-mono" title={`changeDetail.effectiveFrom=${change.effectiveFrom}`}>{fmtTime(change.effectiveFrom)}</td>
+                  <td className="a2-mono" title={fmtTime(change.effectiveFrom)}>{fmtTime(change.effectiveFrom)}</td>
                 </tr>
               </tbody>
             </table>
@@ -498,7 +504,8 @@ export function ApprovalDetailPage() {
 
   const decisions = [...(row.decisions ?? [])].sort((a, b) => Date.parse(a.decidedAt) - Date.parse(b.decidedAt));
   const verdictTone = (v: string) => (v === 'approve' ? ' is-ok' : v === 'reject' ? ' is-danger' : v === 'revise' ? ' is-warn' : '');
-  const verdictLabel = (v: string) => apdDef(`verdict.${v}`, v);
+  const verdictLabel = (v: string) =>
+    v === 'approve' || v === 'reject' || v === 'revise' ? apd(`verdict.${v}`) : apd('verdictUnknown');
 
   return (
     <div className="a2s-page" data-testid="agent-v2-approval-detail">
@@ -507,25 +514,25 @@ export function ApprovalDetailPage() {
       {/* header */}
       <div className="a2d-phead">
         <div style={{ minWidth: 0 }}>
-          <h1 className="a2d-h1" title={`changeKind=${kind} · action=${row.action}`}>{kindLabel}</h1>
+          <h1 className="a2d-h1" title={[kind, row.action].filter(Boolean).join(' · ')}>{kindLabel}</h1>
           <div className="a2d-tags">
             <CopyValue value={row.approvalId} aria={apd('copyIdAria')}>
               <span style={{ fontWeight: 400 }}>{fmtApprovalId(row.approvalId)}</span>
             </CopyValue>
-            <span className={`a2-pill${statusTone}`} title={`status=${row.status}`} data-testid="agent-v2-apd-status">
+            <span className={`a2-pill${statusTone}`} title={row.status} data-testid="agent-v2-apd-status">
               <span className="a2-pill-dot" aria-hidden="true" />
               {statusLabel}
             </span>
-            <span className="a2-pill" title={`riskLevel=${row.riskLevel}`} data-testid="agent-v2-apd-risk">
+            <span className="a2-pill" title={row.riskLevel} data-testid="agent-v2-apd-risk">
               <span style={{ color: riskTone, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <I className="a2d-i a2d-i13">{IShield}</I>
                 {riskLabel}
               </span>
             </span>
-            <span className="a2-pill" title={`type=${row.type}`}>{typeLabel}</span>
+            <span className="a2-pill" title={row.type}>{typeLabel}</span>
             <span
               className={`a2-pill${ended || isTerminal ? '' : ' is-warn'}`}
-              title={row.expiresAt ? `expiresAt=${row.expiresAt}` : undefined}
+              title={row.expiresAt ? fmtTime(row.expiresAt) : undefined}
               data-testid="agent-v2-apd-countdown"
             >
               <I className="a2d-i a2d-i13">{IClock}</I>
@@ -555,32 +562,40 @@ export function ApprovalDetailPage() {
           <Field label={apd('fApprovers')}>
             <span className="a2d-appr">
               {(row.approvers ?? []).map((a) => (
-                <span key={a.userId} className="a2-pill a2d-xs" title={`userId=${a.userId} · role=${a.role ?? ''}`}>
+                <span key={a.userId} className="a2-pill a2d-xs" title={[a.userId, a.role].filter(Boolean).join(' · ')}>
                   <span>{identityText(a.userId, t)}</span>
-                  {a.role ? <span className="a2d-u">{apdDef(`role.${a.role}`, a.role)}</span> : null}
+                  {a.role ? <span className="a2d-u">{apdDef(`role.${a.role}`, apd('roleUnknown'))}</span> : null}
                 </span>
               ))}
             </span>
           </Field>
-          <Field label={apd('fRequired')} mono title={`requiredApprovals=${row.requiredApprovals}`}>
+          <Field label={apd('fRequired')} mono title={String(row.requiredApprovals)}>
             {row.requiredApprovals}
             {row.requiredApprovals === 1 ? <span className="a2d-u">{apd('fRequiredAny')}</span> : null}
           </Field>
-          <Field label={apd('fTtl')} mono title={`ttlSeconds=${row.ttlSeconds}`}>
+          <Field label={apd('fTtl')} mono title={`${row.ttlSeconds}s`}>
             {t(ttlParts(row.ttlSeconds).key, ttlParts(row.ttlSeconds).opts)}
           </Field>
-          <Field label={apd('fRemaining')} mono faint={ended || isTerminal} title={`remainingSeconds=${row.remainingSeconds}`}>
+          <Field label={apd('fRemaining')} mono faint={ended || isTerminal} title={row.remainingSeconds == null ? undefined : `${row.remainingSeconds}s`}>
             <span data-testid="agent-v2-apd-remaining" style={ended || isTerminal ? undefined : { color: 'hsl(var(--warning))' }}>
               {durText}
             </span>
           </Field>
-          <Field label={apd('fCreated')} mono title={row.createdAt}>{fmtTime(row.createdAt)}</Field>
-          <Field label={apd('fExpires')} mono faint={isTerminal} title={row.expiresAt}>{fmtTime(row.expiresAt)}</Field>
+          <Field label={apd('fCreated')} mono title={fmtTime(row.createdAt)}>{fmtTime(row.createdAt)}</Field>
+          <Field label={apd('fExpires')} mono faint={isTerminal} title={fmtTime(row.expiresAt)}>{fmtTime(row.expiresAt)}</Field>
           <Field label={apd('fPolicy')} wide mono>
-            {row.policyDecisionId ? <CopyValue value={row.policyDecisionId} aria={apd('copyPolicyAria')} inline /> : '—'}
+            {row.policyDecisionId ? (
+              <CopyValue value={row.policyDecisionId} aria={apd('copyPolicyAria')} inline>
+                {fmtId(row.policyDecisionId)}
+              </CopyValue>
+            ) : '—'}
           </Field>
           <Field label={apd('fArgs')} wide mono>
-            {row.argsDigest ? <CopyValue value={row.argsDigest} aria={apd('copyArgsAria')} inline /> : '—'}
+            {row.argsDigest ? (
+              <CopyValue value={row.argsDigest} aria={apd('copyArgsAria')} inline>
+                {fmtId(row.argsDigest)}
+              </CopyValue>
+            ) : '—'}
           </Field>
           <Field label={apd('fReason')} wide>
             {row.reasonText ? <div className="a2d-quote">{row.reasonText}</div> : '—'}
@@ -600,19 +615,19 @@ export function ApprovalDetailPage() {
         </div>
         <div className="a2d-rule" />
         <div className="a2d-meta">
-          <Field label={apd('fSubjectType')} title={`binding.subjectType=${binding.subjectType}`}>
-            {binding.subjectType === 'employee' ? apd('subjectEmployee') : binding.subjectType}
+          <Field label={apd('fSubjectType')} title={binding.subjectType}>
+            {binding.subjectType === 'employee' ? apd('subjectEmployee') : apd('subjectUnknown')}
           </Field>
           <Field label={apd('fSubject')}>
-            <span className="a2d-who" title={`binding.subjectId=${binding.subjectId}`}>
+            <span className="a2d-who" title={binding.subjectId}>
               {subjectName ? <span className="a2d-ava" aria-hidden="true">{avatarChar(subjectName) ?? <LkIcon name="user" size={12} />}</span> : null}
               <span className="a2-mono" style={{ fontSize: 12 }}>{fmtId(binding.subjectId)}</span>
               {subjectName ? <span className="a2d-u">{subjectName}</span> : null}
             </span>
           </Field>
-          <Field label={apd('fChangeKind')} title={`binding.changeKind=${kind}`}>{kindLabel}</Field>
+          <Field label={apd('fChangeKind')} title={kind}>{kindLabel}</Field>
           {binding.effectiveFrom ? (
-            <Field label={apd('fEffectiveFrom')} mono title={`binding.effectiveFrom=${binding.effectiveFrom}`}>
+            <Field label={apd('fEffectiveFrom')} mono title={fmtTime(binding.effectiveFrom)}>
               {fmtTime(binding.effectiveFrom)}
             </Field>
           ) : null}
@@ -628,20 +643,24 @@ export function ApprovalDetailPage() {
               label={apd('fMessageDigest')}
               wide
               mono
-              title="binding.messageDigest"
+              title={binding.messageDigest}
               help={<HelpTip term="messageDigest" testId="agent-v2-apd-help-message-digest" />}
             >
-              {binding.messageDigest}
+              <CopyValue value={binding.messageDigest} aria={apd('copyMessageDigestAria')} inline>
+                {fmtId(binding.messageDigest)}
+              </CopyValue>
             </Field>
           ) : null}
           <Field
             label={apd('fTargetHash')}
             wide
             mono
-            title="binding.targetHash"
+            title={binding.targetHash}
             help={<HelpTip term="targetHash" testId="agent-v2-apd-help-target-hash" />}
           >
-            {binding.targetHash}
+            <CopyValue value={binding.targetHash} aria={apd('copyTargetHashAria')} inline>
+              {fmtId(binding.targetHash)}
+            </CopyValue>
           </Field>
         </div>
       </div>
@@ -650,12 +669,12 @@ export function ApprovalDetailPage() {
       <div className="a2d-card" data-testid="agent-v2-apd-detail">
         <div className="a2d-card-hd">
           <span className="a2d-t">{apd('detailTitle')}</span>
-          <span className="a2-pill is-accent a2d-xs" title={`binding.changeKind=${kind}`}>
+          <span className="a2-pill is-accent a2d-xs" title={kind}>
             <I className="a2d-i a2d-i13">{kind === 'message_send' ? ISend : kind === 'grant_escalation' ? IShield : ILayers}</I>
             {kindLabel}
           </span>
           <span className="a2d-sp" />
-          {change ? <span className="a2d-hd-note">{apd('detailSource', { source: change.source })}</span> : null}
+          {change ? <span className="a2d-hd-note">{apd('detailSource')}</span> : null}
         </div>
         <div className="a2d-rule" />
         {renderChangeDetail()}
@@ -680,8 +699,8 @@ export function ApprovalDetailPage() {
                     <I className="a2d-i" >{d.verdict === 'approve' ? ICheck : d.verdict === 'reject' ? IX : IUndo}</I>
                   </span>
                   <div className="a2d-thd">
-                    <span className="a2d-nm" title={`userId=${d.userId}`}>{identityText(d.userId, t)}</span>
-                    <span className={`a2-pill a2d-xs${verdictTone(d.verdict)}`} title={`verdict=${d.verdict}`}>
+                    <span className="a2d-nm" title={d.userId}>{identityText(d.userId, t)}</span>
+                    <span className={`a2-pill a2d-xs${verdictTone(d.verdict)}`} title={d.verdict}>
                       <span className="a2-pill-dot" aria-hidden="true" />
                       {verdictLabel(d.verdict)}
                     </span>
@@ -697,7 +716,7 @@ export function ApprovalDetailPage() {
           <div className="a2d-term" data-testid="agent-v2-apd-term">
             <Field label={apd('termVerdict')}>
               {row.verdict ? (
-                <span className={`a2-pill a2d-xs${verdictTone(row.verdict)}`} title={`verdict=${row.verdict}`}>
+                <span className={`a2-pill a2d-xs${verdictTone(row.verdict)}`} title={row.verdict}>
                   <span className="a2-pill-dot" aria-hidden="true" />
                   {verdictLabel(row.verdict)}
                 </span>
@@ -705,10 +724,14 @@ export function ApprovalDetailPage() {
                 '—'
               )}
             </Field>
-            <Field label={apd('termDecidedAt')} mono title={row.decidedAt ?? undefined}>{fmtTime(row.decidedAt)}</Field>
-            <Field label={apd('termConsumedAt')} mono title={row.consumedAt ?? undefined}>{fmtTime(row.consumedAt)}</Field>
+            <Field label={apd('termDecidedAt')} mono title={row.decidedAt ? fmtTime(row.decidedAt) : undefined}>{fmtTime(row.decidedAt)}</Field>
+            <Field label={apd('termConsumedAt')} mono title={row.consumedAt ? fmtTime(row.consumedAt) : undefined}>{fmtTime(row.consumedAt)}</Field>
             {row.supersededBy ? (
-              <Field label={apd('termSupersededBy')} mono title={row.supersededBy}>{row.supersededBy}</Field>
+              <Field label={apd('termSupersededBy')}>
+                <NavLink className="a2d-link" to={`/agent/approvals/${row.supersededBy}`} title={row.supersededBy}>
+                  {fmtApprovalId(row.supersededBy)}
+                </NavLink>
+              </Field>
             ) : null}
           </div>
         ) : null}
@@ -783,7 +806,7 @@ export function ApprovalDetailPage() {
         <ApprovalDecisionDialog
           verdict={decision}
           title={t('agentConsole.v2.decide.dialog.title', { verb: apd(`verdict.${decision}`) })}
-          target={row.approvalId}
+          target={fmtApprovalId(row.approvalId)}
           kindLabel={kindLabel}
           riskLabel={riskLabel}
           riskNote={t('agentConsole.v2.decide.dialog.riskNote')}

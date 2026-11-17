@@ -136,6 +136,9 @@ beforeEach(() => {
         if (approvalsStatus === 403) {
           return jsonResponse(403, { code: 'console.forbidden', message: 'stub' });
         }
+        if (approvalsStatus === 404) {
+          return jsonResponse(404, { code: 'console.not_found', message: 'stub' });
+        }
         return jsonResponse(200, approvalsBody);
       }
       return jsonResponse(200, {});
@@ -178,8 +181,11 @@ describe('APR-01 approvals pending list', () => {
     expect(document.querySelector(`[data-approval-id="${AC}"]`)).toBeNull();
     // truncated identifiable id + title carries the full id
     expect(screen.getByTitle(A1).textContent).toContain('…');
-    // action/changeKind, employee (onBehalfOf preferred), localized risk and status
-    expect(rows[0].textContent).toContain('grant_escalation');
+    // action/changeKind are internal enums: known → Chinese, unknown → 其他变更, raw only in title
+    expect(rows[0].textContent).toContain('其他变更');
+    expect(rows[0].querySelector('[title="grant_escalation"]')).toBeTruthy();
+    expect(rows[0].textContent).not.toContain('grant_escalation');
+    expect(rows[0].textContent).not.toContain('permission');
     // S2: the readable identity prints, the `human:` ref never does
     expect(rows[0].textContent).toContain('用户 #7');
     expect(rows[0].textContent).not.toContain('human:');
@@ -188,6 +194,32 @@ describe('APR-01 approvals pending list', () => {
     // P1-4: countdown reads as a duration (hh:mm:ss), not a raw second count
     expect(rows[0].textContent).toMatch(/\d{2}:\d{2}:\d{2}/);
     expect(rows[0].textContent).not.toMatch(/剩余 \d+ 秒/);
+    // no engineering language anywhere in the rendered queue
+    const pageText = document.body.textContent ?? '';
+    for (const leak of ['HTTP', 'AP3', 'CR-043', 'BFF', 'human:', 'pilot_owner_placeholder', 'remainingSeconds', 'changeKind=', 'riskLevel=', 'status=']) {
+      expect(pageText).not.toContain(leak);
+    }
+  });
+
+  it('known changeKind prints a Chinese label; unknown risk/status degrade to — with raw only in titles', async () => {
+    approvalsBody = {
+      items: [
+        approval(A1, 'business_action', {
+          status: 'weird_status',
+          riskLevel: 'critical',
+          binding: { subjectType: 'employee', subjectId: 'emp_1', changeKind: 'grant_escalation', targetHash: 'h' },
+        }),
+      ],
+    };
+    renderPage();
+    const row = await screen.findByTestId('agent-v2-approval-row');
+    expect(row.textContent).toContain('职权升级');
+    expect(row.textContent).not.toContain('grant_escalation');
+    expect(row.textContent).not.toContain('weird_status');
+    expect(row.textContent).not.toContain('critical');
+    const risk = row.querySelector('[data-testid="agent-v2-approval-risk"]');
+    expect(risk?.textContent).toContain('—');
+    expect(risk?.getAttribute('title')).toBe('critical');
   });
 
   it('shows the AP8 badge on the pending tab', async () => {
@@ -209,13 +241,14 @@ describe('APR-01 approvals pending list', () => {
     renderPage();
     const row = await screen.findByTestId('agent-v2-approval-row');
     const cd = row.querySelector('[data-testid="agent-v2-approval-countdown"]');
-    // 60s → hh:mm:ss; the raw second count is the title, never the label
+    // 60s → hh:mm:ss; the title carries the absolute Beijing expiry, not a field name
     expect(cd?.textContent).toBe('00:01:00');
     expect(cd?.textContent).not.toContain('7200');
-    expect(cd?.getAttribute('title')).toContain('remainingSeconds=60');
+    expect(cd?.getAttribute('title')).toMatch(/\d{2}-\d{2} \d{2}:\d{2}/);
+    expect(cd?.getAttribute('title')).not.toContain('remainingSeconds');
   });
 
-  it('P1-4: countdown title keeps the raw seconds next to the absolute expiry, hh:mm:ss never folds hours into days', async () => {
+  it('P1-4: countdown reads hh:mm:ss and never folds hours into days; title is the absolute expiry', async () => {
     approvalsBody = {
       items: [approval(A1, 'business_action', { expiresAt: futureIso(90000), remainingSeconds: 90061 })],
     };
@@ -224,7 +257,8 @@ describe('APR-01 approvals pending list', () => {
     const cd = row.querySelector('[data-testid="agent-v2-approval-countdown"]');
     // 25h1m1s stays 25:01:01 — no 1d, no rounding
     expect(cd?.textContent).toBe('25:01:01');
-    expect(cd?.getAttribute('title')).toContain('remainingSeconds=90061');
+    expect(cd?.getAttribute('title')).toMatch(/\d{2}-\d{2} \d{2}:\d{2}/);
+    expect(cd?.getAttribute('title')).not.toContain('remainingSeconds');
   });
 
   it('requests AP8 with dueWithinSeconds=86400 (L6 F-2)', async () => {
@@ -257,14 +291,15 @@ describe('APR-01 approvals pending list', () => {
     expect(screen.getByTestId('agent-v2-approvals-tab-pending').textContent).toBe('待办');
   });
 
-  it('renders a localized block-level error with retry and no machine code (G15)', async () => {
+  it('renders a localized block-level error with request id and retry, no HTTP/machine code (G15)', async () => {
     approvalsStatus = 500;
     renderPage();
     const err = await screen.findByTestId('agent-v2-approvals-queue-error');
-    expect(err.textContent).toContain('审批队列');
-    expect(err.textContent).toContain('HTTP 500');
+    expect(err.textContent).toContain('审批队列暂时没能读出来');
+    expect(err.textContent).not.toContain('HTTP');
     const codeish = /[a-z]+\.[a-z_]+/;
     expect(err.textContent ?? '').not.toMatch(codeish);
+    expect(screen.getByTestId('agent-v2-approvals-error-reqid').textContent).toContain('req_apr01');
     document
       .querySelectorAll('[data-testid$="-error"]')
       .forEach((el) => expect(el.textContent ?? '').not.toMatch(codeish));
@@ -277,18 +312,45 @@ describe('APR-01 approvals pending list', () => {
     expect(screen.queryByTestId('agent-v2-approvals-error')).toBeNull();
   });
 
-  it('shows an explicit 403 state for non-admin deep links', async () => {
+  it('403 and 404 share ONE body with a request id — no existence leak', async () => {
     approvalsStatus = 403;
     renderPage('/agent/approvals?focus=whatever');
-    const card = await screen.findByTestId('agent-v2-approvals-403');
-    expect(card.textContent).toContain('无权查看审批队列');
+    const forbidden = await screen.findByTestId('agent-v2-approvals-hidden');
+    expect(forbidden.textContent).toContain('无权查看审批队列');
+    expect(forbidden.textContent).not.toContain('HTTP');
+    expect(forbidden.textContent).toContain('req_apr01');
+    const forbiddenText = forbidden.textContent;
+
+    cleanup();
+    approvalsStatus = 404;
+    renderPage('/agent/approvals?focus=whatever');
+    const notFound = await screen.findByTestId('agent-v2-approvals-hidden');
+    // the only difference is the request id's rendered line, not the reason
+    expect(notFound.querySelector('.a2-h2')?.textContent).toBe(
+      forbidden.querySelector('.a2-h2')?.textContent,
+    );
+    expect(notFound.querySelector('.a2-card-sub')?.textContent).toBe(
+      forbidden.querySelector('.a2-card-sub')?.textContent,
+    );
+    expect(forbiddenText).not.toContain('console.forbidden');
   });
 
   it('shows the empty state when the queue has no rows', async () => {
     approvalsBody = { items: [] };
+    statsBody = { pending: 0, dueSoon: 0 };
     renderPage();
     const empty = await screen.findByTestId('agent-v2-approvals-empty');
     expect(empty.textContent).toContain('暂无待办审批');
+    expect(empty.textContent).toContain('当前账号没有需要处理的审批');
+  });
+
+  it('does not claim "nothing pending" when the AP8 count says otherwise', async () => {
+    approvalsBody = { items: [] };
+    statsBody = { pending: 3, dueSoon: 0 };
+    renderPage();
+    const empty = await screen.findByTestId('agent-v2-approvals-empty');
+    expect(empty.textContent).toContain('统计显示还有 3 单待办');
+    expect(empty.textContent).not.toContain('当前账号没有需要处理的审批');
   });
 
   it('batch checkboxes and select-current-page drive the selected count; decide buttons stay disabled when the build switch is off', async () => {
@@ -512,7 +574,7 @@ describe('APR-03 — batch decision write (build switch on)', () => {
     expect(bodies).toHaveLength(1); // stopped after the first failure
     expect(result.textContent).toContain('已成功 0 单');
     expect(result.textContent).toContain('服务端拒绝了本次决策');
-    expect(result.textContent).toContain('HTTP 403');
+    expect(result.textContent).not.toContain('HTTP');
     expect(result.textContent).not.toContain('console.forbidden');
     expect(screen.queryByTestId('agent-v2-decision-dialog')).toBeNull();
     // the un-submitted rows stay selected for a retry
