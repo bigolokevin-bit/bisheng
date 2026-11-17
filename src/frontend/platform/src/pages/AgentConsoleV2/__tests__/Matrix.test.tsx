@@ -261,8 +261,122 @@ describe('MATRIX-01 read-only employee matrix', () => {
     const risk = rows[0].querySelector('[data-testid="agent-v2-mtx-risk"]') as HTMLElement;
     const runs = rows[0].querySelector('[data-testid="agent-v2-mtx-runs"]') as HTMLElement;
     expect(risk.textContent).not.toContain('无风险');
-    expect(risk.textContent?.trim()).toBe('—');
+    // MATRIX-R3: the risk cell carries its own label, so a missing signal is
+    // never an isolated 「—」 with no idea what it belongs to.
+    expect(risk.textContent).toContain('风险');
+    expect(risk.textContent).toContain('—');
     expect(runs.textContent).toContain('今日未运行');
+    guardNoRawKeys();
+  });
+});
+
+describe('MATRIX-R3 — DOM parity, focus, real jump targets', () => {
+  it('prints an 8-char version code with the raw ref only in title', async () => {
+    matrixStatus = 200;
+    matrixBody = {
+      items: [
+        {
+          employeeId: 'emp_v1',
+          name: '版本',
+          lifecycle: 'active',
+          currentVersionId: 'empv_4FCDD6FDEADBEEF1234567890',
+        },
+      ],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-mtx-row');
+    const version = rows[0].querySelector('[data-testid="agent-v2-mtx-version"]') as HTMLElement;
+    expect(version.textContent).toContain('4FCDD6FD');
+    expect(version.textContent).not.toContain('empv_4FCDD6FDEADBEEF1234567890');
+    const mono = version.querySelector('.a2-mono') as HTMLElement;
+    expect(mono.getAttribute('title')).toBe('empv_4FCDD6FDEADBEEF1234567890');
+    guardNoRawKeys();
+  });
+
+  it('shows all three budget keys, and — only for the ones that are missing', async () => {
+    matrixStatus = 200;
+    matrixBody = {
+      items: [
+        {
+          employeeId: 'emp_b1',
+          name: '三键',
+          lifecycle: 'active',
+          budget: { dailyTokens: 100000, monthlyCostUsd: 10, perRunMaxUsd: 1 },
+        },
+        {
+          employeeId: 'emp_b2',
+          name: '缺两键',
+          lifecycle: 'active',
+          budget: { dailyTokens: 500 },
+        },
+      ],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-mtx-row');
+    const daily = rows[0].querySelector('[data-testid="agent-v2-mtx-budget-daily"]') as HTMLElement;
+    const monthly = rows[0].querySelector(
+      '[data-testid="agent-v2-mtx-budget-monthly"]',
+    ) as HTMLElement;
+    const perRun = rows[0].querySelector(
+      '[data-testid="agent-v2-mtx-budget-perrun"]',
+    ) as HTMLElement;
+    expect(daily.textContent).toContain('100000');
+    expect(monthly.textContent).not.toBe('—');
+    expect(perRun.textContent).not.toBe('—');
+    // a missing key never borrows the other key's number
+    const row2Monthly = rows[1].querySelector(
+      '[data-testid="agent-v2-mtx-budget-monthly"]',
+    ) as HTMLElement;
+    expect(row2Monthly.textContent).toBe('—');
+    guardNoRawKeys();
+  });
+
+  it('disambiguates two cards that share a name', async () => {
+    matrixStatus = 200;
+    matrixBody = {
+      items: [
+        { employeeId: 'emp_d1', name: '张三', lifecycle: 'active', versionRef: 'empv_AAAA1111' },
+        { employeeId: 'emp_d2', name: '张三', lifecycle: 'active', versionRef: 'empv_BBBB2222' },
+      ],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-mtx-row');
+    const marks = rows.map(
+      (row) => row.querySelector('[data-testid="agent-v2-mtx-disambig"]')?.textContent ?? '',
+    );
+    expect(marks[0]).toBe('AAAA1111');
+    expect(marks[1]).toBe('BBBB2222');
+    guardNoRawKeys();
+  });
+
+  it('honours ?focus by marking only the addressed row', async () => {
+    window.history.replaceState({}, '', '/agent/matrix?focus=emp_f2');
+    matrixStatus = 200;
+    matrixBody = {
+      items: [
+        { employeeId: 'emp_f1', name: '甲', lifecycle: 'active' },
+        { employeeId: 'emp_f2', name: '乙', lifecycle: 'active' },
+      ],
+    };
+    renderPage('/agent/matrix');
+    const rows = await screen.findAllByTestId('agent-v2-mtx-row');
+    expect(rows[0].getAttribute('data-focus')).toBeNull();
+    expect(rows[1].getAttribute('data-focus')).toBe('true');
+    window.history.replaceState({}, '', '/agent/matrix');
+    guardNoRawKeys();
+  });
+
+  it('links each card to the real runs and audit screens', async () => {
+    matrixStatus = 200;
+    matrixBody = {
+      items: [{ employeeId: 'emp_j1', name: '跳转', lifecycle: 'active' }],
+    };
+    renderPage();
+    const rows = await screen.findAllByTestId('agent-v2-mtx-row');
+    const runs = rows[0].querySelector('[data-testid="agent-v2-mtx-jump-runs"]') as HTMLElement;
+    const audit = rows[0].querySelector('[data-testid="agent-v2-mtx-jump-audit"]') as HTMLElement;
+    expect(runs.getAttribute('href')).toBe('/agent/runs?employee=emp_j1');
+    expect(audit.getAttribute('href')).toBe('/agent/audit?employee=emp_j1');
     guardNoRawKeys();
   });
 });

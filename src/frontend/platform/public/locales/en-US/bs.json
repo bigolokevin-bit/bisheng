@@ -4360,7 +4360,12 @@
     "stPaused": "Paused",
     "stOffboarding": "Offboarding",
     "stDraft": "Draft",
-    "stArchived": "Archived"
+    "stArchived": "Archived",
+    "budgetDaily": "Daily tokens",
+    "budgetPerRun": "Per-run cap",
+    "risk": "Risk",
+    "linkRuns": "Run history",
+    "linkAudit": "Audit trail"
   },
 "run02": {
         "title": "Run details",
