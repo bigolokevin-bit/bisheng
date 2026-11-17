@@ -518,7 +518,7 @@ export default function SkillsPage() {
         <div className="a2-card" data-testid="agent-v2-skills-empty">
           <p className="a2-h2 skl-state-h">
             <Icon name="file" size={16} />
-            {t('agentConsole.v2.skills.emptyTitle')}
+            {t('agentConsole.v2.skills.emptyTitleV2')}
           </p>
           <p className="a2-card-sub">{t('agentConsole.v2.skills.emptyHint')}</p>
         </div>
