@@ -1,9 +1,8 @@
 /* eslint-disable no-restricted-syntax -- assertions intentionally use the localized copy under test */
 /**
- * fix B (G10): overview blocks show an explicit error state with the HTTP
- * status and a block-level retry button when their endpoint fails, and the
- * retry recovers real data once the endpoint is healthy again.
- * fetch is stubbed at the global level (makeFetcher uses window fetch).
+ * OV-01 error states: a failed block shows a human reason, the gateway
+ * request id (copyable), and a block-level retry; retry recovers real data
+ * once the endpoint is healthy. Engineering detail stays off screen.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -73,7 +72,10 @@ function stubFetch() {
       if (mode === 'fail' && url.includes('/api/run-stats')) {
         return new Response(JSON.stringify({ code: 'agent.http.500' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Console-Request-Id': 'req-test-500',
+          },
         });
       }
       return new Response(JSON.stringify(bodyFor(url)), {
@@ -102,7 +104,7 @@ function renderOverview() {
 }
 
 describe('OV-01 fix B (G10) block-level error states', () => {
-  it('run-stats 500 renders trend + KPI error copy with retry buttons', async () => {
+  it('run-stats 500 renders trend + KPI error copy with request id and retry', async () => {
     mode = 'fail';
     stubFetch();
     renderOverview();
@@ -111,20 +113,22 @@ describe('OV-01 fix B (G10) block-level error states', () => {
     expect(retry).toBeInTheDocument();
 
     const trendError = screen.getByTestId('agent-v2-ov-trend-error');
-    // localized: 运行趋势暂时取不到（HTTP 500）
-    expect(trendError.textContent).toContain('500');
-    expect(trendError.textContent).toContain('运行趋势');
+    expect(trendError.textContent).toContain('趋势数据获取失败');
+    expect(trendError.textContent).toContain('请求编号');
+    expect(trendError.textContent).toContain('req-test-500');
+    // no engineering detail: status codes / dotted machine codes stay off screen
+    expect(trendError.textContent).not.toContain('HTTP');
 
     expect(screen.getByTestId('agent-v2-ov-retry-kpi-runs')).toBeInTheDocument();
     const runsError = screen.getByTestId('agent-v2-ov-kpi-runs-error');
-    // fix B (G15): localized copy only — the injected machine code
-    // (agent.http.500) must never reach the visible text, only the HTTP status.
-    expect(runsError.textContent).toContain('HTTP 500');
+    expect(runsError.textContent).toContain('查询失败');
+    expect(runsError.textContent).not.toContain('HTTP');
     const codeish = /[a-z]+\.[a-z_]+/;
     expect(runsError.textContent ?? '').not.toMatch(codeish);
     document
       .querySelectorAll('[data-testid$="-error"]')
       .forEach((el) => expect(el.textContent ?? '').not.toMatch(codeish));
+    expect(screen.getByTestId('agent-v2-ov-kpi-runs-reqid').textContent).toContain('req-test-500');
 
     // other blocks are untouched by the failure
     expect(screen.getByTestId('agent-v2-ov-block-anomaly')).toBeInTheDocument();

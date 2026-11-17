@@ -22,6 +22,7 @@ import {
   type RunStatsBody,
 } from './v2Data';
 import { identityText } from './identity';
+import { ReqId } from './listkit';
 import { fmtPercent } from './met01';
 
 export type UnknownRecord = { [key: string]: unknown };
@@ -31,7 +32,40 @@ export interface BlockState<T> {
   ok: boolean;
   status: number;
   code?: string;
+  /** Gateway request id, shown (copyable) beside every block-level error. */
+  requestId?: string;
   data?: T;
+}
+
+/* One human error line per block: plain-language reason + copyable request id
+ * + retry only when retrying can actually help. 401/403/404 are terminal for
+ * the block, so they keep the id and drop the retry. */
+export function BlockError({
+  message,
+  state,
+  onRetry,
+  testId,
+  retryTestId,
+}: {
+  message: string;
+  state: BlockState<unknown>;
+  onRetry?: () => void;
+  testId?: string;
+  retryTestId?: string;
+}) {
+  const { t } = useTranslation();
+  const retryable = onRetry != null && ![401, 403, 404].includes(state.status);
+  return (
+    <div className="ov-berr" data-testid={testId}>
+      <p className="a2-meta">{message}</p>
+      <ReqId requestId={state.requestId} testId={testId ? `${testId}-reqid` : undefined} />
+      {retryable ? (
+        <button type="button" className="a2-btn ov-xs" data-testid={retryTestId} onClick={onRetry}>
+          {t('agentConsole.v2.ov.retry')}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export interface OverviewQueueBody {
@@ -397,19 +431,18 @@ function QueueRow({ src, onRetry }: { src: QueueSource; onRetry: () => void }) {
             {src.state.code === 'agent-console.no-uid'
               ? t('agentConsole.v2.ov.queueNoUid')
               : t('agentConsole.v2.ov.queueUnavailable')}
-            <button type="button" className="ov-link" data-testid={`agent-v2-ov-retry-queue-${src.id}`} onClick={onRetry}>
-              {t('agentConsole.v2.ov.retry')}
-            </button>
+            {src.state.code === 'agent-console.no-uid' ? null : (
+              <>
+                <ReqId requestId={src.state.requestId} testId={`agent-v2-ov-queue-${src.id}-reqid`} />
+                <button type="button" className="ov-link" data-testid={`agent-v2-ov-retry-queue-${src.id}`} onClick={onRetry}>
+                  {t('agentConsole.v2.ov.retry')}
+                </button>
+              </>
+            )}
           </div>
         ) : items.length === 0 ? (
           <div className="qs2" data-testid={`agent-v2-ov-queue-${src.id}-empty`}>
             {t(`agentConsole.v2.ov.${src.hintKey}`)}
-            {src.id === 'approvals' ? (
-              <>
-                {' · '}
-                <span data-testid="agent-v2-ov-queue-gap-org">{t('agentConsole.v2.ov.queueGapOrgTodos')}</span>
-              </>
-            ) : null}
             {src.truthCount != null && src.truthCount > 0 ? (
               <span className="ov-warn" data-testid={`agent-v2-ov-queue-${src.id}-mismatch`}>
                 {' '}· {t('agentConsole.v2.ov.queueMismatch')}
@@ -417,43 +450,57 @@ function QueueRow({ src, onRetry }: { src: QueueSource; onRetry: () => void }) {
             ) : null}
           </div>
         ) : (
-          items.slice(0, 5).map((item, idx) => (
-            <div className="ov-ql" key={idx}>
-              <span className="l1">
-                {(() => {
-                  const st = zhStatus(firstString(item, ['status', 'state', 'lifecycleState', 'outcome']), t);
-                  return (
-                    <span className={`ov-pill ${st.tone} xs${st.mono ? ' a2-mono' : ''}`}>
-                      <span className="dot" />
-                      {st.zh}
-                    </span>
-                  );
-                })()}
-                <span className="nm" title={firstString(item, ['title', 'name', 'resource', 'action']) ?? undefined}>
-                  {firstString(item, ['title', 'name', 'resource', 'action']) ?? '—'}
+          items.slice(0, 5).map((item, idx) => {
+            const id = firstString(item, [
+              src.id === 'approvals' ? 'approvalId' : src.id === 'runs' ? 'runId' : 'taskId',
+              'id',
+            ]);
+            const detailTo =
+              id == null
+                ? src.to
+                : src.id === 'approvals'
+                  ? `/agent/approvals/${encodeURIComponent(id)}`
+                  : src.id === 'runs'
+                    ? `/agent/runs/${encodeURIComponent(id)}`
+                    : `/agent/tasks/${encodeURIComponent(id)}`;
+            return (
+              <div className="ov-ql" key={idx}>
+                <span className="l1">
+                  {(() => {
+                    const st = zhStatus(firstString(item, ['status', 'state', 'lifecycleState', 'outcome']), t);
+                    return (
+                      <span className={`ov-pill ${st.tone} xs${st.mono ? ' a2-mono' : ''}`}>
+                        <span className="dot" />
+                        {st.zh}
+                      </span>
+                    );
+                  })()}
+                  <span className="nm" title={firstString(item, ['title', 'name', 'resource', 'action']) ?? undefined}>
+                    {firstString(item, ['title', 'name', 'resource', 'action']) ?? '—'}
+                  </span>
+                  {(() => {
+                    const w = waitedText(firstString(item, ['createdAt', 'requestedAt', 'startedAt']), t);
+                    return w ? (
+                      <span className={`ov-dtl${w.danger ? ' dg' : ' wr'}`}>
+                        <Icon name="clock" size={13} />
+                        {w.text}
+                      </span>
+                    ) : null;
+                  })()}
                 </span>
-                {(() => {
-                  const w = waitedText(firstString(item, ['createdAt', 'requestedAt', 'startedAt']), t);
-                  return w ? (
-                    <span className={`ov-dtl${w.danger ? ' dg' : ' wr'}`}>
-                      <Icon name="clock" size={13} />
-                      {w.text}
-                    </span>
-                  ) : null;
-                })()}
-              </span>
-              <span className="l2">
-                {displayActor(firstString(item, ['assignee', 'ownerUserId', 'createdBy']), t) ? (
-                  <span>{displayActor(firstString(item, ['assignee', 'ownerUserId', 'createdBy']), t)}</span>
-                ) : null}
-                <span className="a2-mono">{fmtId(firstString(item, ['approvalId', 'taskId', 'runId', 'id']))}</span>
-                <NavLink className="ov-lnk" to={src.to}>
-                  {t('agentConsole.v2.ov.queueProcess')}
-                  <Icon name="arrow" size={13} />
-                </NavLink>
-              </span>
-            </div>
-          ))
+                <span className="l2">
+                  {displayActor(firstString(item, ['assignee', 'ownerUserId', 'createdBy']), t) ? (
+                    <span>{displayActor(firstString(item, ['assignee', 'ownerUserId', 'createdBy']), t)}</span>
+                  ) : null}
+                  <span className="a2-mono">{fmtId(firstString(item, ['approvalId', 'taskId', 'runId', 'id']))}</span>
+                  <NavLink className="ov-lnk" to={detailTo}>
+                    {t('agentConsole.v2.ov.queueProcess')}
+                    <Icon name="arrow" size={13} />
+                  </NavLink>
+                </span>
+              </div>
+            );
+          })
         )}
       </div>
       {src.state.ok && items.length > 0 ? (
@@ -549,17 +596,17 @@ export function CostBudgetBlock({
         <div className="ov-buds">…</div>
       ) : !cost.ok ? (
         <div className="ov-buds">
-          <p className="a2-meta" data-testid="agent-v2-ov-cost-error">
-            {cost.code === 'agent-console.no-employees'
-              ? t('agentConsole.v2.ov.noEmployeesNote')
-              : t('agentConsole.v2.ov.blockUnavailable', {
-                  block: t('agentConsole.v2.ov.costBudgetTitle'),
-                  code: cost.status,
-                })}
-          </p>
-          <button type="button" className="a2-btn" data-testid="agent-v2-ov-retry-cost" onClick={onRetry}>
-            {t('agentConsole.v2.ov.retry')}
-          </button>
+          <BlockError
+            message={
+              cost.code === 'agent-console.no-employees'
+                ? t('agentConsole.v2.ov.noEmployeesNote')
+                : t('agentConsole.v2.emptyBudget')
+            }
+            state={cost}
+            onRetry={onRetry}
+            testId="agent-v2-ov-cost-error"
+            retryTestId="agent-v2-ov-retry-cost"
+          />
         </div>
       ) : (
         <>
@@ -741,24 +788,33 @@ export function AnomalyBlock({
         <>
           {failed === null || dueSoon === null ? (
             <>
-              <p className="ov-empty-line" data-testid="agent-v2-ov-anomaly-runs-state">
-                {approvals.code === 'agent-console.no-uid' || runs.code === 'agent-console.no-uid'
-                  ? t('agentConsole.v2.ov.noteNoUid')
-                  : t('agentConsole.v2.ov.anomalyUnavailable')}
-              </p>
-              <button
-                type="button"
-                className="a2-btn ov-xs"
-                data-testid="agent-v2-ov-retry-anomaly"
-                onClick={onRetry}
-              >
-                {t('agentConsole.v2.ov.retry')}
-              </button>
+              {approvals.code === 'agent-console.no-uid' || runs.code === 'agent-console.no-uid' ? (
+                <p className="ov-empty-line" data-testid="agent-v2-ov-anomaly-runs-state">
+                  {t('agentConsole.v2.ov.noteNoUid')}
+                </p>
+              ) : (
+                <BlockError
+                  message={t('agentConsole.v2.ov.anomalyUnavailable')}
+                  state={{
+                    loading: false,
+                    ok: false,
+                    status: runs.ok ? approvals.status : runs.status,
+                    requestId: runs.ok ? approvals.requestId : runs.requestId,
+                  }}
+                  onRetry={onRetry}
+                  testId="agent-v2-ov-anomaly-runs-state"
+                  retryTestId="agent-v2-ov-retry-anomaly"
+                />
+              )}
             </>
           ) : (
-            <p className="ov-empty-line" data-testid="agent-v2-ov-anomaly-empty">
-              {t('agentConsole.v2.ov.anomalyEmpty')}
-            </p>
+            <div className="ov-empty-cta" data-testid="agent-v2-ov-anomaly-empty">
+              <p className="ov-empty-line">{t('agentConsole.v2.ov.anomalyEmpty')}</p>
+              <NavLink className="ov-lnk" to="/agent/runs">
+                {t('agentConsole.v2.ov.anomalyViewRuns')}
+                <Icon name="arrow" size={13} />
+              </NavLink>
+            </div>
           )}
           {scan}
         </>
@@ -793,10 +849,8 @@ export function AnomalyBlock({
               <span className="ai ac"><Icon name="alert" size={14} /></span>
               <div className="at">
                 <div className="a">{t('agentConsole.v2.ov.anomalyNoLedger', { count: unknownRuns })}</div>
-                <div className="ar2 a2-mono">
+                <div className="ar2">
                   <span className="ov-pill ac xs">{t('agentConsole.v2.ov.anomalyToneInfo')}</span>
-                  {' · '}
-                  {t('agentConsole.v2.ov.anomalyRuleAL5')}
                 </div>
               </div>
               <NavLink className="a2-btn ov-xs" to="/agent/runs">
@@ -822,7 +876,7 @@ function sumField(body: RunStatsBody | undefined, key: 'failed' | 'succeeded'): 
 
 // action → i18n key under ov.actions.* (dots become underscores so they
 // survive i18next keySeparator). Unknown actions keep a generic localized
-// label; the snake_case raw value is always shown in a separate mono line.
+// label; the machine action value never reaches the screen.
 function actionMeta(
   action: string | null,
   t: TFn
@@ -882,12 +936,13 @@ export function ActivityBlock({
         <div className="ov-scan">…</div>
       ) : !audit.ok ? (
         <div className="ov-buds">
-          <p className="a2-meta" data-testid="agent-v2-ov-activity-error">
-            {t('agentConsole.v2.ov.activityUnavailable')}
-          </p>
-          <button type="button" className="a2-btn" data-testid="agent-v2-ov-retry-activity" onClick={onRetry}>
-            {t('agentConsole.v2.ov.retry')}
-          </button>
+          <BlockError
+            message={t('agentConsole.v2.ov.activityUnavailable')}
+            state={audit}
+            onRetry={onRetry}
+            testId="agent-v2-ov-activity-error"
+            retryTestId="agent-v2-ov-retry-activity"
+          />
         </div>
       ) : rows.length === 0 ? (
         <div className="ov-buds">
@@ -936,7 +991,6 @@ export function ActivityBlock({
                           <span className="zh" title={row.action ?? undefined}>
                             {meta.zh || t('agentConsole.v2.ov.eventUnknown')}
                           </span>
-                          {row.action ? <span className="raw a2-mono">{row.action}</span> : null}
                         </div>
                       </td>
                       <td className="ov-hide-sm ov-clip" title={displayActor(firstString(row.raw, ['actorUserId', 'actor', 'actorId', 'userId']), t) ?? undefined}>
@@ -963,9 +1017,6 @@ export function ActivityBlock({
           ) : (
             <div className="ov-rule" />
           )}
-          <div className="ov-rfoot lg-only">
-            <span className="lg">{t('agentConsole.v2.ov.actCaliber')}</span>
-          </div>
         </>
       )}
     </div>

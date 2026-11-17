@@ -18,6 +18,11 @@ import { NavLink, useSearchParams } from 'react-router-dom';
 
 import { userContext } from '@/contexts/userContext';
 import { fmtPercent } from './met01';
+import { ReqId } from './listkit';
+import { CollabEntryCard, MatrixEntryCard, RecentRunsBlock, type RecentRunsBody } from './OverviewAdditions';
+import type { DelegationListShape } from './collab';
+import type { MatrixListBody } from './matrix';
+import './overview.css';
 
 import {
   bucketSum,
@@ -46,6 +51,7 @@ import {
 import {
   ActivityBlock,
   AnomalyBlock,
+  BlockError,
   CostBudgetBlock,
   Icon,
   KpiDots,
@@ -104,7 +110,14 @@ function listKpi(res: ApiRes<QueueBody> | null): BlockState<QueueBody> {
   if (res === null) {
     return { loading: false, ok: false, status: 0, code: 'agent-console.no-uid' };
   }
-  return { loading: false, ok: res.ok, status: res.status, code: res.code, data: res.data };
+  return {
+    loading: false,
+    ok: res.ok,
+    status: res.status,
+    code: res.code,
+    requestId: res.requestId,
+    data: res.data,
+  };
 }
 
 /* Beijing-time "now" pieces for heat focus row / current cell / quota today. */
@@ -165,6 +178,9 @@ export function OverviewPage() {
   const [heat, setHeat] = useState<BlockState<ActivityBody>>(pendingKpi);
   const [quotaRows, setQuotaRows] = useState<EmployeeRow[]>([]);
   const [audit, setAudit] = useState<BlockState<OverviewAuditBody>>(pendingKpi);
+  const [recentRuns, setRecentRuns] = useState<BlockState<RecentRunsBody>>(pendingKpi);
+  const [matrix, setMatrix] = useState<BlockState<MatrixListBody>>(pendingKpi);
+  const [collab, setCollab] = useState<BlockState<DelegationListShape>>(pendingKpi);
 
   const refresh = useCallback(() => setToken((x) => x + 1), []);
 
@@ -231,6 +247,9 @@ export function OverviewPage() {
     setHeat(pendingKpi);
     setQuotaRows([]);
     setAudit(pendingKpi);
+    setRecentRuns(pendingKpi);
+    setMatrix(pendingKpi);
+    setCollab(pendingKpi);
     void (async () => {
       // The BFF caps day-bucket run-stats at a 90-day span and the UTC
       // floor in dayWindow() adds up to a day, so clamp the requested
@@ -248,7 +267,7 @@ export function OverviewPage() {
         from: new Date(Date.now() - 86400000).toISOString(),
         to: new Date().toISOString(),
       };
-      const [s, a, r, r7, rp, ids, qa, qt, qr, h, au] = await Promise.all([
+      const [s, a, r, r7, rp, ids, qa, qt, qr, h, au, rr, mx, cb] = await Promise.all([
         fetchEmployeeStats(fetcher),
         uid ? fetchApprovalStats(fetcher, `human:${uid}`) : Promise.resolve(null),
         fetchRunStats(fetcher, { ...windowCur, bucket: 'day' }),
@@ -286,23 +305,103 @@ export function OverviewPage() {
           to: windowCur.to,
           limit: AUDIT_WINDOW_LIMIT,
         }),
+        // OV-LIST-01: the five most recent runs (upstream requires `since`,
+        // so a bare ?limit=5 would 400 with request.missing_filter).
+        fetcher<RecentRunsBody>('/api/runs', { since: window7.from, limit: 5 }),
+        // OV-CARD-01/02: entry cards read the real list endpoints; a 404
+        // (module not deployed yet) hides the card instead of breaking it.
+        fetcher<MatrixListBody>('/api/matrix', { limit: 50 }),
+        fetcher<DelegationListShape>('/api/delegations'),
       ]);
       if (!alive) return;
-      setStats({ loading: false, ok: s.ok, status: s.status, code: s.code, data: s.data });
+      setStats({
+        loading: false,
+        ok: s.ok,
+        status: s.status,
+        code: s.code,
+        requestId: s.requestId,
+        data: s.data,
+      });
       setApprovals(
         a === null
           ? { loading: false, ok: false, status: 0, code: 'agent-console.no-uid' }
-          : { loading: false, ok: a.ok, status: a.status, code: a.code, data: a.data }
+          : {
+              loading: false,
+              ok: a.ok,
+              status: a.status,
+              code: a.code,
+              requestId: a.requestId,
+              data: a.data,
+            }
       );
-      setRuns({ loading: false, ok: r.ok, status: r.status, code: r.code, data: r.data });
-      setRuns7({ loading: false, ok: r7.ok, status: r7.status, code: r7.code, data: r7.data });
-      setRunsPrev({ loading: false, ok: rp.ok, status: rp.status, code: rp.code, data: rp.data });
+      setRuns({
+        loading: false,
+        ok: r.ok,
+        status: r.status,
+        code: r.code,
+        requestId: r.requestId,
+        data: r.data,
+      });
+      setRuns7({
+        loading: false,
+        ok: r7.ok,
+        status: r7.status,
+        code: r7.code,
+        requestId: r7.requestId,
+        data: r7.data,
+      });
+      setRunsPrev({
+        loading: false,
+        ok: rp.ok,
+        status: rp.status,
+        code: rp.code,
+        requestId: rp.requestId,
+        data: rp.data,
+      });
       setQueueApprovals(listKpi(qa));
       setQueueTasks(listKpi(qt));
       setQueueRuns(listKpi(qr));
-      setHeat({ loading: false, ok: h.ok, status: h.status, code: h.code, data: h.data });
+      setHeat({
+        loading: false,
+        ok: h.ok,
+        status: h.status,
+        code: h.code,
+        requestId: h.requestId,
+        data: h.data,
+      });
       setQuotaRows(ids.data?.items ?? []);
-      setAudit({ loading: false, ok: au.ok, status: au.status, code: au.code, data: au.data });
+      setAudit({
+        loading: false,
+        ok: au.ok,
+        status: au.status,
+        code: au.code,
+        requestId: au.requestId,
+        data: au.data,
+      });
+      setRecentRuns({
+        loading: false,
+        ok: rr.ok,
+        status: rr.status,
+        code: rr.code,
+        requestId: rr.requestId,
+        data: rr.data,
+      });
+      setMatrix({
+        loading: false,
+        ok: mx.ok,
+        status: mx.status,
+        code: mx.code,
+        requestId: mx.requestId,
+        data: mx.data,
+      });
+      setCollab({
+        loading: false,
+        ok: cb.ok,
+        status: cb.status,
+        code: cb.code,
+        requestId: cb.requestId,
+        data: cb.data,
+      });
       const nowIso = new Date().toISOString();
       setBlockTimes((prev) => ({
         approvals: a !== null && a.ok ? nowIso : prev.approvals,
@@ -313,13 +412,26 @@ export function OverviewPage() {
       // from E11 first, then one batched month query. No silent "0.00".
       const empIds = (ids.data?.items ?? []).map((e) => e.employeeId);
       if (!ids.ok) {
-        setCost({ loading: false, ok: false, status: ids.status, code: ids.code });
+        setCost({
+          loading: false,
+          ok: false,
+          status: ids.status,
+          code: ids.code,
+          requestId: ids.requestId,
+        });
       } else if (empIds.length === 0) {
         setCost({ loading: false, ok: false, status: 0, code: 'agent-console.no-employees' });
       } else {
         const b = await fetchBudgetMonth(fetcher, empIds, monthPeriod());
         if (!alive) return;
-        setCost({ loading: false, ok: b.ok, status: b.status, code: b.code, data: b.data });
+        setCost({
+          loading: false,
+          ok: b.ok,
+          status: b.status,
+          code: b.code,
+          requestId: b.requestId,
+          data: b.data,
+        });
       }
       if (alive) setUpdatedAt(new Date().toISOString());
     })();
@@ -512,7 +624,6 @@ export function OverviewPage() {
   const terminalForRate = runSums.succeeded + runSums.failed;
   const successRate = runs.ok && terminalForRate > 0 ? fmtPercent((runSums.succeeded / terminalForRate) * 100) : null;
   const windowLabel = t(`agentConsole.v2.ov.range${rangeKey}`);
-  const rangeShort = RANGE_DAYS[rangeKey] <= 28 ? '7' : String(rangeDays);
 
   const budgetOverCount = useMemo(() => {
     let over = 0;
@@ -530,6 +641,25 @@ export function OverviewPage() {
     return withDenom === 0 ? null : over;
   }, [cost, quotaRows]);
   const budgetEmpCount = quotaRows.length;
+
+  /* Every block on the page participates: the refresh button only unlocks
+   * when no card is still fetching (loading is a state, not a decoration). */
+  const pageLoading = [
+    stats,
+    approvals,
+    runs,
+    runs7,
+    runsPrev,
+    cost,
+    queueApprovals,
+    queueTasks,
+    queueRuns,
+    heat,
+    audit,
+    recentRuns,
+    matrix,
+    collab,
+  ].some((s) => s.loading);
 
   return (
     <div className="a2s-page ov-page" data-testid="agent-v2-ov-page">
@@ -569,8 +699,15 @@ export function OverviewPage() {
               {t('agentConsole.v2.ov.clearFilters')}
             </button>
           ) : null}
-          <button type="button" className="a2-btn ov-refresh" data-testid="agent-v2-ov-refresh" onClick={refresh}>
-            <Icon name="refresh" size={16} />
+          <button
+            type="button"
+            className="a2-btn ov-refresh"
+            data-testid="agent-v2-ov-refresh"
+            onClick={refresh}
+            disabled={pageLoading}
+            aria-busy={pageLoading}
+          >
+            <Icon name="refresh" size={16} className={pageLoading ? 'ov-spin' : ''} />
             {t('agentConsole.v2.ov.refresh')}
           </button>
         </div>
@@ -583,10 +720,6 @@ export function OverviewPage() {
           ) : (
             <span>…</span>
           )}
-          <span className="faint">·</span>
-          <span>
-            {t('agentConsole.v2.ov.windowNote', { short: rangeShort, long: String(rangeDays) })}
-          </span>
         </div>
         {authExpired ? (
           <p className="a2-meta" data-testid="agent-v2-ov-auth-expired">
@@ -620,11 +753,9 @@ export function OverviewPage() {
           ) : stats.loading ? null : (
             <span className="ov-kn">
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-onduty-error">
-                {t('agentConsole.v2.ov.blockUnavailable', {
-                  block: t('agentConsole.v2.ov.kpiOnDuty'),
-                  code: stats.status,
-                })}
+                {t('agentConsole.v2.errorQuery')}
               </span>
+              <ReqId requestId={stats.requestId} testId="agent-v2-ov-kpi-onduty-reqid" />
               <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-onduty" onClick={refresh}>
                 {t('agentConsole.v2.ov.retry')}
               </button>
@@ -640,10 +771,16 @@ export function OverviewPage() {
             {approvals.loading ? (
               <span className="ov-v">…</span>
             ) : approvals.ok ? (
-              <>
-                <span className="ov-v">{approvals.data?.pending ?? '—'}</span>
-                <KpiDots testId="agent-v2-ov-kpi-pending-dots" />
-              </>
+              approvals.data?.pending === 0 ? (
+                <span className="ov-v is-empty" data-testid="agent-v2-ov-kpi-pending-empty">
+                  {t('agentConsole.v2.emptyApprovals')}
+                </span>
+              ) : (
+                <>
+                  <span className="ov-v">{approvals.data?.pending ?? '—'}</span>
+                  <KpiDots testId="agent-v2-ov-kpi-pending-dots" />
+                </>
+              )
             ) : null}
           </div>
           {approvals.ok ? (
@@ -659,14 +796,16 @@ export function OverviewPage() {
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-pending-error">
                 {approvals.code === 'agent-console.no-uid'
                   ? t('agentConsole.v2.ov.noteNoUid')
-                  : t('agentConsole.v2.ov.blockUnavailable', {
-                      block: t('agentConsole.v2.ov.kpiPending'),
-                      code: approvals.status,
-                    })}
+                  : t('agentConsole.v2.errorQuery')}
               </span>
-              <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-pending" onClick={refresh}>
-                {t('agentConsole.v2.ov.retry')}
-              </button>
+              {approvals.code === 'agent-console.no-uid' ? null : (
+                <>
+                  <ReqId requestId={approvals.requestId} testId="agent-v2-ov-kpi-pending-reqid" />
+                  <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-pending" onClick={refresh}>
+                    {t('agentConsole.v2.ov.retry')}
+                  </button>
+                </>
+              )}
             </span>
           )}
         </div>
@@ -717,11 +856,9 @@ export function OverviewPage() {
           ) : runs7.loading ? null : (
             <span className="ov-kn">
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-runs-error">
-                {t('agentConsole.v2.ov.blockUnavailable', {
-                  block: t('agentConsole.v2.ov.kpiWeekRuns'),
-                  code: runs7.status,
-                })}
+                {t('agentConsole.v2.errorQuery')}
               </span>
+              <ReqId requestId={runs7.requestId} testId="agent-v2-ov-kpi-runs-reqid" />
               <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-runs" onClick={refresh}>
                 {t('agentConsole.v2.ov.retry')}
               </button>
@@ -731,7 +868,7 @@ export function OverviewPage() {
 
         {/* 本月成本 */}
         <div className="ov-card ov-kpi" data-testid="agent-v2-ov-kpi-cost">
-          <a className="ov-kpi-link" href="#ov-cost" aria-label={`${t('agentConsole.v2.ov.kpiMonthCost')} →`} />
+          <NavLink className="ov-kpi-link" to="/agent/metrics?src=ov" aria-label={`${t('agentConsole.v2.ov.kpiMonthCost')} →`} />
           <span className="a2-micro">{t('agentConsole.v2.ov.kpiMonthCost')}</span>
           <div className="ov-kr">
             {cost.loading ? (
@@ -781,17 +918,31 @@ export function OverviewPage() {
               <span className="a2-meta" data-testid="agent-v2-ov-kpi-cost-error">
                 {cost.code === 'agent-console.no-employees'
                   ? t('agentConsole.v2.ov.noteNoEmployees')
-                  : t('agentConsole.v2.ov.blockUnavailable', {
-                      block: t('agentConsole.v2.ov.kpiMonthCost'),
-                      code: cost.status,
-                    })}
+                  : t('agentConsole.v2.errorQuery')}
               </span>
-              <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-cost" onClick={refresh}>
-                {t('agentConsole.v2.ov.retry')}
-              </button>
+              {cost.code === 'agent-console.no-employees' ? null : (
+                <>
+                  <ReqId requestId={cost.requestId} testId="agent-v2-ov-kpi-cost-reqid" />
+                  <button type="button" className="a2-btn ov-xs" data-testid="agent-v2-ov-retry-kpi-cost" onClick={refresh}>
+                    {t('agentConsole.v2.ov.retry')}
+                  </button>
+                </>
+              )}
             </span>
           )}
         </div>
+      </div>
+
+      {/* ②b PRD OV-LIST-01: the 5 most recent runs, each row a real route */}
+      <div className="ov-extra">
+        <RecentRunsBlock state={recentRuns} onRetry={refresh} />
+      </div>
+
+      {/* ②c PRD OV-CARD-01/02: entry cards; a missing upstream (404) hides
+          the card instead of showing a broken door. */}
+      <div className="ov-entryrow">
+        <MatrixEntryCard state={matrix} onRetry={refresh} />
+        <CollabEntryCard state={collab} onRetry={refresh} />
       </div>
 
       {/* ③ queue + ④ trend */}
@@ -905,8 +1056,6 @@ export function OverviewPage() {
             heat: blockTimes.heat ? fmtTimeShort(blockTimes.heat) : '—',
           })}
         </span>
-        <span className="sp" />
-        <span>{t('agentConsole.v2.ov.footerCaliber')}</span>
         <span className="sp" />
         <span data-testid="agent-v2-ov-footer-keys">
           {/* S3: the ⌘K search hint left with the dead global-search pill. */}
@@ -1232,15 +1381,13 @@ function TrendCard({
         <div className="ov-scan">…</div>
       ) : !runs.ok ? (
         <div className="ov-buds">
-          <p className="a2-meta" data-testid="agent-v2-ov-trend-error">
-            {t('agentConsole.v2.ov.blockUnavailable', {
-              block: t('agentConsole.v2.ov.trendTitle'),
-              code: runs.status,
-            })}
-          </p>
-          <button type="button" className="a2-btn" data-testid="agent-v2-ov-retry-trend" onClick={onRetry}>
-            {t('agentConsole.v2.ov.retry')}
-          </button>
+          <BlockError
+            message={t('agentConsole.v2.trendError')}
+            state={runs}
+            onRetry={onRetry}
+            testId="agent-v2-ov-trend-error"
+            retryTestId="agent-v2-ov-retry-trend"
+          />
         </div>
       ) : bars === null || sums.runs === 0 ? (
         <div className="ov-buds">
@@ -1278,7 +1425,6 @@ function TrendCard({
               {unknown > 0
                 ? ` · ${t('agentConsole.v2.ov.trendFootUnknown', { count: unknown, total: sums.runs })}`
                 : ''}
-              {` · ${t('agentConsole.v2.ov.utcBucketNote')}`}
             </span>
             <span className="sp" />
             <span className="lg">{t('agentConsole.v2.ov.trendTodayFrame')}</span>
@@ -1369,20 +1515,22 @@ function HeatCard({
         <div className="ov-scan">…</div>
       ) : !heat.ok ? (
         <div className="ov-buds">
-          <p className="a2-meta" data-testid="agent-v2-ov-heat-error">
-            {t('agentConsole.v2.ov.blockUnavailable', {
-              block: t('agentConsole.v2.ov.heatTitle'),
-              code: heat.status,
-            })}
-          </p>
-          <button type="button" className="a2-btn" data-testid="agent-v2-ov-retry-heat" onClick={onRetry}>
-            {t('agentConsole.v2.ov.retry')}
-          </button>
+          <BlockError
+            message={t('agentConsole.v2.heatError')}
+            state={heat}
+            onRetry={onRetry}
+            testId="agent-v2-ov-heat-error"
+            retryTestId="agent-v2-ov-retry-heat"
+          />
         </div>
       ) : grid === null ? (
-        <p className="ov-empty-line" data-testid="agent-v2-ov-heat-empty">
-          {t('agentConsole.v2.ov.heatEmpty', { count: weeks })}
-        </p>
+        <div className="ov-empty-cta" data-testid="agent-v2-ov-heat-empty">
+          <p className="ov-empty-line">{t('agentConsole.v2.ov.heatEmpty', { count: weeks })}</p>
+          <NavLink className="ov-lnk" to="/agent/runs">
+            {t('agentConsole.v2.ov.trendGoRuns')}
+            <Icon name="arrow" size={13} />
+          </NavLink>
+        </div>
       ) : (
         <>
           <div className="ov-hwrap">
