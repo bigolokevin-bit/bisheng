@@ -135,6 +135,15 @@ export function fmtClock(iso: string | number | null | undefined): string {
 }
 
 /** Asia/Shanghai HH:mm:ss.SSS (event detail occurred time). */
+/** PRD L5 canonical wall clock: Asia/Shanghai YYYY-MM-DD HH:mm (minute precision). */
+export function fmtMinuteFull(iso: string | null | undefined): string {
+  const ms = parseMs(iso);
+  if (ms === null) return '—';
+  const d = new Date(ms + 480 * 60_000);
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
+}
+
 export function fmtStamp(iso: string | null | undefined): string {
   const ms = parseMs(iso);
   if (ms === null) return '—';
@@ -203,7 +212,7 @@ export function fmtGap(ms: number | null): string | null {
 
 /** Raw upstream figure, never re-rounded (0.009875 must not become 0.00). */
 export function fmtCost(costUsd: number | null | undefined): string {
-  return typeof costUsd === 'number' && Number.isFinite(costUsd) ? String(costUsd) : '—';
+  return typeof costUsd === 'number' && Number.isFinite(costUsd) ? `$${String(costUsd)}` : '—';
 }
 
 export function fmtCap(cap: number | null | undefined): string {

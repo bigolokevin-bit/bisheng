@@ -75,7 +75,7 @@ import {
   fmtGap,
   fmtMoment,
   fmtRatio,
-  fmtStamp,
+  fmtMinuteFull,
   fullIso,
   payloadText,
   shortRef,
@@ -825,7 +825,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
             >
               {costStatus === 'unknown' ? (
                 <span className="a2r-unk" title={t('agentConsole.v2.run02.costNoteUnknown')}>
-                  unknown
+                  —
                 </span>
               ) : costMissing ? (
                 <span className="faint">—</span>
@@ -1230,7 +1230,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                 >
                   <span className="a2r-wrap">{t('agentConsole.v2.run02.calEstimatedDesc')}</span>
                 </KVRow>
-                <KVRow k={<span className="mono a2r-raw">unknown</span>}>
+                <KVRow k={<span className="mono a2r-raw">—</span>}>
                   <span className="a2r-wrap">{t('agentConsole.v2.run02.calUnknownDesc')}</span>
                 </KVRow>
               </div>
@@ -1428,14 +1428,14 @@ function StepRowView({ step, gapMs, t }: { step: RunStep; gapMs: number | null; 
         <KV k={t('agentConsole.v2.run02.kvStepSeq')} v={`stepSeq ${step.stepSeq}`} mono />
         <KV
           k={t('agentConsole.v2.run02.kvCall')}
-          v={`seq ${step.callEvent.seq} · ${fmtStamp(step.callEvent.occurredAt)}`}
+          v={`seq ${step.callEvent.seq} · ${fmtMinuteFull(step.callEvent.occurredAt)}`}
           mono
         />
         <KV
           k={t('agentConsole.v2.run02.kvResult')}
           v={
             step.resultEvent
-              ? `seq ${step.resultEvent.seq} · ${fmtStamp(step.resultEvent.occurredAt)}`
+              ? `seq ${step.resultEvent.seq} · ${fmtMinuteFull(step.resultEvent.occurredAt)}`
               : '—'
           }
           mono
@@ -1551,8 +1551,8 @@ function EventRowView({ event, gapMs, t }: { event: TraceEvent; gapMs: number | 
           }
           sans
         />
-        <KV k={t('agentConsole.v2.run02.kvOccurred')} v={fmtStamp(event.occurredAt)} mono title={fullIso(event.occurredAt)} />
-        <KV k={t('agentConsole.v2.run02.kvPulled')} v={fmtStamp(event.pulledAt)} mono title={fullIso(event.pulledAt)} />
+        <KV k={t('agentConsole.v2.run02.kvOccurred')} v={fmtMinuteFull(event.occurredAt)} mono title={fullIso(event.occurredAt)} />
+        <KV k={t('agentConsole.v2.run02.kvPulled')} v={fmtMinuteFull(event.pulledAt)} mono title={fullIso(event.pulledAt)} />
         <KV
           k={t('agentConsole.v2.run02.kvLag')}
           v={
