@@ -158,6 +158,13 @@ export interface ApiResult<T> {
   data: T | null;
   code?: string;
   message?: string;
+  /**
+   * S4.5: the BFF echoes an `X-Console-Request-Id` response header (gateway
+   * fallback: `X-Request-Id`). Success and failure results both carry it when
+   * present so console error screens can show a copyable number instead of
+   * 「未提供」. Absent means genuinely not supplied — pages must not invent it.
+   */
+  requestId?: string;
 }
 
 /** Overview fetch aggregate; each block may fail independently (per-block degradation). */
@@ -510,6 +517,8 @@ export const DEMO_FIXTURES: AgentConsoleFixtures = (() => {
 // ---------------------------------------------------------------------------
 
 export class AuthError extends Error {
+  /** S4.5: request id when the 401 response carried one. */
+  requestId?: string;
   constructor(message = 'login required or expired') {
     super(message);
     this.name = 'AuthError';
@@ -517,6 +526,8 @@ export class AuthError extends Error {
 }
 
 export class UpstreamError extends Error {
+  /** S4.5: request id when the thrown path had a response to read it from. */
+  requestId?: string;
   constructor(message = 'console upstream unavailable') {
     super(message);
     this.name = 'UpstreamError';

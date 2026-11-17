@@ -217,14 +217,14 @@ export function createHttpAuditApi(options: HttpAuditApiOptions = {}): AuditApi 
         data: null,
         code: envelope?.code ?? `agent.http.${res.status}`,
         message: envelope?.message,
-        requestId: res.headers?.get?.('x-request-id') ?? undefined,
+        requestId: res.headers?.get?.('x-console-request-id') ?? res.headers?.get?.('x-request-id') ?? undefined,
       } satisfies AuditApiResult<T>;
     }
     return {
       ok: true,
       status: res.status,
       data: (body ?? {}) as T,
-      requestId: res.headers?.get?.('x-request-id') ?? undefined,
+      requestId: res.headers?.get?.('x-console-request-id') ?? res.headers?.get?.('x-request-id') ?? undefined,
     } satisfies AuditApiResult<T>;
   }
 

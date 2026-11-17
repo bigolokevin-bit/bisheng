@@ -163,7 +163,8 @@ export function useCursorList<T>({
         if (!live) return;
         settled = true;
         busyRef.current = false;
-        setRequestId(null);
+        // S4.5: a thrown adapter error can still carry the gateway id.
+        setRequestId((e as { requestId?: string } | null)?.requestId ?? null);
         if (e instanceof AuthError) {
           authRef.current?.();
           return;
@@ -228,7 +229,7 @@ export function useCursorList<T>({
         settled = true;
         busyRef.current = false;
         setLoadingMore(false);
-        setRequestId(null);
+        setRequestId((e as { requestId?: string } | null)?.requestId ?? null);
         if (e instanceof AuthError) {
           authRef.current?.();
           return;

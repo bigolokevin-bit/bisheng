@@ -162,7 +162,8 @@ export function createHttpAgentConsoleRunsApi(
     } catch {
       throw new UpstreamError('console request failed (network)');
     }
-    if (res.status === 401) throw new AuthError();
+    const rid = res.headers?.get?.('x-console-request-id') ?? undefined;
+    if (res.status === 401) throw Object.assign(new AuthError(), { requestId: rid });
     let body: unknown = null;
     try {
       body = await res.json();
@@ -177,9 +178,10 @@ export function createHttpAgentConsoleRunsApi(
         data: null,
         code: envelope?.code ?? `agent.http.${res.status}`,
         message: envelope?.message,
+        requestId: rid,
       };
     }
-    return { ok: true, status: res.status, data: body as T };
+    return { ok: true, status: res.status, data: body as T, requestId: rid };
   }
 
   return {

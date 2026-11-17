@@ -74,8 +74,10 @@ import './taskDetail.css';
 type HeadView =
   | { kind: 'loading' }
   | { kind: 'ready'; task: TaskDetail; pulledAt: number }
-  | { kind: 'error'; status: number }
-  | { kind: 'forbidden'; status: number };
+  /* S4.5: error/forbidden carry the gateway request id when the BFF echoed
+     one — the error screen prints it instead of 「未提供」. */
+  | { kind: 'error'; status: number; rid?: string }
+  | { kind: 'forbidden'; status: number; rid?: string };
 
 export interface TaskDetailPageProps {
   /** T2 read-only adapter (injectable for tests, HTTP fallback on the page). */
@@ -158,9 +160,9 @@ export function TaskDetailPage({
         if (res.ok && res.data) {
           setHead({ kind: 'ready', task: res.data, pulledAt: Date.now() });
         } else if (res.status === 403 || res.status === 404) {
-          setHead({ kind: 'forbidden', status: res.status });
+          setHead({ kind: 'forbidden', status: res.status, rid: res.requestId });
         } else {
-          setHead({ kind: 'error', status: res.status });
+          setHead({ kind: 'error', status: res.status, rid: res.requestId });
         }
       })
       .catch((err: unknown) => {
@@ -170,7 +172,7 @@ export function TaskDetailPage({
           onAuth();
           return;
         }
-        setHead({ kind: 'error', status: 0 });
+        setHead({ kind: 'error', status: 0, rid: (err as { requestId?: string }).requestId });
       });
     return () => {
       live = false;
@@ -243,7 +245,7 @@ export function TaskDetailPage({
             <Link className="lnk" to="/agent/tasks" data-testid="agent-v2-task-forbidden-back">
               {t('agentConsole.v2.tsk02.backToList')}
             </Link>
-            <ReqId requestId={null} testId="agent-v2-task-forbidden-reqid" />
+            <ReqId requestId={head.rid} testId="agent-v2-task-forbidden-reqid" />
           </StageCard>
         </div>
       </div>
@@ -303,8 +305,8 @@ export function TaskDetailPage({
                 </Link>
               </>
             )}
-            {/* S4: the gateway exposes no request id on this route — say so. */}
-            <ReqId requestId={null} testId="agent-v2-task-error-reqid" />
+            {/* S4.5: the real gateway id when the response carried one. */}
+            <ReqId requestId={head.rid} testId="agent-v2-task-error-reqid" />
           </StageCard>
         </div>
       </div>

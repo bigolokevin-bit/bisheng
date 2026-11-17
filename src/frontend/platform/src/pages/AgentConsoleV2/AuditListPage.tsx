@@ -130,8 +130,16 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
                 ok: true,
                 status: res.status,
                 data: { items: res.data.events, nextCursor: res.data.nextCursor },
+                // S4.5: carry the gateway id so the error screens can print it.
+                requestId: res.requestId,
               }
-            : { ok: false, status: res.status, data: null, code: res.code },
+            : {
+                ok: false,
+                status: res.status,
+                data: null,
+                code: res.code,
+                requestId: res.requestId,
+              },
         );
     },
     [auditApi, query],

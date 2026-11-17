@@ -102,8 +102,10 @@ function backoffSec(failures: number): number {
 type HeadView =
   | { kind: 'loading' }
   | { kind: 'ready'; run: Run; pulledAt: number }
-  | { kind: 'error'; status: number }
-  | { kind: 'forbidden'; status: number };
+  /* S4.5: error/forbidden carry the gateway request id when the BFF echoed
+     one — the error screen prints it instead of 「未提供」. */
+  | { kind: 'error'; status: number; rid?: string }
+  | { kind: 'forbidden'; status: number; rid?: string };
 
 type EventsView =
   | { kind: 'idle' }
@@ -205,9 +207,9 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
         if (res.ok && res.data) {
           setHead({ kind: 'ready', run: res.data, pulledAt: Date.now() });
         } else if (res.status === 403 || res.status === 404) {
-          setHead({ kind: 'forbidden', status: res.status });
+          setHead({ kind: 'forbidden', status: res.status, rid: res.requestId });
         } else {
-          setHead({ kind: 'error', status: res.status });
+          setHead({ kind: 'error', status: res.status, rid: res.requestId });
         }
       })
       .catch((err: unknown) => {
@@ -217,7 +219,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
           onAuth();
           return;
         }
-        setHead({ kind: 'error', status: 0 });
+        setHead({ kind: 'error', status: 0, rid: (err as { requestId?: string }).requestId });
       });
     return () => {
       live = false;
@@ -488,7 +490,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
               {t('agentConsole.v2.run02.backToList')}
             </Link>
             {/* S4: this route exposes no request id — an explicit 「未提供」. */}
-            <ReqId requestId={null} testId="agent-v2-rd-forbidden-reqid" />
+            <ReqId requestId={head.rid} testId="agent-v2-rd-forbidden-reqid" />
           </StageCard>
         </div>
       </div>
@@ -541,7 +543,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                 </Link>
               </>
             )}
-            <ReqId requestId={null} testId="agent-v2-rd-error-reqid" />
+            <ReqId requestId={head.rid} testId="agent-v2-rd-error-reqid" />
           </StageCard>
         </div>
       </div>
