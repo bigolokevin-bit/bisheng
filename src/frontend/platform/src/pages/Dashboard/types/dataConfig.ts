@@ -192,7 +192,7 @@ export interface MetricField {
     type: 'number' | 'percent' | 'duration' | 'storage'    // 数值 百分比 时长 存储大小      
     decimalPlaces: number         // 小数位数
     unit?: string                 // 数量单位（如 K、M、B）
-    suffix?: string               // 单位后缀（如 元、个、次）
+    suffix?: string               // 单位后缀（如 个、次）
     thousandSeparator: boolean    // 是否显示千分位符
   }
 }
