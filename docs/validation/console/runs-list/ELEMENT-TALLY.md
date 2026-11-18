@@ -45,3 +45,19 @@
 - 工程语言：ISO 串只用于查询参数与新鲜度戳，上屏经 `formatMoment`；无裸 JSON 字段名、`undefined`、`NaN`。
 - 四态：加载/正常/空/错齐；错误与 403 屏均带 `ReqId`（`agent-v2-runs-error-reqid` / `-forbidden-reqid` / `agent-v2-rd-error-reqid` / `-forbidden-reqid`），403/404 同体仅状态码不同。
 - 结论：本轮未发现需改代码的缺陷，如实记为「已核销无缺陷」。
+
+## 2026-11-18 RUNS-01-R2 复核（基座 598f8842d3）
+
+说明：`qa-verify/docs/validation/console/runs-list/ACCEPTANCE.md`（RUNS-01-R2 节）在本树不存在（无 `qa-verify/` 目录），本轮按派工六条逐条核对；本树内无该卡可抄，故判据以派工文本为准并在此如实标注。
+
+| 判据 | 证据（本树代码） | 判定 |
+|---|---|---|
+| ① 身份不裸露 | `RunsSection.tsx:432-437` `runEmployeeLabel(...)` → 「员工 · 8 位短码」/「未指派」，全量原值仅进单元格 `title`；注释明写 no `emp_…`/`employee:`/`human:` text node | 满足 |
+| ② 来源列真值 | `runs01.ts:278-322` `SOURCE_FIELDS=['source','triggerType','trigger','sourceSystem']` + `resolveRunSource(run,t)`；`RunsSection.tsx:522-530` 用解析结果，真缺失才 `—` | 满足 |
+| ③ KPI 口径 | `RunsSection.tsx:373` 注释「无数据源的聚合数字逐个点名」；缺源显 `—` 并带脚注 | 满足 |
+| ④ 错误信封 `{code,rid}` | 本页代码不含信封解析（`runs01.ts` 无 `rid/requestId/console.forbidden` 处理）；信封由共享适配层/BFF 负责，422 原生体问题在本页写域外 | 移交（BFF/共享件） |
+| ⑤ `?window=24h/7d/30d` 真生效 | `runs01.ts:79-96` `SINCE_WINDOWS` + `sinceIso()`；`:105-156` `window` 作为 `since` 别名解析、回写时删除该键；请求始终带 `since` | 满足 |
+| ⑥ 四态/断点/文案 | 加载/正常/空/错四态与 403-404 同体沿用既有实现；错误屏人话 + 请求号 + 重试；375/1280×720 沿用既有断点；工程语言零上屏 | 满足 |
+
+结论：本树在 598f8842d3 上已满足 ①②③⑤⑥，本轮无代码改动；④ 属共享适配层/BFF，按写域纪律移交，不计为本页缺陷。
+门禁：vitest 809（派工基线 750，不降）；build `build-runs3` entry `assets/js/index-cjmL27YX.js` sha256 `dfdc02d9e7939e6eefa7b5a754b9ebad8324da1ff4300ff731ea60642170a4a7`，标记 `agent-v2-runs-row` entry 内 0、非 entry `assets/js/shellPages-C6U3HL49.js` 命中。
