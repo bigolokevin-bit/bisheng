@@ -717,7 +717,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
         <div className="card a2r-panel" data-testid="agent-v2-rd-summary">
           <div className="a2r-ch">
             <span className="a2r-cht">{t('agentConsole.v2.run02.summaryTitle')}</span>
-            <span className="a2r-chc mono">R2</span>
+            
             <span className="a2r-sp" />
             <span className="a2r-chn">{t('agentConsole.v2.run02.summaryNote')}</span>
           </div>
