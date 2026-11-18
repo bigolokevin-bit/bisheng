@@ -801,6 +801,32 @@
   flex-wrap: wrap;
 }
 
+/* ---------- TSK-03 深链预填（R2 修单 D3） ---------- */
+/* A value that arrived through ?assignee / ?priority is marked while it still
+ * stands, and the line under the field says in words what was taken from the
+ * link (a person's name, a priority word — never an id, never the wire enum).
+ * Ring only: no colour of its own, so dark and light stay one DOM. */
+.agent-app .a2s-page .lk.tsk03 .field.is-deeplink .inp,
+.agent-app .a2s-page .lk.tsk03 .field.is-deeplink .pri {
+  box-shadow: 0 0 0 1px var(--accent-border);
+}
+.agent-app .a2s-page .lk.tsk03 .field.is-deeplink .inp:focus,
+.agent-app .a2s-page .lk.tsk03 .field.is-deeplink .pri:focus-within {
+  box-shadow: 0 0 0 1px var(--accent-border), 0 0 0 3px hsl(var(--accent) / 0.25);
+}
+.agent-app .a2s-page .lk.tsk03 .dl-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11.5px;
+  line-height: 16px;
+  color: hsl(var(--micro-foreground));
+}
+.agent-app .a2s-page .lk.tsk03 .dl-note .lk-i {
+  flex: none;
+  margin-top: 1px;
+}
+
 /* ---------- 响应式 ---------- */
 /* EMP-02 R3 ⑥ (E08/P8): at 1280x720 the form column runs past the fold, so the
  * primary CTA sat at y773-811 and was unreachable without scrolling. Inside the
@@ -816,6 +842,45 @@
     background: hsl(var(--card));
     box-shadow: 0 -1px 0 var(--hairline);
     padding: 10px 20px;
+  }
+}
+/* TSK-03 R2 fix order D4 / SPEC E01: inside the same 1181-1280 band the action
+ * bar sticks to the bottom of the viewport (rule above), which puts it on top
+ * of whatever the first paint has there — measured before this rule: 备注 box
+ * y637-726 while the sticky bar box sits at y648-705, so the bar covered the
+ * bottom of an editable field. The bar stays; the form column gets a tighter
+ * vertical rhythm in THIS band only, so 备注 ends at y634 (14px clear of the
+ * bar) and the floating bar never covers an editable field. tsk03-only on
+ * purpose: EMP-02 keeps its own measured spacing, and the shared rules above
+ * are untouched. Re-measured 2026-11-18 at 1280x720 dark+light (primary button
+ * y659-695, bottom 695 ≤ 720 with no scroll) — numbers in
+ * docs/validation/console/task-create/ACCEPTANCE.md. */
+@media (min-width: 1181px) and (max-width: 1280px) {
+  .agent-app .a2s-page .lk.tsk03 {
+    gap: 8px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .phead .h1 {
+    font-size: 26px;
+    line-height: 32px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .card-hd {
+    padding: 8px 16px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .fset {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .field {
+    gap: 4px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .fhint {
+    line-height: 14px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .pri {
+    padding: 3px;
+  }
+  .agent-app .a2s-page .lk.tsk03 .pri-opt {
+    padding: 5px 10px;
   }
 }
 @media (max-width: 1180px) {
@@ -835,6 +900,21 @@
   }
 }
 @media (max-width: 767px) {
+  /* TSK-03 R2 fix order D1 / SPEC E15 「主按钮不折字」: at 375x812 the four
+   * characters of 「建立任务」 were drawn 7px below the bottom edge of the
+   * button box (measured before the fix: button y1157-1193, glyph box
+   * y1182-1200, both themes). The fixed 36px height is what cut them: mobile
+   * text autosizing makes the CJK line box taller than the computed 13px, so
+   * a fixed-height button can no longer promise to contain its own label.
+   * The bar may wrap and the button may grow; it may never clip the text.
+   * tsk03 only — EMP-02's 「保存」 (2 chars) keeps the shared rule above. */
+  .agent-app .a2s-page .lk.tsk03 .facts .b {
+    height: auto;
+    min-height: 36px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    line-height: 20px;
+  }
   .agent-app .a2s-page :is(.lk.emp02, .lk.tsk03) .fset {
     padding: 14px;
   }
