@@ -10,9 +10,14 @@
  * - The button REALLY creates: POST /api/tasks with `source: {"kind":"manual"}`,
  *   an `Idempotency-Key` generated once per submission and reused by retries.
  *   No channel, no messageId, no created_by, no status (§5).
- * - Assignees are real employees from E11; offboarding and archived are
+ * - Assignees are real employees from E11; offboarding, archived and draft are
  *   excluded (assigning work to them creates a task that stalls immediately,
- *   §9-2). On-duty and onboarding stay, annotated with their state.
+ *   §9-2, and the domain answers 内容不合格 for a draft assignee — an option
+ *   that can only fail is not a choice). On-duty and onboarding stay,
+ *   annotated with their state.
+ * - A deep link (?assignee=employee:<id> / ?priority=low|normal|high) prefills
+ *   what it can and says in one neutral line what it could not apply; nothing
+ *   is dropped in silence, and no id from the URL is ever put on screen.
  * - No assignee candidates ⇒ the select is NOT rendered at all: a block
  *   explains why, offers 「去新建员工」/「重新读取」, keeps the typed title, and
  *   disables the primary button with a readable reason (E06).
@@ -26,7 +31,7 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { userContext } from '@/contexts/userContext';
 
@@ -74,8 +79,38 @@ interface Candidate {
 }
 
 const PRISTINE = { title: '', assigneeId: '', priority: 'normal', note: '' };
+/* Presentation order only: 1 = 低, 2 = 普通, 3 = 高. The DOM never carries the
+ * wire enum (SPEC §8 E04); the submit body still sends low/normal/high (§5). */
 const PRIORITIES = ['low', 'normal', 'high'] as const;
-const EXCLUDED_LIFECYCLE = new Set(['offboarding', 'archived']);
+/* draft is here because the domain refuses it (task.assignee_invalid): a
+ * candidate that can only ever fail must not be offered as a choice. */
+const EXCLUDED_LIFECYCLE = new Set(['offboarding', 'archived', 'draft']);
+
+interface DeepLink {
+  /** employee:<id> → id; anything else with an assignee= value stays empty */
+  assigneeId: string;
+  /** assignee= was present but not in employee:<id> shape */
+  badAssigneeShape: boolean;
+  priority: string;
+  badPriority: boolean;
+}
+
+/* One read of location.search at mount: a link may name the assignee and the
+   priority; anything it says that this page cannot honour is reported, never
+   swallowed (R2 fix order D3). */
+function parseDeepLink(search: string): DeepLink {
+  const params = new URLSearchParams(search);
+  const rawAssignee = params.get('assignee') ?? '';
+  const rawPriority = params.get('priority') ?? '';
+  const shaped = rawAssignee.startsWith('employee:');
+  const priority = (PRIORITIES as readonly string[]).includes(rawPriority) ? rawPriority : '';
+  return {
+    assigneeId: shaped ? rawAssignee.slice('employee:'.length) : '',
+    badAssigneeShape: Boolean(rawAssignee) && !shaped,
+    priority,
+    badPriority: Boolean(rawPriority) && !priority,
+  };
+}
 /* Bounded candidate walk: enough for a pilot tenant, never an unbounded page
  * chain that could keep the form loading forever. */
 const CANDIDATE_PAGE = 100;
@@ -84,6 +119,7 @@ const CANDIDATE_MAX_PAGES = 3;
 export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof submitWrite>[0]['env'] }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   useConsoleCrumbTail(t('agentConsole.v2.tsk03.crumb'));
 
   const ctx = useContext(userContext) as
@@ -107,6 +143,16 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
   const [copied, setCopied] = useState(false);
   const [escWarn, setEscWarn] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  /* deep link: notices the page must say out loud (locale key names) */
+  const [deepNotices, setDeepNotices] = useState<string[]>([]);
+  /* request id and status of the failed read, so the 无权限 screen can offer
+     them in the collapsed fold and nowhere else (SPEC §5) */
+  const [readRequestId, setReadRequestId] = useState<string | undefined>(undefined);
+  const [readStatus, setReadStatus] = useState<number | undefined>(undefined);
+
+  const linkRef = useRef<DeepLink | null>(null);
+  if (linkRef.current === null) linkRef.current = parseDeepLink(location.search);
+  const linkUsedRef = useRef(false);
 
   const titleRef = useRef<HTMLInputElement | null>(null);
   const assigneeRef = useRef<HTMLSelectElement | null>(null);
@@ -117,6 +163,14 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
 
   const dirty = isDirty(values, PRISTINE);
   const selected = candidates.find((c) => c.id === values.assigneeId) ?? null;
+  /* What the link managed to set stays visible as a highlight plus one plain
+     line; the value itself is shown as the person's name, never as an id. */
+  const deepAssignee = Boolean(linkRef.current?.assigneeId) && values.assigneeId === linkRef.current?.assigneeId;
+  const deepPriority = Boolean(linkRef.current?.priority) && values.priority === linkRef.current?.priority;
+
+  const pushNotice = useCallback((key: string) => {
+    setDeepNotices((prev) => (prev.includes(key) ? prev : [...prev, key]));
+  }, []);
 
   useEffect(
     () => () => {
@@ -143,6 +197,8 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
         if (!live) return;
         if (!res.ok) {
           window.clearTimeout(watchdog);
+          setReadRequestId(res.requestId);
+          setReadStatus(res.status);
           if (res.status === 401) setStage('auth');
           else if (res.status === 403 || res.status === 404) setStage('forbidden');
           else setStage('error');
@@ -170,6 +226,20 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
       }
       usable.sort((a, b) => a.name.localeCompare(b.name));
       setCandidates(usable);
+      setReadRequestId(undefined);
+      setReadStatus(undefined);
+      /* A deep link is consumed once, against the roster it actually got: the
+         id is matched, never trusted, and an id that is not here is reported
+         in user language instead of vanishing. No raw id reaches the screen. */
+      const link = linkRef.current;
+      if (link && !linkUsedRef.current) {
+        linkUsedRef.current = true;
+        if (link.badAssigneeShape) pushNotice('deepBadAssignee');
+        if (link.assigneeId) {
+          if (usable.some((c) => c.id === link.assigneeId)) setValues((p) => ({ ...p, assigneeId: link.assigneeId }));
+          else pushNotice('deepMissingAssignee');
+        }
+      }
       setValues((prev) => {
         if (!prev.assigneeId) return prev;
         return usable.some((c) => c.id === prev.assigneeId) ? prev : { ...prev, assigneeId: '' };
@@ -182,6 +252,16 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
       window.clearTimeout(watchdog);
     };
   }, [reloadToken]);
+
+  /* deep link: the priority needs no roster, so it lands at once. An answer
+     the link never gave is said out loud, in plain words, without red. */
+  useEffect(() => {
+    const link = linkRef.current;
+    if (!link) return undefined;
+    if (link.priority) setValues((prev) => ({ ...prev, priority: link.priority }));
+    else if (link.badPriority) pushNotice('deepBadPriority');
+    return undefined;
+  }, [pushNotice]);
 
   /* Enter the page on the title once candidates are ready (§4 focus). */
   useEffect(() => {
@@ -326,6 +406,7 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
     setFailure(null);
     setResult(null);
     setCopied(false);
+    setDeepNotices([]);
     window.setTimeout(() => titleRef.current?.focus(), 0);
   };
 
@@ -438,6 +519,14 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
   }
 
   if (stage === 'forbidden') {
+    /* What this screen says: one plain explanation and two real exits (返回
+       任务列表 / 重新读取 — the retry re-runs this very read, and if it comes
+       back forbidden again, that is the honest answer). Everything about how
+       the screen is built is gone: no 「逐字相同，只有码不同」, no 「不会先渲染
+       骨架」, no 「不会泄露谁有权限」. Those are construction notes for the
+       reviewer, not words for the person standing here (R2 fix order D2 /
+       SPEC §6). 码值 and 请求编号 live only in the collapsed fold, so 403 and
+       404 keep one body and differ only under the fold (E13). */
     return shell(
       <div className="flow-narrow">
         <div className="card stage" data-testid="agent-v2-tsk-c-forbidden">
@@ -451,9 +540,28 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
               <LkIcon name="arrowLeft" size={16} />
               {t('agentConsole.v2.tsk03.forbiddenBack')}
             </Link>
+            <button
+              type="button"
+              className="b gh"
+              data-testid="agent-v2-tsk-c-forbidden-retry"
+              onClick={() => setReloadToken((n) => n + 1)}
+            >
+              <LkIcon name="refresh" size={16} />
+              {t('agentConsole.v2.tsk03.forbiddenRetry')}
+            </button>
           </div>
-          <p className="vn">{t('agentConsole.v2.tsk03.forbiddenNote')}</p>
-          <TechInfo t={t} rows={[t('agentConsole.v2.tsk03.techStatusForbidden')]} center />
+          <TechInfo
+            t={t}
+            rows={[
+              `${t('agentConsole.v2.tsk03.techRequest')} ${
+                readRequestId ?? t('agentConsole.v2.id.requestIdAbsent')
+              }`,
+              ...(readStatus
+                ? [t('agentConsole.v2.tsk03.techStatusCode', { status: readStatus })]
+                : []),
+            ]}
+            center
+          />
         </div>
       </div>
     );
@@ -529,6 +637,16 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
             ) : null}
 
             <div className="fset">
+              {deepNotices.length ? (
+                /* Neutral line for what the link could not apply: information,
+                   not a fault — no red, no error role, no id on screen. */
+                <div className="roband" role="note" data-testid="agent-v2-tsk-c-deeplink-note">
+                  <LkIcon name="info" size={14} />
+                  <span>
+                    {deepNotices.map((key) => t(`agentConsole.v2.tsk03.${key}`)).join(t('agentConsole.v2.tsk03.sumSep'))}
+                  </span>
+                </div>
+              ) : null}
               {showInvalid ? (
                 <div className="ferrsum" role="alert" data-testid="agent-v2-tsk-c-error-summary">
                   <LkIcon name="alert" size={14} />
@@ -585,7 +703,7 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
                 )}
               </div>
 
-              <div className="field">
+              <div className={`field${deepAssignee ? ' is-deeplink' : ''}`}>
                 <div className="flab">
                   <span className="lbl">{t('agentConsole.v2.tsk03.assigneeLabel')}</span>
                   <span className="tagreq">{t('agentConsole.v2.tsk03.required')}</span>
@@ -651,22 +769,35 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
                         {t('agentConsole.v2.tsk03.assigneeHint', { count: candidates.length })}
                       </div>
                     )}
+                    {deepAssignee && !errors.assignee ? (
+                      <div className="dl-note" data-testid="agent-v2-tsk-c-deeplink-assignee">
+                        <LkIcon name="link" size={13} />
+                        <span>
+                          {t('agentConsole.v2.tsk03.deepAppliedAssignee', {
+                            name: selected?.name || t('agentConsole.v2.id.unnamed'),
+                          })}
+                        </span>
+                      </div>
+                    ) : null}
                   </>
                 )}
               </div>
 
-              <div className="field">
+              <div className={`field${deepPriority ? ' is-deeplink' : ''}`}>
                 <div className="flab">
                   <span className="lbl">{t('agentConsole.v2.tsk03.priorityLabel')}</span>
                   <span className="tagreq opt">{t('agentConsole.v2.tsk03.optional')}</span>
                 </div>
                 <div className="pri" role="radiogroup" aria-label={t('agentConsole.v2.tsk03.priorityLabel')}>
-                  {PRIORITIES.map((p) => (
-                    <label className="pri-opt" key={p} data-testid={`agent-v2-tsk-c-priority-${p}`}>
+                  {PRIORITIES.map((p, index) => (
+                    /* E04: neither the testid nor the input value may carry the
+                       wire enum, so the option is numbered and the value is the
+                       word on screen. The submit body still sends the enum. */
+                    <label className="pri-opt" key={p} data-testid={`agent-v2-tsk-c-priority-${index + 1}`}>
                       <input
                         type="radio"
                         name="priority"
-                        value={p}
+                        value={t(`agentConsole.v2.tsk03.priority.${p}`)}
                         checked={values.priority === p}
                         disabled={submitting}
                         onChange={() => setField('priority', p)}
@@ -677,6 +808,16 @@ export function TaskCreatePage({ writeEnv }: { writeEnv?: Parameters<typeof subm
                   ))}
                 </div>
                 <div className="fhint">{t('agentConsole.v2.tsk03.priorityNote')}</div>
+                {deepPriority ? (
+                  <div className="dl-note" data-testid="agent-v2-tsk-c-deeplink-priority">
+                    <LkIcon name="link" size={13} />
+                    <span>
+                      {t('agentConsole.v2.tsk03.deepAppliedPriority', {
+                        value: t(`agentConsole.v2.tsk03.priority.${values.priority}`),
+                      })}
+                    </span>
+                  </div>
+                ) : null}
               </div>
 
               <div className="field">
