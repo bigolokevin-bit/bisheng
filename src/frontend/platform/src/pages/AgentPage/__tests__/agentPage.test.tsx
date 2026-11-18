@@ -182,6 +182,21 @@ describe('AgentPage shell', () => {
     ).toBe(false);
   });
 
+  // P0 switch card: the flag-off route /agent/employees/:id forwards the id as
+  // initialEmployeeId — the page must mount the detail view directly, skipping
+  // the list, with the same five tabs and no write affordances.
+  it('opens the detail view directly when seeded with initialEmployeeId', async () => {
+    render(<AgentPage api={stub()} initialEmployeeId={EMP1} />);
+    await screen.findByText('v3');
+    expect(screen.queryByText('Koi Claw (stub demo)')).toBeNull();
+    expect(screen.getByRole('tab', { name: 'agentConsole.tabs.overview' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'agentConsole.tabs.chat' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'agentConsole.tabs.tasks' })).toBeInTheDocument();
+    fireEvent.click(screen.getByText('agentConsole.detail.back'));
+    await screen.findByText('Koi Claw (stub demo)');
+    expectNoWriteButtons();
+  });
+
   it('detail view mounts the four tabs and switches to tasks lazily', async () => {
     const base = stub();
     // Inactive tabs are not mounted, so tasks must not be fetched yet.

@@ -29,6 +29,12 @@ export interface AgentPageProps {
    * tests and the visual harness pass `createStubAgentConsoleApi(...)`.
    */
   api?: AgentConsoleApi;
+  /**
+   * Route wiring only (P0 switch card): lets `/agent/employees/:id` open the
+   * detail view directly. The list <-> detail state machine is unchanged;
+   * without this prop the page behaves exactly as before.
+   */
+  initialEmployeeId?: string;
 }
 
 /**
@@ -38,9 +44,9 @@ export interface AgentPageProps {
  * are not mounted, so they issue no requests until opened (Radix unmounts
  * inactive panels).
  */
-export function AgentPage({ api }: AgentPageProps) {
+export function AgentPage({ api, initialEmployeeId }: AgentPageProps) {
   const { t } = useTranslation();
-  const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employeeId, setEmployeeId] = useState<string | null>(initialEmployeeId ?? null);
   const resolvedApi = api ?? getDefaultApi();
 
   if (employeeId) {

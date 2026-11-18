@@ -1,7 +1,7 @@
 // @ts-strict-ignore
 import { lazy, useEffect } from "react";
 import { agentConsoleV2Enabled } from "@/pages/AgentConsoleV2/flag";
-import { Navigate, createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter, useParams } from "react-router-dom";
 import MainLayout from "../layout/MainLayout";
 import { LoginPage } from "../pages/LoginPage/login";
 import { ResetPwdPage } from "../pages/LoginPage/resetPwd";
@@ -37,6 +37,13 @@ const TaskApps = lazy(() => import("@/pages/LabelPage/taskApps"));
 const LogPage = lazy(() => import("@/pages/LogPage").then(module => ({ default: module.LogPage })));
 const AgentConsolePage = lazy(() => import("@/pages/AgentPage").then(module => ({ default: module.AgentPage })));
 const AgentApprovalsPage = lazy(() => import("@/pages/AgentApprovalsPage").then(module => ({ default: module.AgentApprovalsPage })));
+// P0 switch card: with the v2 flag OFF, /agent/employees[/:id] land on the
+// upstream v1 AgentPage (list / detail). This wrapper only forwards the route
+// param as the detail seed — no v1 page logic is re-implemented here.
+const AgentConsoleEmployeeDetailPage = () => {
+  const { id } = useParams();
+  return <AgentConsolePage initialEmployeeId={id} />;
+};
 // P0-15 W1 shell: the L1 routes + 404 live under one rail/topbar shell (parity spec §2).
 // The shell itself stays here; its page children come from the registry in
 // ./consolePages (single-writer seam — page lanes never edit this file).
@@ -131,6 +138,12 @@ const privateRouter = [
         ? []
         : [
             { path: "agent", element: <AgentConsolePage />, permission: "agent" },
+            { path: "agent/employees", element: <AgentConsolePage />, permission: "agent" },
+            {
+              path: "agent/employees/:id",
+              element: <AgentConsoleEmployeeDetailPage />,
+              permission: "agent",
+            },
             {
               path: "agent/approvals",
               element: <AgentApprovalsPage />,

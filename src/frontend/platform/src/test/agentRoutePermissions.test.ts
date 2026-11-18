@@ -15,19 +15,21 @@ const pathsOf = (routes: RouteNode[]): string[] =>
     .filter((path): path is string => typeof path === "string")
 
 describe("agent route permissions (S10b-5)", () => {
+  // P0 switch card: flag-off /agent/employees[/:id] route to the upstream v1
+  // AgentPage; they share the `agent` grant and must be stripped without it.
+  const agentRoutes = ["agent", "agent/employees", "agent/employees/:id", "agent/approvals"] as const
+
   it("strips both agent routes without the agent grant", () => {
     const router = getPrivateRouter(["admin"])
     const paths = pathsOf(router.routes as RouteNode[])
-    expect(paths).not.toContain("agent")
-    expect(paths).not.toContain("agent/approvals")
+    agentRoutes.forEach((p) => expect(paths).not.toContain(p))
     router.dispose()
   })
 
   it("keeps both agent routes with the agent grant", () => {
     const router = getPrivateRouter(["admin", "agent"])
     const paths = pathsOf(router.routes as RouteNode[])
-    expect(paths).toContain("agent")
-    expect(paths).toContain("agent/approvals")
+    agentRoutes.forEach((p) => expect(paths).toContain(p))
     router.dispose()
   })
 
