@@ -77,3 +77,32 @@
 - 计数不变：元素数 33 ｜ 已核销 33 ｜ 核销率 100% ｜ 死控件 0。
 - 不可用/权限未授：无。metrics 全部数据源为只读运行时聚合，页面不依赖写权限。
 - 未测边界：真实后端缺键返回未联调；本轮证据为源码与现有单测口径，未重跑视觉。
+
+## 2026-11-18 本拍复核（基座 0e228d6，MET-02）
+
+> 设计源 `docs/product/design/console-v2/MET01-TARGET-SPEC.md` 在本树不存在（grep 无此文件），无法按 SPEC 行逐条抄录；本节按页面实际区块（A0–A5 + 四态）建表并逐行判定，缺口如实标注。
+
+| elementId | 数据源 | 七态 | 权限 | 去向 | 文案key | 验收腿 | 状态 |
+|---|---|---|---|---|---|---|---|
+| A0-01 页头/口径说明 | runtime summary | 正常/降级/加载/错/403/404 | approval.viewer | 无 | met.a0* | 读 | 已核销 |
+| A0-02 运行健康级别 | summary.sources | ok/degraded/缺 | 同上 | 无 | met.a0Level | 读 | 已核销（缺行落降级） |
+| A1-01 活跃会话 | summary | 有值/0/缺 | 同上 | 无 | met.a1* | 读 | 已核销（缺显—） |
+| A2-01 请求数 | usage | 有值/0/缺 | 同上 | 无 | met.a2Requests | 读 | 已核销 |
+| A2-02 消息数 | usage | 有值/0/缺 | 同上 | 无 | met.a2Messages | 读 | 已核销 |
+| A2-03 tokens | usage | 有值/0/缺 | 同上 | 无 | met.a2Tokens | 读 | 已核销 |
+| A2-04 p95 延迟 | usage | 有值/缺 | 同上 | 无 | met.a2P95 | 读 | 已核销 |
+| A2-05 日期口径 | usage.day | 北京时间到分 | 同上 | 无 | met.a2Day | 读 | 已核销 |
+| A3-01 磁盘 | platform | 有值/缺 | 同上 | 无 | met.a3Disk | 读 | 已核销 |
+| A3-02 psutil | platform | 有值/缺 | 同上 | 无 | met.a3Psutil | 读 | 已核销 |
+| A4-01 分段占比 | trends | 有值/空/degraded | 同上 | 无 | met.a4* | 读 | 已核销（ratio=0 显—，99.6% 不进位） |
+| A4-02 图例/来源空态 | trends | 空态说明 | 同上 | 无 | met.a4SourceEmpty | 读 | 已核销 |
+| A5-01 成本/配额入口 | costs | 有值/缺 | 同上 | /agent/runs | met.a5Link | 读 | 已核销（真跳） |
+| H-01 热力夜间量 | trends heat | 有值/缺 | 同上 | 无 | met.heatNight | 读 | 已核销（缺显—） |
+| H-02 峰值小时 | trends heat | 有值/缺 | 同上 | 无 | met.heatPeak | 读 | 已核销 |
+| H-03 总量 | trends heat | 有值/缺 | 同上 | 无 | met.heatTotal | 读 | 已核销 |
+| ST-01 加载骨架 | — | 骨架不显示读数 | — | — | met.loading | 读 | 已核销 |
+| ST-02 空态 | — | 说明+去处 | — | /agent | met.empty* | 读 | 已核销 |
+| ST-03 错误态 | — | 人话+请求编号(缺失显未提供)+重试 | — | — | met.error* | 读 | 已核销 |
+| ST-04 403/404 整页同体 | — | 中性人话，HTTP 码只进 title | — | 返回列表 | met.forbidden* | 读 | 已核销（本拍去掉可见 HTTP 码） |
+
+小计：20 元素 / 20 已核销 / 核销率 100% / 死控件 0。
