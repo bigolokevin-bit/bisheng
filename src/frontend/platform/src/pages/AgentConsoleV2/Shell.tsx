@@ -401,16 +401,8 @@ export function AgentConsoleShell() {
               ) : null}
             </nav>
             <span className="a2s-sp" aria-hidden="true" />
-            {/* S3: global search has no backend — an honest static note
-                replaces the dead input + ⌘K affordance. */}
-            <span
-              className="a2s-search is-static"
-              data-testid="agent-v2-search-off"
-              title={t('agentConsole.v2.shellSearchOff')}
-            >
-              <RailIcon name="search" size={14} />
-              <span className="a2s-search-off">{t('agentConsole.v2.shellSearchOff')}</span>
-            </span>
+            {/* S3/G8: the dead global-search affordance is gone — no backend
+                stands behind it, so the topbar shows no search at all. */}
             <span
               className="a2s-chip"
               data-testid="agent-v2-env-chip"
