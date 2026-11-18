@@ -43,7 +43,7 @@ const RUN_CAP = 4;
 
 type RowRuns =
   | { state: 'loading' }
-  | { state: 'failed' }
+  | { state: 'failed'; requestId?: string }
   | { state: 'ok'; total: number; ok: number; fail: number };
 
 const LIFECYCLE_KEYS = new Set([
@@ -65,7 +65,7 @@ function isAuthFailure(res: ApiRes<unknown>): boolean {
 }
 
 function isForbidden(res: ApiRes<unknown>): boolean {
-  return res.status === 403 || res.code === 'console.forbidden';
+  return res.status === 403 || res.status === 404 || res.code === 'console.forbidden';
 }
 
 export function EmployeesListPage() {
@@ -157,7 +157,7 @@ export function EmployeesListPage() {
       });
       if (cancelled) return;
       if (!res.ok) {
-        setRuns((prev) => ({ ...prev, [row.employeeId]: { state: 'failed' } }));
+        setRuns((prev) => ({ ...prev, [row.employeeId]: { state: 'failed', requestId: res.requestId } }));
         return;
       }
       const sum = bucketSum(res.data?.buckets);
@@ -240,7 +240,7 @@ export function EmployeesListPage() {
       return (
         <span
           className="emp-muted"
-          title={t('agentConsole.v2.ov.blockUnavailable', { block: t('agentConsole.v2.navEmployees'), code: moreError.status })}
+          title={`${t('agentConsole.v2.runsError')} · ${t('agentConsole.v2.id.requestId')} ${stat.requestId ?? t('agentConsole.v2.id.absent')}`}
           data-testid={`agent-v2-emp-runs-${row.employeeId}`}
         >
           —
@@ -338,7 +338,7 @@ export function EmployeesListPage() {
             <p className="a2-meta">{t('agentConsole.v2.emp.authHint')}</p>
           </div>
         ) : isForbidden(listError) ? (
-          <div className="a2-card emp-state" data-testid="agent-v2-employees-403">
+          <div className="a2-card emp-state" data-testid={listError.status === 404 ? 'agent-v2-employees-404' : 'agent-v2-employees-403'}>
             <h2 className="a2-h2">{t('agentConsole.v2.emp.noPermission')}</h2>
             <p className="a2-meta">{t('agentConsole.v2.emp.forbiddenHint')}</p>
             <ReqId requestId={listError.requestId} testId="agent-v2-employees-403-rid" />
@@ -349,10 +349,7 @@ export function EmployeesListPage() {
             <p className="a2-meta">
               {listError.status === 0
                 ? t('agentConsole.v2.ed.readFailedDesc')
-                : t('agentConsole.v2.ov.blockUnavailable', {
-                    block: t('agentConsole.v2.navEmployees'),
-                    code: listError.status,
-                  })}
+                : t('agentConsole.v2.errorQuery')}
             </p>
             <ReqId requestId={listError.requestId} testId="agent-v2-employees-error-rid" />
             <button
@@ -414,7 +411,8 @@ export function EmployeesListPage() {
                       >
                         {employeeDisplayName({ id: row.employeeId, name: row.name }, dups, t)}
                       </Link>
-                      <span className={`a2-pill emp-pill is-${row.lifecycleState}`}>
+                      <span className={`a2-pill emp-pill is-${row.lifecycleState}`}
+                      title={row.lifecycleState}>
                         {t(lifecycleKey(row.lifecycleState))}
                       </span>
                     </span>
@@ -458,10 +456,7 @@ export function EmployeesListPage() {
                 <span className="a2-meta">
                   {moreError.status === 0
                     ? t('agentConsole.v2.ed.readFailedDesc')
-                    : t('agentConsole.v2.ov.blockUnavailable', {
-                        block: t('agentConsole.v2.navEmployees'),
-                        code: moreError.status,
-                      })}
+                    : t('agentConsole.v2.errorQuery')}
                 </span>
                 <ReqId requestId={moreError.requestId} />
                 <button type="button" className="a2-btn" onClick={loadMore} data-testid="agent-v2-emp-next-retry">
