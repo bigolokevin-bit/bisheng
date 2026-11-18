@@ -163,8 +163,8 @@ describe('EMP-03 employee detail honesty', () => {
     renderDetail();
     const row = await screen.findByTestId('agent-v2-ed-budget-row');
     expect(row.textContent).toContain('月度成本上限 $10.00');
-    expect(row.textContent).toContain('日 token 额度 未配置');
-    expect(row.textContent).toContain('单次上限 未配置');
+    expect(row.textContent).toContain('日 token 额度 —');
+    expect(row.textContent).toContain('单次上限 —');
     expect(row.textContent).not.toContain('USD');
   });
 
@@ -212,12 +212,14 @@ describe('EMP-03 employee detail honesty', () => {
     );
   });
 
-  it('separates forbidden from not found', async () => {
+  it('shows the same neutral body for 403 and 404', async () => {
     detailStatus = 403;
     detailBody = { code: 'console.forbidden' };
     renderDetail();
     const card = await screen.findByTestId('agent-v2-ed-forbidden');
-    expect(card.textContent).toContain('无权限查看该员工');
+    expect(card.textContent).toContain('员工不存在或无权访问');
+    expect(card.textContent).not.toContain('无权限查看该员工');
+    expect(card.textContent).toContain('req-1');
   });
 
   it('separates an expired session from both access states', async () => {

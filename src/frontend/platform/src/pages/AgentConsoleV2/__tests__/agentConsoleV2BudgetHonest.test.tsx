@@ -148,13 +148,13 @@ describe('EmployeeDetailPage budget limits (GAP-2 honest empty state)', () => {
     expect(text).not.toContain('token 额度 0');
   });
 
-  it('only the configured limits print; the unset ones say 未配置', async () => {
+  it('only the configured limit prints; missing keys stay —', async () => {
     versionBudget = { monthlyCostUsd: 10 };
     renderDetail();
     const text = await budgetRowText();
-    expect(text).toContain('日 token 额度 未配置');
+    expect(text).toContain('日 token 额度 —');
     expect(text).toContain('月度成本上限 $10.00');
-    expect(text).toContain('单次上限 未配置');
+    expect(text).toContain('单次上限 —');
     expect(text).not.toContain('USD 0.00');
   });
 
@@ -168,14 +168,24 @@ describe('EmployeeDetailPage budget limits (GAP-2 honest empty state)', () => {
     expect(text).not.toContain('未配置');
   });
 
-  it('a configured zero is still a real zero, not 未配置', async () => {
+  it('zeros mean “no limit”, never a fake $0.00 budget', async () => {
     versionBudget = { dailyTokens: 0, monthlyCostUsd: 0, perRunMaxUsd: 0 };
     renderDetail();
     const text = await budgetRowText();
-    expect(text).toContain('日 token 额度 0');
-    expect(text).toContain('月度成本上限 $0.00');
-    expect(text).toContain('单次上限 $0.00');
-    expect(text).not.toContain('未配置');
+    expect(text.trim()).toBe('本版本未配置预算');
+    expect(text).not.toContain('$0.00');
+    expect(text).not.toContain('token 额度 0');
+  });
+
+  it('asks runs for a bounded window and audit for an actor filter', async () => {
+    renderDetail();
+    await screen.findByTestId('agent-v2-ed-banner');
+    const urls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map((c) => String(c[0]));
+    const runsUrl = urls.find((u) => u.includes('/api/runs'));
+    const auditUrl = urls.find((u) => u.includes('/api/audit'));
+    expect(runsUrl).toContain('since=');
+    expect(auditUrl).toContain('actorId=');
+    expect(auditUrl).not.toContain('employeeId=');
   });
 
   it('shows the owner and Beijing effective time, and discloses the danger zone with zero controls', async () => {

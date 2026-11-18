@@ -51,6 +51,7 @@ import {
 } from './v2Data';
 
 import { HelpTip } from './HelpTip';
+import './employeeDetail.css';
 import { KpiSpark } from './OverviewBlocks';
 import type { OverviewQueueBody } from './OverviewBlocks';
 
@@ -213,9 +214,9 @@ export function EmployeeDetailPage() {
           assignee: `employee:${id}`,
           limit: 20,
         }),
-        fetch<OverviewQueueBody>('/api/runs', { employeeId: id, limit: 20 }),
+        fetch<OverviewQueueBody>('/api/runs', { employeeId: id, since: w30.from, limit: 20 }),
         fetch<{ events?: UnknownRecord[] }>('/api/audit', {
-          employeeId: id,
+          actorId: `employee:${id}`,
           from: w30.from,
           to: w30.to,
           limit: 20,
@@ -241,7 +242,7 @@ export function EmployeeDetailPage() {
 
   if (loading && !detail.ok && detail.status === 0) {
     return (
-      <div className="a2s-page" data-testid="agent-v2-employee-detail">
+      <div className="a2s-page ed-page" data-testid="agent-v2-employee-detail">
         <p className="a2-meta">{t('agentConsole.v2.loading')}</p>
       </div>
     );
@@ -252,7 +253,7 @@ export function EmployeeDetailPage() {
    * 401/403/404 answers reach the access states below. */
   if (!detail.ok && !detail.loading && detail.status === 0) {
     return (
-      <div className="a2s-page" data-testid="agent-v2-employee-detail">
+      <div className="a2s-page ed-page" data-testid="agent-v2-employee-detail">
         <div className="a2-card" data-testid="agent-v2-ed-readFailed">
           <h1 className="a2-h1">{t('agentConsole.v2.ed.readFailedTitle')}</h1>
           <p className="a2-meta">{t('agentConsole.v2.ed.readFailedDesc')}</p>
@@ -274,7 +275,7 @@ export function EmployeeDetailPage() {
    * whether the employee exists, so it must never borrow the 404 copy. */
   if (!detail.ok && detail.status >= 500) {
     return (
-      <div className="a2s-page" data-testid="agent-v2-employee-detail">
+      <div className="a2s-page ed-page" data-testid="agent-v2-employee-detail">
         <div className="a2-card" data-testid="agent-v2-ed-unavailable">
           <h1 className="a2-h1">{t('agentConsole.v2.ed.readFailedTitle')}</h1>
           <p className="a2-meta">{t('agentConsole.v2.errorQuery')}</p>
@@ -302,10 +303,11 @@ export function EmployeeDetailPage() {
         : detail.status === 403
           ? 'forbidden'
           : 'notFound';
+    const accessKey = detail.status === 401 ? 'unauthorized' : 'notFound';
     return (
-      <div className="a2s-page" data-testid="agent-v2-employee-detail">
+      <div className="a2s-page ed-page" data-testid="agent-v2-employee-detail">
         <div className="a2-card" data-testid={`agent-v2-ed-${code}`}>
-          <h1 className="a2-h1">{t(`agentConsole.v2.ed.${code}`)}</h1>
+          <h1 className="a2-h1">{t(`agentConsole.v2.ed.${accessKey}`)}</h1>
           <p className="a2-meta">
             <NavLink className="a2-btn" to="/agent/employees">
               {t('agentConsole.v2.ed.back')}
@@ -355,11 +357,11 @@ export function EmployeeDetailPage() {
   );
 
   return (
-    <div className="a2s-page" data-testid="agent-v2-employee-detail">
+    <div className="a2s-page ed-page" data-testid="agent-v2-employee-detail">
       {/* header */}
       <div className="a2s-topbar" style={{ justifyContent: 'space-between' }}>
         <h1 className="a2-h1">{name}</h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="ed-head-actions">
           <span className="a2-micro" data-testid="agent-v2-ed-updated">
             {updatedAt
               ? `${t('agentConsole.v2.ed.updated')} ${updatedAt}`
@@ -380,7 +382,7 @@ export function EmployeeDetailPage() {
       </div>
 
       {/* identity banner */}
-      <div className="a2-card" data-testid="agent-v2-ed-banner" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+      <div className="a2-card ed-banner" data-testid="agent-v2-ed-banner">
         <div
           className="a2-avatar"
           aria-hidden
@@ -680,19 +682,19 @@ export function EmployeeDetailPage() {
                 value:
                   budgetShape.dailyTokens != null
                     ? String(budgetShape.dailyTokens)
-                    : budgetUnset,
+                    : '—',
               })}{' · '}
               {t('agentConsole.v2.ed.budgetMonthly', {
                 value:
                   budgetShape.monthlyUsd != null
                     ? fmtMoney(budgetShape.monthlyUsd)
-                    : budgetUnset,
+                    : '—',
               })}{' · '}
               {t('agentConsole.v2.ed.budgetPerRun', {
                 value:
                   budgetShape.perRunUsd != null
                     ? fmtMoney(budgetShape.perRunUsd)
-                    : budgetUnset,
+                    : '—',
               })}
             </p>
           ) : (
@@ -789,21 +791,32 @@ export function EmployeeDetailPage() {
               {t('agentConsole.v2.ed.tasksEmpty')}
             </p>
           ) : (
-            (tasks.data?.items ?? []).map((it, i) => (
-              <div
-                key={str(it, ['id', 'taskId']) || i}
-                className="a2-card-item"
-                data-testid="agent-v2-ed-task-row"
-              >
-                <p className="a2-meta">
-                  {str(it, ['title', 'name', 'summary']) || '—'} ·{' '}
-                  {(() => {
-                    const raw = str(it, ['status', 'state']);
-                    return raw && TASK_STATUS[raw] ? t(`agentConsole.v2.tsk.statusLabel.${TASK_STATUS[raw]}`) : '—';
-                  })()}
-                </p>
-              </div>
-            ))
+            (tasks.data?.items ?? []).map((it, i) => {
+              const taskId = str(it, ['taskId', 'id']);
+              return (
+                <div
+                  key={taskId || i}
+                  className="a2-card-item"
+                  data-testid="agent-v2-ed-task-row"
+                >
+                  <p className="a2-meta">
+                    {str(it, ['title', 'name', 'summary']) || '—'} ·{' '}
+                    {(() => {
+                      const raw = str(it, ['status', 'state']);
+                      return raw && TASK_STATUS[raw] ? t(`agentConsole.v2.tsk.statusLabel.${TASK_STATUS[raw]}`) : '—';
+                    })()}
+                    {taskId ? (
+                      <>
+                        {' · '}
+                        <NavLink to={`/agent/tasks/${encodeURIComponent(taskId)}`}>
+                          {t('agentConsole.v2.collab.list.view')}
+                        </NavLink>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              );
+            })
           )}
         </div>
       ) : null}

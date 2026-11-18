@@ -1,0 +1,21 @@
+/* EMP-03 page-local layout: the shell topbar row carries three actions on a
+ * narrow viewport; let them wrap instead of pushing the page wider than 375. */
+.agent-app .ed-head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.agent-app .ed-head-actions .a2-btn { flex: 0 0 auto; }
+.agent-app .ed-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.agent-app .ed-page .a2-card-item { min-width: 0; }
+.agent-app .ed-page .a2-meta { overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .agent-app .ed-head-actions { width: 100%; }
+}
