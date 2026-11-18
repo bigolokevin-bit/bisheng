@@ -1,0 +1,135 @@
+/**
+ * RUN-01 page-scoped layout (shared geometry stays in listkit.css).
+ *
+ * Closes the two RUNS-01-R2 visual gaps:
+ * - D2 (375): ten columns cannot live inside 375px. The ≤767 block turns each
+ *   row into a card — the header disappears and every cell prints its own
+ *   caption from `data-l` (the aud01 row-card idiom, deep/06 §5.6), so no
+ *   column is clipped mid-glyph and the page has zero horizontal overflow.
+ *   The horizontal-scroll hint hides here because there is nothing left to
+ *   scroll.
+ * - D4 (1280×720): the suite's 1100px table floor left ~15px of slack next to
+ *   the scrollbar. The runs table carries no long free-text column, so its
+ *   floor drops to 980px between 1280 and 1360, and the head/meta stack
+ *   tighter so the filter bar and the first rows stay above the fold.
+ *
+ * Tokens only — no new colors, no new components, no frosted glass.
+ */
+
+/* ---------- 1280–1360: the table must not outgrow the card (D4) ---------- */
+@media (min-width: 1280px) and (max-width: 1360px) {
+  .agent-app .lk.runs01 table.tbl {
+    min-width: 980px;
+  }
+  .agent-app .lk.runs01 .phead .h1 {
+    font-size: 28px;
+    line-height: 36px;
+  }
+  /* Fold the page head before the table: 720px height has no room to spare. */
+  .agent-app .lk.runs01 .phead {
+    gap: 12px;
+  }
+  .agent-app .lk.runs01 .phead .sub {
+    font-size: 12.5px;
+    line-height: 20px;
+  }
+}
+
+/* ---------- ≤767: rows become cards, page never scrolls sideways -------- */
+@media (max-width: 767px) {
+  .agent-app .lk.runs01 .tblhint {
+    display: none;
+  }
+  .agent-app .lk.runs01 table.tbl {
+    min-width: 0;
+  }
+  .agent-app .lk.runs01 .tbl thead {
+    display: none;
+  }
+  .agent-app .lk.runs01 .tbl,
+  .agent-app .lk.runs01 .tbl tbody,
+  .agent-app .lk.runs01 .tbl tr,
+  .agent-app .lk.runs01 .tbl td {
+    display: block;
+    width: auto;
+  }
+  .agent-app .lk.runs01 .tbl tbody tr {
+    border-bottom: 1px solid var(--hairline);
+    padding: 4px 0;
+  }
+  .agent-app .lk.runs01 .tbl tr td {
+    height: auto;
+    min-width: 0;
+    padding: 7px 14px;
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+    white-space: normal;
+  }
+  .agent-app .lk.runs01 .tbl tr td::before {
+    content: attr(data-l);
+    flex: none;
+    min-width: 56px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: hsl(var(--micro-foreground));
+  }
+  .agent-app .lk.runs01 .tbl td:first-child {
+    padding-top: 12px;
+  }
+  .agent-app .lk.runs01 .tbl td:last-child {
+    padding-bottom: 12px;
+  }
+  /* A card cell owns its content width: the fixed table columns are gone. */
+  .agent-app .lk.runs01 .tbl td.lk-td-who {
+    overflow: visible;
+  }
+  .agent-app .lk.runs01 .who {
+    justify-content: flex-end;
+  }
+  .agent-app .lk.runs01 .cost {
+    align-items: flex-end;
+  }
+  .agent-app .lk.runs01 .src {
+    white-space: normal;
+    justify-content: flex-end;
+    text-align: right;
+  }
+  /* Touch has no hover: the copy affordance must be visible, and it is
+     static so it cannot add to scrollWidth (same lesson as aud01). */
+  .agent-app .lk.runs01 .cp {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .agent-app .lk.runs01 .cp .cc {
+    position: static;
+    transform: none;
+    display: inline-flex;
+    opacity: 1;
+    width: 24px;
+    height: 24px;
+    flex: none;
+    margin-left: 2px;
+  }
+  .agent-app .lk.runs01 .cp .tp {
+    left: auto;
+    right: 0;
+    transform: none;
+    max-width: 220px;
+    white-space: normal;
+    text-align: right;
+  }
+  /* The stacked head must not push the filter bar under the fold. */
+  .agent-app .lk.runs01 .phead .h1 {
+    font-size: 22px;
+    line-height: 30px;
+  }
+  .agent-app .lk.runs01 .fresh {
+    gap: 6px;
+    line-height: 18px;
+  }
+}

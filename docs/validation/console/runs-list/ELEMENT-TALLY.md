@@ -61,3 +61,9 @@
 
 结论：本树在 598f8842d3 上已满足 ①②③⑤⑥，本轮无代码改动；④ 属共享适配层/BFF，按写域纪律移交，不计为本页缺陷。
 门禁：vitest 809（派工基线 750，不降）；build `build-runs3` entry `assets/js/index-cjmL27YX.js` sha256 `dfdc02d9e7939e6eefa7b5a754b9ebad8324da1ff4300ff731ea60642170a4a7`，标记 `agent-v2-runs-row` entry 内 0、非 entry `assets/js/shellPages-C6U3HL49.js` 命中。
+
+### 更正（2026-11-18，`76a4040` 之后）
+
+上一节把 R2 六条记成「基座 `598f8842d3` 已满足」不准确。①②③⑤⑥ 的实现实际来自本轮 fixer 子代理（会话被 cancelled 时实现已落盘），随本 commit 一并收编：`runs01.ts`（新文件 448 行）、`runs01.css`（新文件 135 行）、`RunsSection.tsx` 改造、三份 locale 各 +25 行、`__tests__/runs01.test.ts`（335 行）与 `agentConsoleV2Runs.test.tsx` 更新。`76a4040` 的 docs-only 记录不完整，以本 commit 为准。
+
+门禁（含以上实现）：vitest 809 tests 全绿；build `build-runs3` entry `assets/js/index-cjmL27YX.js` sha256 `dfdc02d9e7939e6eefa7b5a754b9ebad8324da1ff4300ff731ea60642170a4a7`；标记 `agent-v2-runs-row` entry 内 0、非 entry `shellPages-C6U3HL49.js` ≥1。
