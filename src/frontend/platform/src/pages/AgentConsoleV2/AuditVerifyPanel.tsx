@@ -413,7 +413,7 @@ function VerifyTruncated({
       <div className="tail">
         <div className="kv">
           <span className="k">{t('agentConsole.v2.aud01.verifyGateLabel')}</span>
-          <span className="mono">ok = {String(result.ok)} · complete = {String(result.complete)}</span>
+          <span className="hd-note">扫描被上限截断，未覆盖整个窗口</span>
           <span className="hd-note">{t('agentConsole.v2.aud01.verifyS2Note')}</span>
         </div>
         <div className="kv">
@@ -439,7 +439,7 @@ function VerifyBroken({
   result: AuditVerifyResult;
   scannedText: string;
 }) {
-  const ids = useMemo(() => result.brokenEventIds ?? [], [result]);
+  const ids = useMemo(() => (result.brokenEventIds ?? []).slice(0, BROKEN_IDS_LIMIT), [result]);
   const broken = result.brokenCount ?? ids.length;
   const capped = ids.length >= BROKEN_IDS_LIMIT;
   return (
@@ -488,19 +488,14 @@ function VerifyBroken({
       <div className="tail">
         <div className="kv">
           <span className="k">{t('agentConsole.v2.aud01.verifyGateLabel')}</span>
-          <span className="mono">
-            ok = false · complete = {String(result.complete)} · brokenCount = {broken}
-          </span>
+          <span className="hd-note">本次校验未通过（链不连续）</span>
         </div>
         <div className="kv">
           <span className="k">{t('agentConsole.v2.aud01.verifyLimitLabel')}</span>
           <span className="hd-note">
             {capped
-              ? t('agentConsole.v2.aud01.verifyLimitCapped', { n: BROKEN_IDS_LIMIT })
-              : t('agentConsole.v2.aud01.verifyLimitOk', {
-                  n: BROKEN_IDS_LIMIT,
-                  m: ids.length,
-                })}
+              ? `最多列出前 ${BROKEN_IDS_LIMIT} 条；本次共 ${broken} 处`
+              : `${ids.length} 处断点全部列出`}
           </span>
         </div>
         {result.anchorCheckpointId || result.chainHeadHash ? (
@@ -528,7 +523,6 @@ function VerifyBroken({
 
 function VerifyFailed({
   t,
-  httpStatus,
   requestId,
   hideCode = false,
   onRetry,
@@ -539,7 +533,6 @@ function VerifyFailed({
   hideCode?: boolean;
   onRetry: () => void;
 }) {
-  const code = httpStatus > 0 ? `HTTP ${httpStatus}` : t('agentConsole.v2.aud01.networkError');
   return (
     <div className="cv s4" role="alert" data-testid="aud01-verify-s4">
       <div className="top">
@@ -550,9 +543,8 @@ function VerifyFailed({
           <div className="h">{t('agentConsole.v2.aud01.verifyS4Title')}</div>
           {hideCode ? null : (
             <div className="s">
-              {t('agentConsole.v2.aud01.verifyS4DescPre')}
-              <span className="mono">{code}</span>
-              {t('agentConsole.v2.aud01.verifyS4DescPost')}
+              {t('agentConsole.v2.aud01.verifyS4DescPre').replace(/[（(]\s*$/, '')}
+              {t('agentConsole.v2.aud01.verifyS4DescPost').replace(/^\s*[)）]\s*/, '')}
             </div>
           )}
         </div>
