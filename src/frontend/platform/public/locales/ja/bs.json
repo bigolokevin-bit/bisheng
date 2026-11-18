@@ -6954,7 +6954,13 @@
         "footSourcePre": "データ源：A7 チェーン検証 + ",
         "footSourcePost": " + Bisheng セッション（読み取り専用）",
         "footCaliber": "口径：三状態の不明≠オフ · sanitized は真偽値と接続種別のみ · ルールと読み取り値を分離 · total なし · degraded を 0 にしない",
-        "footZeroWrite": "本ページは書き込み入口ゼロ：書き込みも危険操作も描画しません"
+        "footZeroWrite": "本ページは書き込み入口ゼロ：書き込みも危険操作も描画しません",
+        "fDeadLetterLabel": "送信バックログ",
+        "nChannelSafe": "ランタイムの報告値です。未有効のチャネルは表示しません",
+        "aRecipientBodySafe": "受信者は従業員の担当者マッピングから取得され、編集可能なリストではありません。",
+        "channelHermes": "Hermes ランタイム",
+        "metaSources": "データソース：監査チェーン検証、Hermes セッション概要、Bisheng セッション（読み取り専用）",
+        "navSwipeHint": "左右にスワイプして表示"
       },
     "skills": {
       "title": "スキルガバナンス",

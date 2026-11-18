@@ -363,3 +363,16 @@
     padding-right: 14px;
   }
 }
+/* 375: the section nav scrolls sideways; say so instead of clipping silently. */
+.agent-app .a2s1 .s1nav-hint {
+  display: none;
+}
+@media (max-width: 767px) {
+  .agent-app .a2s1 .s1nav-hint {
+    display: block;
+    padding: 2px 12px 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: hsl(var(--muted-foreground));
+  }
+}
