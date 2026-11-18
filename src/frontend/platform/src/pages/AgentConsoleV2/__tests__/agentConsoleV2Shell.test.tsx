@@ -102,18 +102,38 @@ describe('AgentConsoleShell (W1)', () => {
     expect(account.textContent).toBeTruthy();
   });
 
-  it('S3: dead controls are gone — search is a static note, account has no menu shell', () => {
+  it('S3/G8: dead controls are gone — no search affordance, account has no menu shell', () => {
     const { container } = renderShell('/agent');
-    // the search slot is a passive note, not an input with a ⌘K promise
-    expect(screen.getByTestId('agent-v2-search-off')).toHaveTextContent(
-      'agentConsole.v2.shellSearchOff',
-    );
+    // G8: the unusable 「搜索暂不可用」 slot was removed from the topbar, not
+    // relabelled — there is no search note, no input and no ⌘K promise left.
+    expect(screen.queryByTestId('agent-v2-search-off')).toBeNull();
+    expect(container.querySelector('.a2s-search')).toBeNull();
     expect(container.querySelector('.a2s-search input')).toBeNull();
     expect(container.querySelector('.a2s-search-kbd')).toBeNull();
     // the account label never opened a menu: no chevron icon inside it
     const account = screen.getByTestId('agent-v2-account');
     expect(account.tagName).toBe('SPAN');
     expect(account.querySelector('svg path[d^="m6 9 6 6"]')).toBeNull();
+  });
+
+  it('S3/G8: the retired 「搜索暂不可用」 copy never reaches the shell DOM', () => {
+    const { container } = renderShell('/agent');
+    expect(container.textContent).not.toContain('agentConsole.v2.shellSearchOff');
+  });
+
+  it('theme toggle exposes a readable label and flips both ways', () => {
+    renderShell('/agent');
+    const toggle = screen.getByTestId('agent-v2-theme-toggle');
+    const shell = screen.getByTestId('agent-console-shell');
+    expect(toggle.tagName).toBe('BUTTON');
+    expect(toggle).toHaveAttribute('aria-label', 'agentConsole.v2.themeToggle');
+    expect((toggle.getAttribute('aria-label') ?? '').trim().length).toBeGreaterThan(0);
+    expect(shell).toHaveAttribute('data-theme', 'dark');
+    fireEvent.click(toggle);
+    expect(shell).toHaveAttribute('data-theme', 'light');
+    fireEvent.click(toggle);
+    expect(shell).toHaveAttribute('data-theme', 'dark');
+    expect(window.localStorage.getItem('agentConsole.v2.theme')).toBe('dark');
   });
 
   it('keeps the default two-segment crumb and only appends an opted-in detail tail', () => {
