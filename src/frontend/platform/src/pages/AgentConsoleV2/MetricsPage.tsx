@@ -610,10 +610,9 @@ export function MetricsPage({ fetcher: fetcherProp }: MetricsPageProps) {
             <MetIcon name="lock" size={20} />
           </span>
           <div className="t">{t('agentConsole.v2.met.forbiddenTitle')}</div>
-          <div className="s">
-            {t('agentConsole.v2.met.forbiddenBodyPre')}
-            <span className="a2-mono">HTTP 403</span>
-            {t('agentConsole.v2.met.forbiddenBodyPost')}
+          <div className="s" title="HTTP 403">
+            {t('agentConsole.v2.met.forbiddenBodyPre').replace(/[（(]\s*$/, '')}
+            {t('agentConsole.v2.met.forbiddenBodyPost').replace(/^\s*[）)]/, '')}
           </div>
           <div className="acts2">
             <NavLink className="met-b out" to="/agent/employees" data-testid="agent-v2-met-forbidden-back">

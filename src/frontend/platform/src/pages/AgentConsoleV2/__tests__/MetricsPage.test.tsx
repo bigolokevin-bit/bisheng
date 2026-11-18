@@ -465,7 +465,10 @@ describe('MET-01 auth/error triage by code', () => {
     renderPage();
     await screen.findByTestId('agent-v2-met-forbidden');
     expect(screen.getByTestId('agent-v2-met-forbidden').textContent).toContain('运行指标仅对管理员开放');
-    expect(screen.getByTestId('agent-v2-met-forbidden').textContent).toContain('HTTP 403');
+    const forbiddenCard = screen.getByTestId('agent-v2-met-forbidden');
+    expect(forbiddenCard.textContent).toContain('没有管理控制台权限');
+    expect(forbiddenCard.textContent).not.toContain('HTTP 403');
+    expect(forbiddenCard.querySelector('.s')?.getAttribute('title')).toContain('HTTP 403');
     expect(screen.queryByTestId('agent-v2-met-skel-a')).toBeNull();
     expect(screen.queryByTestId('agent-v2-met-agrid')).toBeNull();
     expect(screen.getByTestId('agent-v2-met-forbidden-back')).toBeTruthy();
