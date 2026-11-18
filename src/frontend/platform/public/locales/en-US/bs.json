@@ -7126,7 +7126,13 @@
         "footSourcePre": "Sources: A7 chain verification + ",
         "footSourcePost": " + Bisheng session (read-only)",
         "footCaliber": "Caliber: unknown ≠ off · sanitized shows only booleans and connectivity classes · rules and readings kept apart · no total · degraded is never 0",
-        "footZeroWrite": "Zero write entry on this page: no write or dangerous action is rendered"
+        "footZeroWrite": "Zero write entry on this page: no write or dangerous action is rendered",
+        "fDeadLetterLabel": "Outbound backlog",
+        "nChannelSafe": "Reported by the runtime; inactive channels are not shown",
+        "aRecipientBodySafe": "Recipients come from the employee owner mapping and are not an editable list.",
+        "channelHermes": "Hermes runtime",
+        "metaSources": "Sources: audit chain verification, Hermes session summary, Bisheng sessions (read-only)",
+        "navSwipeHint": "Swipe to see more"
       },
     "skills": {
       "title": "Skill governance",

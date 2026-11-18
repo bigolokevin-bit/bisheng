@@ -7071,7 +7071,13 @@
         "footSourcePre": "数据源：A7 链校验 + ",
         "footSourcePost": " + Bisheng 会话（只读）",
         "footCaliber": "口径：三态未知≠关 · sanitized 只上布尔与连通类别 · 规则与读数分开 · 无 total · degraded 不改 0",
-        "footZeroWrite": "本页零写入口：任何写操作与危险动作均不渲染"
+        "footZeroWrite": "本页零写入口：任何写操作与危险动作均不渲染",
+        "fDeadLetterLabel": "出站积压",
+        "nChannelSafe": "来源为运行时上报；未启用的渠道不上屏",
+        "aRecipientBodySafe": "接收人取自员工负责人映射，不是可编辑的收件人清单。",
+        "channelHermes": "Hermes 运行时",
+        "metaSources": "数据来源：审计链校验、Hermes 会话摘要、Bisheng 会话（只读）",
+        "navSwipeHint": "左右滑动查看更多"
       },
     "skills": {
       "title": "技能治理",

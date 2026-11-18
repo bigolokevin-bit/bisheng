@@ -231,7 +231,7 @@ export const ALERT_ROWS: readonly AlertRowDef[] = [
     id: 'recipient',
     icon: 'user',
     nmKey: `${NS}.aRecipientTitle`,
-    whyKey: `${NS}.aRecipientBody`,
+    whyKey: `${NS}.aRecipientBodySafe`,
     linkLabelKey: `${NS}.viewInVersion`,
     linkToKey: '/agent/employees',
   },
@@ -394,7 +394,8 @@ export function channelLabel(
 ): string {
   if (!platform) return t(`${NS}.unknownRuntime`);
   if (platform === 'feishu') return t(`${NS}.channelFeishu`);
-  return platform;
+  if (platform === 'hermes' || platform === 'hermes-agent') return t(`${NS}.channelHermes`);
+  return t(`${NS}.unknownRuntime`);
 }
 
 /** A read that failed with a status the group gate understands. */

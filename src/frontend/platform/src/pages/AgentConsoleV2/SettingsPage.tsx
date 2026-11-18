@@ -220,8 +220,13 @@ export function SettingsPage({
         {/* meta row: freshness · data sources · read-only caliber */}
         <div className="fresh" data-testid="agent-v2-set-fresh">
           <SetIcon name="clock" size={13} />
-          <span aria-live="polite">
-            {t(`${NS}.metaReadAt`)} <span className="mono">{fmtClock(readAt)}</span>
+          {a7.phase === 'loading' ? null : (
+            <span aria-live="polite">
+              {t(`${NS}.metaReadAt`)} <span className="mono">{fmtClock(readAt)}</span>
+            </span>
+          )}
+          <span className="a2s-meta" data-testid="agent-v2-set-sources">
+            {t(`${NS}.metaSources`)}
           </span>
         </div>
 
@@ -277,6 +282,7 @@ export function SettingsPage({
                 <SDot tone={navDot(s).tone} label={navDot(s).label} testId={`agent-v2-set-dot-${s.id}`} />
               </Link>
             ))}
+            <span className="s1nav-hint">{t(`${NS}.navSwipeHint`)}</span>
           </nav>
 
           <div className="s1-body">
@@ -508,7 +514,7 @@ function ModelsGroup({ t, summary }: { t: TFunction; summary: HermesSummary | nu
         icon="server"
         title={t(`${NS}.modelsTitle`)}
         action={
-          <Link className="b sm out" to="/model/management" data-testid="agent-v2-set-open-model">
+          <Link className="b sm out" to="/model/management" target="_blank" rel="noopener noreferrer" data-testid="agent-v2-set-open-model">
             <SetIcon name="ext" size={16} />
             {t(`${NS}.openInBisheng`)}
           </Link>
@@ -567,14 +573,14 @@ function ModelsGroup({ t, summary }: { t: TFunction; summary: HermesSummary | nu
           <Field
             label={t(`${NS}.fChannel`)}
             sans
-            note={t(`${NS}.nChannel`)}
+            note={t(`${NS}.nChannelSafe`)}
             testId="agent-v2-set-f-channel"
           >
             {channelLabel(t, summary?.gateway?.platform ?? null)}
           </Field>
 
           <Field
-            label={t(`${NS}.fDeadLetter`)}
+            label={t(`${NS}.fDeadLetterLabel`)}
             sans
             note={t(`${NS}.nDeadLetter`)}
             testId="agent-v2-set-f-deadletter"
