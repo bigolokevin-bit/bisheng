@@ -4543,7 +4543,14 @@
           "failed": "失敗",
           "interrupted": "中断",
           "cancelled": "キャンセル済み"
-        }
+        },
+        "notFoundTitle": "この実行は存在しないか表示できません",
+        "notFoundDesc": "実行 ID が無効、削除済み、またはこのアカウントの表示範囲外です。再試行するか、実行一覧に戻ってください。",
+        "notFoundRetry": "再読み込み",
+        "relTaskDisabled": "TSK-02 は未公開です",
+        "relTimeMissingNote": "記録時刻は実行ヘッダー由来です。欠落時は — を表示します",
+        "pendingLabel": "配布待ち",
+        "noEventsMeta": "イベントストリームは未要求です（シーケンス 0）"
       },
       "help": {
         "targetHash": {

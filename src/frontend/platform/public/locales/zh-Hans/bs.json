@@ -4543,7 +4543,14 @@
           "failed": "失败",
           "interrupted": "已中断",
           "cancelled": "已取消"
-        }
+        },
+        "notFoundTitle": "这次运行不存在或暂不可见",
+        "notFoundDesc": "运行编号无效、已被删除，或不属于当前账号可查看的范围。可以重试，或从运行列表重新进入。",
+        "notFoundRetry": "重新读取",
+        "relTaskDisabled": "TSK-02 尚未上线",
+        "relTimeMissingNote": "记录时间由运行头提供；缺失时显示 —",
+        "pendingLabel": "待派发",
+        "noEventsMeta": "事件流未发起请求（序号为 0）"
       },
       "help": {
         "targetHash": {

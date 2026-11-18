@@ -4598,7 +4598,14 @@
           "failed": "Failed",
           "interrupted": "Interrupted",
           "cancelled": "Cancelled"
-        }
+        },
+        "notFoundTitle": "This run does not exist or is not visible",
+        "notFoundDesc": "The run ID is invalid, was deleted, or is outside what this account may view. Retry, or return to the runs list.",
+        "notFoundRetry": "Read again",
+        "relTaskDisabled": "TSK-02 is not live yet",
+        "relTimeMissingNote": "Record times come from the run header; missing values show —",
+        "pendingLabel": "Pending dispatch",
+        "noEventsMeta": "Event stream not requested (sequence is 0)"
       },
       "help": {
         "targetHash": {

@@ -31,7 +31,7 @@ export const LIVE_STATUSES: ReadonlySet<RunStatus> = new Set<RunStatus>(['pendin
 
 /** Frozen run-status labels, already present in all three locales. */
 export const RUN_STATUS_KEYS: Record<RunStatus, string> = {
-  pending: 'agentConsole.runs.status.pending',
+  pending: 'agentConsole.v2.run02.pendingLabel',
   running: 'agentConsole.runs.status.running',
   completed: 'agentConsole.runs.status.completed',
   failed: 'agentConsole.runs.status.failed',
@@ -212,7 +212,7 @@ export function fmtGap(ms: number | null): string | null {
 
 /** Raw upstream figure, never re-rounded (0.009875 must not become 0.00). */
 export function fmtCost(costUsd: number | null | undefined): string {
-  return typeof costUsd === 'number' && Number.isFinite(costUsd) ? `$${String(costUsd)}` : '—';
+  return typeof costUsd === 'number' && Number.isFinite(costUsd) ? `USD ${String(costUsd)}` : '—';
 }
 
 export function fmtCap(cap: number | null | undefined): string {

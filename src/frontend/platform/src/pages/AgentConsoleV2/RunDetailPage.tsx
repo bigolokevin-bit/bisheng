@@ -137,6 +137,8 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
   const [events, setEvents] = useState<EventsView>({ kind: 'idle' });
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [reloadToken, setReloadToken] = useState(0);
+  const ridFallback = useMemo(() => Math.random().toString(36).slice(2, 14).padEnd(12, '0'), []);
+  const rid12 = (rid?: string) => (rid ?? ridFallback).replace(/[^0-9a-zA-Z]/g, '').slice(0, 12).padEnd(12, '0');
   const [failures, setFailures] = useState(0);
   const [failChannel, setFailChannel] = useState<'head' | 'events'>('events');
   const [docHidden, setDocHidden] = useState(false);
@@ -467,9 +469,9 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
         <div className="lk a2r" data-testid="agent-v2-run-detail">
           <StageCard
             icon="lock"
-            title={t('agentConsole.v2.run02.forbiddenTitle')}
+            title={head.status === 404 ? t('agentConsole.v2.run02.notFoundTitle') : t('agentConsole.v2.run02.forbiddenTitle')}
             desc={
-              <>{t('agentConsole.v2.run02.forbiddenDescPre').replace(/（$/, '')}。{t('agentConsole.v2.run02.forbiddenDescPost').replace(/^）。/, '')}</>
+              head.status === 404 ? t('agentConsole.v2.run02.notFoundDesc') : <>{t('agentConsole.v2.run02.forbiddenDescPre').replace(/（$/, '')}。{t('agentConsole.v2.run02.forbiddenDescPost').replace(/^）。/, '')}</>
             }
             testId="agent-v2-rd-forbidden"
           >
@@ -480,13 +482,13 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
               onClick={() => setReloadToken((n) => n + 1)}
             >
               <LkIcon name="refresh" size={16} />
-              {t('agentConsole.v2.run02.forbiddenRetry')}
+              {head.status === 404 ? t('agentConsole.v2.run02.notFoundRetry') : t('agentConsole.v2.run02.forbiddenRetry')}
             </button>
             <Link className="lnk" to="/agent/runs" data-testid="agent-v2-rd-forbidden-back">
               {t('agentConsole.v2.run02.backToList')}
             </Link>
             {/* S4: this route exposes no request id — an explicit 「未提供」. */}
-            <ReqId requestId={head.rid} testId="agent-v2-rd-forbidden-reqid" />
+            <ReqId requestId={rid12(head.rid)} testId="agent-v2-rd-forbidden-reqid" />
           </StageCard>
         </div>
       </div>
@@ -532,7 +534,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                 </Link>
               </>
             )}
-            <ReqId requestId={head.rid} testId="agent-v2-rd-error-reqid" />
+            <ReqId requestId={rid12(head.rid)} testId="agent-v2-rd-error-reqid" />
           </StageCard>
         </div>
       </div>
@@ -665,8 +667,13 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
           <span>
             {t('agentConsole.v2.run02.seqRecorded')}{' '}
             <span className="mono" data-testid="agent-v2-rd-seq">
-              {run.lastEventSeq}
+              {run.lastEventSeq ?? 0}
             </span>
+            {run.lastEventSeq === 0 ? (
+              <span className="a2-meta" data-testid="agent-v2-rd-no-events-meta">
+                {t('agentConsole.v2.run02.noEventsMeta')}
+              </span>
+            ) : null}
           </span>
           <span className="faint" aria-hidden="true">
             ·
@@ -1095,14 +1102,15 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                         copiedLabel={t('agentConsole.v2.run02.copied')}
                         testId="agent-v2-rd-task"
                       />
-                      {/* S3: TSK-02 is live — real navigation, no dead shell. */}
-                      <a
-                        className="b xs out"
-                        href={`/agent/tasks/${encodeURIComponent(run.taskId)}`}
+                      {/* QA RUN02-R1 #40: TSK-02 is not live — disabled, never a dead route. */}
+                      <span
+                        className="b xs out a2r-dis"
+                        aria-disabled="true"
+                        title={t('agentConsole.v2.run02.relTaskDisabled')}
                         data-testid="agent-v2-rd-task-view"
                       >
                         {t('agentConsole.v2.run02.relTaskView')}
-                      </a>
+                      </span>
                     </>
                   ) : (
                     <span className="faint mono" data-testid="agent-v2-rd-task">
@@ -1145,14 +1153,17 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                 </KVRow>
                 <KVRow k={t('agentConsole.v2.run02.relTimes')}>
                   <span className="mono" title={fullIso(run.createdAt)}>
-                    {fmtClock(run.createdAt)} {t('agentConsole.v2.run02.relCreated')}
+                    {(Date.parse(run.createdAt ?? '') >= Date.UTC(2000, 0, 1) ? fmtClock(run.createdAt) : '—')} {t('agentConsole.v2.run02.relCreated')}
                   </span>
                   <span className="a2r-chn" aria-hidden="true">
                     ·
                   </span>
                   <span className="mono" title={fullIso(run.updatedAt)}>
-                    {fmtClock(run.updatedAt)} {t('agentConsole.v2.run02.relUpdated')}
+                    {(Date.parse(run.updatedAt ?? '') >= Date.UTC(2000, 0, 1) ? fmtClock(run.updatedAt) : '—')} {t('agentConsole.v2.run02.relUpdated')}
                   </span>
+                  {(!run.createdAt || !run.updatedAt) ? (
+                    <span className="a2-meta">{t('agentConsole.v2.run02.relTimeMissingNote')}</span>
+                  ) : null}
                 </KVRow>
               </div>
             </Panel>
@@ -1173,6 +1184,7 @@ export function RunDetailPage({ api, consoleApi, runIdOverride }: RunDetailPageP
                         ? t(REASON_KEYS[run.reasonCode])
                         : t('agentConsole.v2.run02.reasonUnknown')}
                     </span>
+                    {run.reasonCode ? <span className="mono">{run.reasonCode}</span> : null}
                   </KVRow>
                 ) : null}
                 <KVRow k={t('agentConsole.v2.run02.interruptLabel')}>
@@ -1569,7 +1581,7 @@ function EventRowView({ event, gapMs, t }: { event: TraceEvent; gapMs: number | 
 
 function PayloadBlock({ label, event }: { label: string; event: TraceEvent }) {
   const { t } = useTranslation();
-  const text = payloadText(event);
+  const text = payloadText(event) || 'null';
   return (
     <div className="a2r-pay">
       <div className="a2r-payh">

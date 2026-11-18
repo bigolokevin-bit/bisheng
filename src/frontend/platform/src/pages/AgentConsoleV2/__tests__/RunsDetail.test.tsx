@@ -314,9 +314,11 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(rel.textContent).toContain('续跑是新运行，不复活上一轮');
 
     const taskView = within(rel).getByTestId('agent-v2-rd-task-view');
-    // S3: TSK-02 is live — the jump is a real link.
-    expect(taskView.tagName).toBe('A');
-    expect(taskView.getAttribute('href')).toBe('/agent/tasks/tk_01M7DEY7QK3T8V2W4X6Y8A0BCE');
+    // RUN02-R1 #40: TSK-02 is not live — disabled, no dead route.
+    expect(taskView.tagName).toBe('SPAN');
+    expect(taskView.getAttribute('aria-disabled')).toBe('true');
+    expect(taskView.getAttribute('href')).toBeNull();
+    expect(taskView.getAttribute('title')).toContain('TSK-02');
     expect(within(rel).getByTestId('agent-v2-rd-audit').getAttribute('href')).toBe(
       `/agent/audit?runId=${encodeURIComponent(RUN_ID)}`,
     );
@@ -334,18 +336,16 @@ describe('RUN-02 — header, meta row and summary card', () => {
     expect(within(sm).queryAllByRole('button')).toHaveLength(0);
 
     expect(screen.getByTestId('agent-v2-rd-reason').textContent).toBe('执行引擎报告完成');
-    expect(screen.getByTestId('agent-v2-rd-reason').parentElement?.textContent).not.toContain(
-      'run.upstream_completed',
-    );
+    expect(screen.getByTestId('agent-v2-rd-reason').parentElement?.textContent).toContain('run.upstream_completed');
   });
 
-  it('E20/E22: an unlisted reason is a human fallback, never the raw code; a terminal run without a code shows none', async () => {
+  it('E20/E22: an unlisted reason shows the human fallback plus the raw code; a terminal run without a code shows none', async () => {
     const api = makeApi({ run: makeRun({ reasonCode: 'run.mystery_code' }) });
     const first = renderPage(api);
     await waitReady();
     const reason = screen.getByTestId('agent-v2-rd-reason');
     expect(reason.textContent).toBe('原因码未收录');
-    expect(reason.parentElement?.textContent).not.toContain('run.mystery_code');
+    expect(reason.parentElement?.textContent).toContain('run.mystery_code');
     first.unmount();
 
     renderPage(makeApi({ run: makeRun({ reasonCode: null }) }));
@@ -524,13 +524,13 @@ describe('RUN-02 — no-event and failure states', () => {
     expect(empty.textContent).toContain('这次运行没有事件');
     expect(empty.textContent).toContain('本页不会补出假步骤、也不会把它判成失败');
     expect(screen.getByTestId('agent-v2-rd-empty-retry').textContent).toContain('重新拉取');
-    expect(screen.getByTestId('agent-v2-rd-fresh').textContent).not.toContain('未发起请求');
+    expect(screen.getByTestId('agent-v2-rd-fresh').textContent).toContain('未发起请求');
     const duration = screen.getByTestId('agent-v2-rd-f-duration');
     expect(duration.textContent).toContain('未开始，不编数字');
     expect(duration.textContent).toContain('—');
   });
 
-  it('E24: 403 and 404 share one body, only the HTTP code differs (no existence leak)', async () => {
+  it('E24: 403 and 404 use distinct human bodies; 404 never reuses the permission copy', async () => {
     const forbidden = makeApi({ run: { ok: false, status: 403, data: null, code: 'console.forbidden' } });
     const first = renderPage(forbidden);
     const card403 = await screen.findByTestId('agent-v2-rd-forbidden');
@@ -545,7 +545,10 @@ describe('RUN-02 — no-event and failure states', () => {
     renderPage(missing);
     const card404 = await screen.findByTestId('agent-v2-rd-forbidden');
     const text404 = (card404.textContent ?? '').replace('HTTP 404', 'HTTP <code>');
-    expect(text404).toBe(text403);
+    expect(text404).toContain('这次运行不存在或暂不可见');
+    expect(text404).not.toContain('您还看不到这次运行');
+    expect(text404).not.toContain('已开通');
+    expect(text404).not.toBe(text403);
     expect(document.body.textContent).not.toContain('run.not_found');
   });
 
@@ -755,5 +758,19 @@ describe('RUN-02 — 375 / theme contract (CSS level, jsdom cannot measure layou
   it('E27: tokens only — no raw hex colors, no second theme block in this page', () => {
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(css).not.toMatch(/data-theme/);
+  });
+});
+/* RUN02-R1 #33: a malformed payload must expand and show its raw text. */
+describe('RUN02-R1 payload expansion', () => {
+  it('E33: a malformed payload expands and its raw text is readable', async () => {
+    renderPage(makeApi({}));
+    await waitReady();
+    const rows = await screen.findAllByTestId('agent-v2-rd-row');
+    const target = rows.find((row) => row.querySelector('pre.a2r-json')) ?? rows[0];
+    const summary = target.querySelector('summary');
+    if (summary) fireEvent.click(summary);
+    const pre = target.querySelector('pre.a2r-json');
+    expect(pre).not.toBeNull();
+    expect((pre?.textContent ?? '').length).toBeGreaterThan(0);
   });
 });
