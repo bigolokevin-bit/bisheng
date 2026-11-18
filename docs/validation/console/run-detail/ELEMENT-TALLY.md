@@ -43,3 +43,52 @@
 - 错误/禁止屏不再显示 `HTTP <code>`；保留人话说明、请求编号（缺则「未提供」）与重试/返回。
 - 步骤详情不再显示裸字段名 `stepSeq`，只显示序号数值。
 - 事件时间 `YYYY-MM-DD HH:mm`；成本 `$` 原值、未知 —；耗时缺失 —；owner 只显「员工 · 短码」。
+
+## RUN02-R2 · SPEC 全量骨架（2026-11-18，锁 abad6fd）
+
+设计源：`docs/product/design/console-v2/RUN02-TARGET-SPEC.md`。分母按 SPEC §1.1–§1.8 实读 37 项；状态列以代码与测试证据为准。
+
+| elementId | 数据源 | 七态 | 权限 | 去向 | 文案key | 验收腿 | 状态 |
+|---|---|---|---|---|---|---|---|
+| RUN02-SHELL-RAIL | Shell 8 项 | — | — | 运行 current | `navRuns` | Shell 只读，本页不改 | 不可用（Shell/L1） |
+| RUN02-SHELL-CRUMB | 路由 | 正常 | 读 | 控制台 › 运行 › 运行详情 | `run02.crumb*` | 无 runId 上屏 | 已核销 |
+| RUN02-HEAD-BACK | history | 正常 | 读 | `/agent/runs` | `run02.back` | `agent-v2-rd-back` | 已核销 |
+| RUN02-HEAD-STATUS | R2 status | 六态 | 读 | — | `run02.st*` | pill 先于 h1，aria+文本 | 已核销 |
+| RUN02-HEAD-TITLE | — | 正常 | 读 | — | `run02.title` | h1 为「运行详情」 | 已核销 |
+| RUN02-HEAD-RUNID | R2 runId | 正常 | 读 | 复制全值 | `run02.runId*` | 短号展示、全值进 copy/title | 已核销 |
+| RUN02-HEAD-REFRESH | R2+R3 | 正常/加载 | 读 | 重新拉取 | `run02.refresh` | `agent-v2-rd-refresh` | 已核销 |
+| RUN02-HEAD-COPYLINK | location | 正常 | 读 | 复制链接 | `run02.copyLink` | 出口按钮非实心 | 已核销 |
+| RUN02-META-UPDATED | R2 pulledAt | 正常 | 读 | — | `run02.updated` | `fmtClock` 北京时间 | 已核销 |
+| RUN02-META-POLL | 轮询状态 | 运行中/已结束/中断 | 读 | — | `run02.poll*` | 三态文案与重试次数 | 已核销 |
+| RUN02-META-SEQ | R3 nextSeq | 正常 | 读 | — | `run02.seqRecorded` | 已记录到序号 | 已核销 |
+| RUN02-META-SOURCE | 契约 | 正常 | 读 | — | `run02.sourceReadonly` | 只读句在；数据源声明串缺 | 部分 |
+| RUN02-ALERT-POLL | 连续 3 次失败 | 告警 | 读 | 立即重试 | `run02.pollLost*` | role=status，不改状态 pill | 已核销 |
+| RUN02-ALERT-STALE | lag>30s | 告警 | 读 | 立即重试 | `run02.stale*` | 秒数+拉取时刻 | 已核销 |
+| RUN02-OV-STATUS | R2 status | 六态/未知 | 读 | — | `run02.ov*` | 人类句 + 未知枚举原值 | 已核销 |
+| RUN02-OV-EMPLOYEE | E11 | 正常/降级 | 读 | `/agent/employees/:id` | `run02.employee*` | 「员工 · 短码」，裸 id 只进 title | 已核销 |
+| RUN02-OV-VERSION | R2 | 正常/缺 | 读 | — | `run02.version` | 整数无 v 前缀 | 已核销 |
+| RUN02-OV-DURATION | R2 起止 | 正常/进行中/缺 | 读 | — | `run02.duration*` | 仅两端齐全才算，缺 — | 已核销 |
+| RUN02-OV-COST | R2 costUsd/costStatus | 正常/无账目/未知 | 读 | — | `run02.cost*` | `$` 原值，unknown→—，禁 0.00 | 已核销 |
+| RUN02-OV-CAP | R2 budgetCapUsd | 正常/缺 | 读 | — | `run02.cap*` | 上限原值；比率仅两侧齐 | 已核销 |
+| RUN02-OV-START | R2 startedAt | 正常/缺 | 读 | — | `run02.started` | 北京时间到分，title 全 ISO | 已核销 |
+| RUN02-OV-END | R2 endedAt | 终态/进行中/缺 | 读 | — | `run02.ended` | 未结束 —，不编时间 | 已核销 |
+| RUN02-OV-GOV | R2 标识 | 正常 | 读 | 复制 | `run02.gov*` | runId/upstream/policy 短显+复制 | 已核销 |
+| RUN02-TRACE-DERIVE | R3 事件 | 正常 | 读 | — | `run02.step*` | 配对/重复调用/孤儿结果派生 | 已核销 |
+| RUN02-TRACE-GAP | R3 occurredAt | 正常/缺 | 读 | — | `run02.gap*` | 相邻差值，缺上一条隐藏 | 已核销 |
+| RUN02-TRACE-PAYLOAD | R3 payload | 正常/坏 payload | 读 | 展开 | `run02.payload*` | 原样 pre，不美化 | 已核销 |
+| RUN02-TRACE-LOADMORE | R3 keyset | 正常/失败/更多 | 读 | 追加 | `run02.more*` | sinceSeq+limit=200，失败保留已载 | 已核销 |
+| RUN02-TRACE-EMPTY | R2 lastEventSeq=0 | 空 | 读 | 重新拉取 | `run02.eventsEmpty*` | 零 R3 请求，空态独立 | 已核销 |
+| RUN02-RIGHT-RELATED | R2 关联 | 正常/缺 | 读 | 任务/审计/上一运行 | `run02.rel*` | 任务链接直到 TSK-02，缺则不渲染 | 已核销 |
+| RUN02-RIGHT-STATE | 契约状态机 | 六态 | 读 | — | `run02.state*` | role=img，终态说明 | 已核销 |
+| RUN02-RIGHT-REASON | R2 reasonCode | 正常/未收录/缺 | 读 | — | `run02.reason*` | 人类句；未收录显「原因码未收录」 | 已核销 |
+| RUN02-RIGHT-COSTLEGEND | costStatus | 三态 | 读 | — | `run02.cal*` | 口径与来源，foot 真值 | 已核销 |
+| RUN02-STATE-LOADING | — | 加载 ≤10s | 读 | — | `run02.loading` | 无 shimmer，超时切错 | 已核销 |
+| RUN02-STATE-ERROR | — | 5xx/网络/400 | 读 | 重试/回列表 | `run02.error*` | 人话+请求号（未提供）+重试；无 HTTP 码 | 已核销 |
+| RUN02-STATE-DENIED | — | 403/404 | 整页 | 刷新/回列表 | `run02.forbidden*` | 同体，仅请求号不同 | 已核销 |
+| RUN02-STATE-NOEVENTS | — | 空事件 | 读 | 重新拉取 | `run02.eventsEmpty*` | 不请求 R3，无伪造 | 已核销 |
+| RUN02-RESP-1280 | — | 正常 | 读 | — | — | 1279 断点单列，首屏含 8 字段 | 已核销 |
+| RUN02-RESP-375 | — | 正常 | 读 | — | — | CSS 断点+换行，无横溢；无实拍 | 部分 |
+
+元素数：37　已核销：34　部分：2　不可用：1　核销率：91.9%（严格）　死控件数：0
+
+> 偏差：成本 `unknown` 按本轮硬要求显 `—`（SPEC 原文为字面 unknown）；错误屏不显 HTTP 码（硬要求③覆盖 SPEC §1.8）；未收录原因不显原始码（硬要求③），已记入 ACCEPTANCE。
