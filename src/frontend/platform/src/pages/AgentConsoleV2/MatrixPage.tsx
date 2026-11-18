@@ -51,14 +51,23 @@ export default function MatrixPage() {
 
   useEffect(() => {
     if (!focusId) return;
-    const el = document.querySelector('[data-testid="agent-v2-mtx-row"][data-focus="true"]');
+    const el = document.querySelector<HTMLElement>(
+      '[data-testid="agent-v2-mtx-row"][data-focus="true"]',
+    );
     el?.scrollIntoView?.({ block: 'center' });
+    el?.focus?.({ preventScroll: true });
   }, [focusId, nonce]);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    fetchApi<MatrixListBody>('/api/matrix', { limit: 50 }).then((r) => {
+    const params: Record<string, unknown> = { limit: 50 };
+    const stateParam =
+      typeof window === 'undefined'
+        ? ''
+        : (new URLSearchParams(window.location.search).get('state') ?? '').trim();
+    if (stateParam) params.state = stateParam;
+    fetchApi<MatrixListBody>('/api/matrix', params).then((r) => {
       if (!alive) return;
       setRes(r);
       setLoading(false);
@@ -77,6 +86,8 @@ export default function MatrixPage() {
 
   const isTimeout = res != null && !res.ok && res.status === 0 && res.code === 'console.timeout';
   const isQueryError = res != null && !res.ok && res.status === 401;
+  const isForbidden =
+    res != null && !res.ok && (res.status === 403 || res.code === 'console.forbidden');
 
   /* Same-name cards carry a short code so two people never look identical.
      Declared before the early returns: a hook after them changes the call
@@ -101,6 +112,29 @@ export default function MatrixPage() {
           {Array.from({ length: 6 }, (_, i) => (
             <span className="a2s-sk-row" key={i} />
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ---- forbidden: whole-page replacement, no matrix data at all (STATE-03) ---- */
+  if (isForbidden) {
+    return (
+      <div className="a2s-page" data-testid="agent-v2-mtx-page">
+        <div className="a2-card" data-testid="agent-v2-mtx-forbidden">
+          <p className="a2-h2">
+            <Icon name="alert" size={16} />
+            {t('agentConsole.v2.mtx.forbiddenTitle')}
+          </p>
+          <p className="a2-card-sub">{t('agentConsole.v2.mtx.forbiddenHint')}</p>
+          <span style={{ display: 'block' }}>
+            <ReqId requestId={res?.requestId} testId="agent-v2-mtx-forbidden-reqid" />
+          </span>
+          <p style={{ marginTop: 12 }}>
+            <NavLink className="a2-link" to="/agent" data-testid="agent-v2-mtx-forbidden-back">
+              {t('agentConsole.v2.mtx.forbiddenBack')}
+            </NavLink>
+          </p>
         </div>
       </div>
     );
@@ -218,7 +252,33 @@ export default function MatrixPage() {
           n: rows.filter((r) => (r.lifecycle ?? '').toLowerCase() === 'active').length,
         })}{' '}
         · {t('agentConsole.v2.mtx.sumRisk', { n: rows.filter((r) => riskSignalCount(r.risk) > 0).length })} ·{' '}
-        {t('agentConsole.v2.mtx.sumUnset', { n: rows.filter((r) => r.budget == null).length })}
+        {t('agentConsole.v2.mtx.sumUnset', { n: rows.filter((r) => r.budget == null).length })} ·{' '}
+        <span data-testid="agent-v2-mtx-sum-skills">
+          {t('agentConsole.v2.mtx.sumSkills', {
+            n: rows.some((r) => typeof r.skillCount === 'number')
+              ? String(
+                  rows.reduce(
+                    (s, r) => s + (typeof r.skillCount === 'number' ? r.skillCount : 0),
+                    0,
+                  ),
+                )
+              : '—',
+          })}
+        </span>{' '}
+        ·{' '}
+        <span data-testid="agent-v2-mtx-sum-runs">
+          {t('agentConsole.v2.mtx.sumRuns', {
+            n: rows.some((r) => typeof r.todayRuns?.total === 'number')
+              ? String(
+                  rows.reduce(
+                    (s, r) =>
+                      s + (typeof r.todayRuns?.total === 'number' ? r.todayRuns!.total! : 0),
+                    0,
+                  ),
+                )
+              : '—',
+          })}
+        </span>
       </p>
       {res.data?.nextCursor ? (
         <p className="a2-meta" data-testid="agent-v2-mtx-truncated">
@@ -259,6 +319,8 @@ export default function MatrixPage() {
               className="a2-card"
               data-testid="agent-v2-mtx-row"
               data-focus={focused ? 'true' : undefined}
+              id={`mtx-row-${r.employeeId}`}
+              tabIndex={focused ? -1 : undefined}
               style={focused ? { outline: '2px solid var(--accent-border, #8a8f98)', outlineOffset: 2 } : undefined}
               key={r.employeeId}
             >
