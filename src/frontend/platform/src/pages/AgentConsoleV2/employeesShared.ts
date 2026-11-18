@@ -108,13 +108,13 @@ export type BudgetView =
  */
 export function budgetView(budget?: BudgetLike | null): BudgetView {
   if (budget == null) return { kind: 'missing' };
-  const daily = typeof budget.dailyTokens === 'number' && Number.isFinite(budget.dailyTokens) ? budget.dailyTokens : null;
-  const monthly =
-    typeof budget.monthlyCostUsd === 'number' && Number.isFinite(budget.monthlyCostUsd)
-      ? budget.monthlyCostUsd
-      : null;
-  const perRun =
-    typeof budget.perRunMaxUsd === 'number' && Number.isFinite(budget.perRunMaxUsd) ? budget.perRunMaxUsd : null;
+  /* POLICY: 0 means "no limit"/unset, never a real zero budget. A 0 copied
+     to the screen would read as "you may spend nothing" — the opposite. */
+  const positive = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null;
+  const daily = positive(budget.dailyTokens);
+  const monthly = positive(budget.monthlyCostUsd);
+  const perRun = positive(budget.perRunMaxUsd);
   if (daily == null && monthly == null && perRun == null) return { kind: 'unset' };
   return { kind: 'configured', dailyTokens: daily, monthlyUsd: monthly, perRunUsd: perRun };
 }
