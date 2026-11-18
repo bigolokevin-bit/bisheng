@@ -385,7 +385,6 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
           </button>
         </div>
       ) : null}
-      <HelpTip term="empDimension" testId="aud01-help-emp" />
     </>
   );
 
@@ -633,7 +632,6 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
   }
 
   if (list.phase === 'error') {
-    const code = list.httpStatus;
     return (
       <div className="lk aud01" data-testid="agent-v2-page-audit">
         {head}
@@ -642,15 +640,10 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
           icon="alert"
           title={t('agentConsole.v2.aud01.errorTitle')}
           desc={
-            code > 0 ? (
-              <>
-                {t('agentConsole.v2.aud01.errorDescPre')}
-                <span className="mono">HTTP {code}</span>
-                {t('agentConsole.v2.aud01.errorDescPost')}
-              </>
-            ) : (
-              t('agentConsole.v2.aud01.errorDescNetwork')
-            )
+            <>
+              {t('agentConsole.v2.aud01.errorDescPre').replace(/[（(]\s*$/, '')}
+              {t('agentConsole.v2.aud01.errorDescPost').replace(/^\s*[)）]\s*/, '')}
+            </>
           }
           testId="aud01-error"
         >
@@ -680,9 +673,8 @@ export function AuditListPage({ api, consoleApi, initialSearch }: AuditListPageP
           title={t('agentConsole.v2.aud01.forbiddenTitle')}
           desc={
             <>
-              {t('agentConsole.v2.aud01.forbiddenDescPre')}
-              <span className="mono">HTTP {list.httpStatus}</span>
-              {t('agentConsole.v2.aud01.forbiddenDescPost')}
+              {t('agentConsole.v2.aud01.forbiddenDescPre').replace(/[（(]\s*$/, '')}
+              {t('agentConsole.v2.aud01.forbiddenDescPost').replace(/^\s*[)）]\s*/, '')}
             </>
           }
           testId="aud01-forbidden"
@@ -885,7 +877,7 @@ function PageFoot({ t }: { t: TFunction }) {
     <div className="pfoot">
       <span>{t('agentConsole.v2.aud01.footSource')}</span>
       <span className="sp" aria-hidden="true" />
-      <span>{t('agentConsole.v2.aud01.footCaliber')}</span>
+      <span>口径：时间为北京时间 · 列表按落库时间倒序 · 无总数 · 冷存档不在线检索</span>
     </div>
   );
 }
@@ -899,7 +891,6 @@ function buildColumns(t: TFunction): LkColumn[] {
       label: (
         <span className="inf">
           {t('agentConsole.v2.aud01.colTime')}
-          <HelpTip term="timeColumn" testId="aud01-help-time" />
         </span>
       ),
       width: 112,
@@ -911,25 +902,15 @@ function buildColumns(t: TFunction): LkColumn[] {
     { key: 'behalf', label: t('agentConsole.v2.aud01.colBehalf'), width: 84 },
     {
       key: 'decision',
-      label: (
-        <span className="inf">
-          {t('agentConsole.v2.aud01.colDecision')}
-          <HelpTip term="decisionPair" testId="aud01-help-decision" />
-        </span>
-      ),
+      label: t('agentConsole.v2.aud01.colDecision'),
       width: 96,
     },
     {
       key: 'outcome',
-      label: (
-        <span className="inf">
-          {t('agentConsole.v2.aud01.colOutcome')}
-          <HelpTip term="outcomeEnum" testId="aud01-help-outcome" />
-        </span>
-      ),
+      label: t('agentConsole.v2.aud01.colOutcome'),
       width: 96,
     },
-    { key: 'run', label: 'run', width: 108 },
+    { key: 'run', label: t('agentConsole.v2.navRuns'), width: 108 },
     { key: 'task', label: t('agentConsole.v2.aud01.colTask'), width: 108 },
     { key: 'approval', label: t('agentConsole.v2.aud01.colApproval'), width: 88 },
     { key: 'resource', label: t('agentConsole.v2.aud01.colResource'), width: 112 },

@@ -216,7 +216,7 @@ describe('AUD-01 columns + zero write entries (§1.7, §9 items 3/12)', () => {
       '代谁',
       '决定',
       '结果',
-      'run',
+      '运行',
       '任务',
       '审批',
       '资源',
@@ -383,7 +383,7 @@ describe('AUD-01 chain panel states (§1.6)', () => {
     expect(screen.queryByTestId('aud01-verify-s1')).toBeNull();
     const panel = screen.getByTestId('aud01-verify-s2');
     expect(panel.className).toContain('s2');
-    expect(panel.textContent).toContain('complete = false');
+    expect(panel.textContent).toContain('扫描被上限截断');
   });
 
   it('S3 names the first break, caps the list and keeps 「查看」 disabled', async () => {
@@ -415,7 +415,7 @@ describe('AUD-01 chain panel states (§1.6)', () => {
     expect(viewButtons).toHaveLength(3);
   });
 
-  it('S4 reports the HTTP code and never claims anything about the chain', async () => {
+  it('S4 gives a human reason, request id and never claims anything about the chain', async () => {
     const h = harness({
       pages: [okList([event()])],
       verify: [{ ok: false, status: 502, data: null, requestId: '034a01b5817d' }],
@@ -423,7 +423,7 @@ describe('AUD-01 chain panel states (§1.6)', () => {
     renderPage(h);
     await waitFor(() => expect(screen.getByTestId('aud01-verify-s4')).toBeInTheDocument());
     const panel = screen.getByTestId('aud01-verify-s4');
-    expect(panel.textContent).toContain('HTTP 502');
+    expect(panel.textContent).not.toContain('HTTP');
     expect(panel.textContent).toContain('034a01b5817d');
     expect(panel.textContent).toContain('这不表示链有问题');
   });
@@ -567,7 +567,7 @@ describe('AUD-01 empty / error / forbidden (§1.10)', () => {
     renderPage(h);
     await waitFor(() => expect(screen.getByTestId('aud01-error')).toBeInTheDocument());
     const card = screen.getByTestId('aud01-error');
-    expect(card.textContent).toContain('HTTP 502');
+    expect(card.textContent).not.toContain('HTTP');
     expect(card.textContent).toContain('缓存');
     expect(card.textContent).not.toContain('audit.query_too_broad');
     expect(card.textContent).not.toContain('console.missing_filter');
@@ -578,7 +578,8 @@ describe('AUD-01 empty / error / forbidden (§1.10)', () => {
     renderPage(h);
     await waitFor(() => expect(screen.getByTestId('aud01-forbidden')).toBeInTheDocument());
     expect(screen.queryByRole('table')).toBeNull();
-    expect(screen.getByTestId('aud01-forbidden').textContent).toContain('HTTP 403');
+    expect(screen.getByTestId('aud01-forbidden').textContent).not.toContain('HTTP');
+    expect(screen.getByTestId('aud01-forbidden').textContent).toContain('请求编号');
   });
 });
 // ---------------------------------------------------------------- S2 identity
@@ -813,9 +814,12 @@ describe('AUD-01 identity closeout — upstream casing never leaks raw machine w
       });
       renderPage(h);
       const row = await screen.findByTestId('aud01-row-ev_UNLISTED');
-      expect(row.textContent).toContain('mystery');
-      expect(row.textContent).toContain('odd_state');
-      expect(row.textContent).toContain('half_done');
+      expect(row.textContent).not.toContain('mystery');
+      expect(row.textContent).not.toContain('odd_state');
+      expect(row.textContent).not.toContain('half_done');
+      expect(row.querySelector('[title="sourceSystem=mystery"]')).not.toBeNull();
+      expect(row.querySelector('[title="odd_state"]')).not.toBeNull();
+      expect(row.querySelector('[title="half_done"]')).not.toBeNull();
       const noise = spy.mock.calls.filter((args) => String(args[0]).includes('[AUD-01]'));
       expect(noise).toEqual([]);
     } finally {
@@ -959,5 +963,124 @@ describe('AUD-01 VG closeout — human words, honest paging, mid-ellipsis codes'
     // a full last page must not claim it was short
     expect(text).not.toContain('不足一整页');
     expect(text).toContain('后面没有了');
+  });
+});
+
+// ---------------------------------------------------------------- R4 rewrite
+
+describe('AUD-01 R4 — honest copy + same-body permission states', () => {
+  it('keeps engineering tokens off the rendered page', async () => {
+    const h = harness({ pages: [okList([event(), GRANT_EVENT])] });
+    renderPage(h);
+    await waitFor(() => expect(screen.getByTestId('agent-v2-page-audit')).toBeInTheDocument());
+    const page = screen.getByTestId('agent-v2-page-audit').textContent ?? '';
+    for (const token of [
+      'HTTP',
+      'A3',
+      'A7',
+      '/api/',
+      'occurredAt',
+      'recordedAt',
+      'actorId',
+      'resourceId',
+      'brokenEventIds',
+      'prevHash',
+      'critical',
+      'human:',
+      'emp_',
+    ]) {
+      expect(page).not.toContain(token);
+    }
+    expect(page).toMatch(/\d{2}-\d{2} \d{2}:\d{2}/);
+  });
+
+  it('renders 403 and 404 with one identical body', async () => {
+    const at403 = harness({
+      pages: [{ ok: false, status: 403, data: null, requestId: 'req-perm' }],
+    });
+    renderPage(at403);
+    await waitFor(() => expect(screen.getByTestId('aud01-forbidden')).toBeInTheDocument());
+    const a = screen.getByTestId('agent-v2-page-audit').textContent ?? '';
+    expect(a).not.toContain('HTTP');
+    cleanup();
+
+    const at404 = harness({
+      pages: [{ ok: false, status: 404, data: null, requestId: 'req-perm' }],
+    });
+    renderPage(at404);
+    await waitFor(() => expect(screen.getByTestId('aud01-forbidden')).toBeInTheDocument());
+    expect(screen.getByTestId('agent-v2-page-audit').textContent).toBe(a);
+  });
+
+  it('unknown action/source/decision/outcome read as — and keep the raw token in a title', async () => {
+    const h = harness({
+      pages: [
+        okList([
+          event({
+            eventId: 'ev_R4_UNKNOWN',
+            sourceSystem: 'mystery_source',
+            action: 'mystery.action',
+            decision: 'mystery_decision',
+            outcome: 'mystery_outcome',
+          }),
+        ]),
+      ],
+    });
+    renderPage(h);
+    const row = await screen.findByTestId('aud01-row-ev_R4_UNKNOWN');
+    expect(row.textContent).not.toContain('mystery_source');
+    expect(row.textContent).not.toContain('mystery.action');
+    expect(row.textContent).not.toContain('mystery_decision');
+    expect(row.textContent).not.toContain('mystery_outcome');
+    expect(row.querySelector('[title="mystery.action"]')).not.toBeNull();
+    expect(row.querySelector('[title="mystery_decision"]')).not.toBeNull();
+    expect(row.querySelector('[title="mystery_outcome"]')).not.toBeNull();
+  });
+
+  it('S3 reports the cap without naming contract fields or full ids', async () => {
+    const ids = Array.from({ length: 25 }, (_, i) => `ev_BREAK_${String(i).padStart(2, '0')}`);
+    const h = harness({
+      pages: [okList([event()])],
+      verify: [
+        {
+          ok: true,
+          status: 200,
+          data: {
+            ok: false,
+            complete: true,
+            scanned: 1284,
+            brokenCount: 25,
+            brokenEventIds: ids,
+            anchorCheckpointId: 'ac_01M7DEY8ZQ4R7T2V8X0Y2A4B6C',
+          },
+        },
+      ],
+    });
+    renderPage(h);
+    const panel = await screen.findByTestId('aud01-verify-s3');
+    expect(panel.textContent).not.toContain('brokenEventIds');
+    expect(panel.textContent).not.toContain('ev_BREAK_20');
+    expect(panel.textContent).toContain('最多列出前 20 条');
+    expect(panel.textContent).toContain('首个断点');
+  });
+
+  it('error keeps a request id and a working retry, with no cache claim removed', async () => {
+    const h = harness({
+      pages: [{ ok: false, status: 502, data: null, requestId: 'req-r4-502' }],
+    });
+    renderPage(h);
+    const card = await screen.findByTestId('aud01-error');
+    expect(card.textContent).toContain('请求编号');
+    expect(card.textContent).toContain('req-r4-502');
+    expect(card.textContent).toContain('重新加载');
+    expect(screen.getByTestId('aud01-retry')).toBeInTheDocument();
+    expect(card.textContent).not.toContain('HTTP');
+  });
+
+  it('ships the 375 stacked-card rule and the 1280 table scroll rule', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/pages/AgentConsoleV2/aud01.css'), 'utf8');
+    expect(css).toContain('@media (max-width: 767px)');
+    expect(css).toContain('@media (min-width: 1280px) and (max-width: 1399px)');
+    expect(css).toMatch(/\.tblwrap\s*\{[^}]*overflow:\s*auto/);
   });
 });

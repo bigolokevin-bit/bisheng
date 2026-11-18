@@ -13,7 +13,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 
-import { HelpTip } from './HelpTip';
 import { CopyId } from './listkit';
 import { LkIcon } from './listkit/icons';
 import {
@@ -112,7 +111,6 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
               >
                 <LkIcon name="clockAlert" size={13} />
                 {t('agentConsole.v2.aud01.clockSkew')}
-                <HelpTip term="clockSkew" testId="aud01-help-skew" />
               </span>
             </span>
           ) : (
@@ -138,8 +136,8 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
               </span>
             ) : (
               // Unknown actions are NOT machine-translated: raw value only.
-              <span className="l mono" title={action}>
-                {action}
+              <span className="l" title={action}>
+                {action ? t('agentConsole.v2.id.unknown') : '—'}
               </span>
             )}
           </span>
@@ -179,7 +177,7 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
           <OutcomeCell outcome={event.outcome} t={t} />
         </td>
 
-        <td className="mono" data-l="run">
+        <td className="mono" data-l={t('agentConsole.v2.navRuns')}>
           {runId ? (
             <span className="idcell">
               {/* R1 (VG-B1): 「运行 · 短码」 — the raw rn_/ws_ id stays in title. */}
@@ -332,8 +330,9 @@ export function AuditEventRow({ event, t, names }: AuditEventRowProps) {
 }
 
 function sourceLabel(t: TFunction, source: string): string {
-  // Unlisted enums render verbatim — never invented, never guessed.
-  return sourceWord(source, t);
+  // Unlisted enums degrade to — (raw value stays in the cell title).
+  const word = sourceWord(source, t);
+  return word === source ? '—' : word;
 }
 
 /** Wire id that may arrive as a `{type,id}` object (the human ref shape). */
@@ -363,8 +362,12 @@ function DecisionCell({ decision, t }: { decision?: string; t: TFunction }) {
   }
   const key = DECISION_KEYS[value];
   if (key === undefined) {
-    // Unlisted enum: the raw token is the honest reading (no invented word).
-    return <span className="mono">{wireText(decision)}</span>;
+    // Unlisted enum degrades to —; the raw token stays in the title.
+    return (
+      <span className="faint" title={wireText(decision)}>
+        —
+      </span>
+    );
   }
   const titleKey =
     value === 'require_approval'
@@ -386,7 +389,11 @@ function OutcomeCell({ outcome, t }: { outcome: string; t: TFunction }) {
   const value = outcomeEnum(outcome);
   const key = OUTCOME_KEYS[value];
   if (key === undefined) {
-    return <span className="mono">{wireText(outcome)}</span>;
+    return (
+      <span className="faint" title={wireText(outcome)}>
+        —
+      </span>
+    );
   }
   return (
     <span className={`pill ${outcomeTone(value)}`}>
@@ -611,9 +618,9 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
               <span className="faint">—</span>
             )}
           </div>
-          <div className="integ exp">{t('agentConsole.v2.aud01.noPerEventVerify')}</div>
+          <div className="integ exp">单条记录无法自证，也没有「验证此条」入口；完整性只在窗口级校验，见上方面板。</div>
           {!hash ? (
-            <div className="integ exp">{t('agentConsole.v2.aud01.noHashNote')}</div>
+            <div className="integ exp">这条记录在锚点之前，不参与校验；不代表数据有问题。</div>
           ) : null}
           <div className="kv">
             <span className="k">{t('agentConsole.v2.aud01.integSchemaLabel')}</span>
@@ -621,15 +628,9 @@ function Expansion({ event, t }: { event: AuditEvent; t: TFunction }) {
           </div>
           {event.error ? (
             <>
-              {errorCode ? (
-                <div className="kv">
-                  <span className="k">{t('agentConsole.v2.aud01.errorCode')}</span>
-                  <span className="mono">{errorCode}</span>
-                </div>
-              ) : null}
               {errorMessage ? (
                 <div className="kv">
-                  <span className="k">{t('agentConsole.v2.aud01.errorMessage')}</span>
+                  <span className="k" title={errorCode || undefined}>{t('agentConsole.v2.aud01.errorMessage')}</span>
                   <span className="errtext">{errorMessage}</span>
                 </div>
               ) : null}
